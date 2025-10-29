@@ -1,8 +1,10 @@
 const express = require('express');
 require('dotenv').config(); // Carrega as variáveis de ambiente
+const cookieParser = require('cookie-parser');
 
 const app = express();
 app.use(express.json()); // Middleware para ler JSON
+app.use(cookieParser());
 
 // Importa o roteador mestre
 const mainRouter = require('./routes/index');

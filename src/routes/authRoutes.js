@@ -1,11 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const authController = require('../controllers/authController');
+const authMiddleware = require('../middlewares/authMiddleware');
 
-// Rota POST para /api/auth/register
+// Rotas Públicas (não precisam de authMiddleware)
 router.post('/register', authController.register);
-
-// Rota POST para /api/auth/login
 router.post('/login', authController.login);
+router.post('/refresh', authController.refreshToken); // Endpoint de renovação
+
+// Rotas Protegidas (precisam de authMiddleware)
+router.post('/logout', authMiddleware, authController.logout);
+router.get('/me', authMiddleware, authController.getMe); // Endpoint do perfil logado
 
 module.exports = router;

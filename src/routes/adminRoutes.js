@@ -8,6 +8,7 @@ const adminMissionRoutes = require('./adminMissionRoutes');
 const adminAwardsRoutes = require('./adminAwardsRoutes');
 const adminQuizRoutes = require('./adminQuizRoutes');
 const adminCardsRoutes = require('./adminCardsRoutes');
+const adminUserRoutes = require('./adminUserRoutes');
 
 // APLICAÇÃO EM CASCATA DE MIDDLEWARE:
 // 1. Primeiro, verifica se o usuário está logado (authMiddleware).
@@ -37,6 +38,8 @@ router.post(
 // --- PLUGAR AS NOVAS ROTAS DE CRUD DE MISSÃO ---
 // Todas as rotas em 'adminMissionRoutes' começarão com /api/admin/missions
 router.use('/missions', adminMissionRoutes);
+
+router.use('/users', adminUserRoutes);
 
 // --- ROTAS DE CRUD DE QUIZ ---
 // (Prefix: /api/admin/quizzes)

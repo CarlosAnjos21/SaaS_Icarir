@@ -20,8 +20,8 @@ const authMiddleware = (req, res, next) => {
 
   // 4. Validar o token
   try {
-    // jwt.verify() decodifica o token usando sua chave secreta
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+
+    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
     
     // 5. Anexar o payload do usuário ao objeto 'req'
     // Lembre-se que salvamos o payload como { user: { id, email, role, ... } }
@@ -32,6 +32,7 @@ const authMiddleware = (req, res, next) => {
 
   } catch (error) {
     // Se o token for inválido (assinatura errada) ou expirado, jwt.verify() falha
+    // Isso será comum, pois o Access Token expira rápido (ex: 15min)
     res.status(401).json({ error: 'Token inválido ou expirado.' });
   }
 };
