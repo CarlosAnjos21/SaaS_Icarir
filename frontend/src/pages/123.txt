@@ -1,0 +1,4 @@
+Se quiser, posso te ajudar a criar uma tela de perfil, logout, ou proteger rotas para que só usuários 
+logados acessem certas páginas. Quer seguir por esse caminho?
+
+

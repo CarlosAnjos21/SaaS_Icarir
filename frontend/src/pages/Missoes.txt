@@ -1,0 +1,312 @@
+Missoes Normal:
+import { useState } from "react";
+
+const allMissions = [
+  {
+    id: 1,
+    title: "Acabou de chegar!",
+    points: 150,
+    description:
+      "O objetivo dessa missão é te introduzir para esse mundo novo que você está prestes a desbravar. Você verá mais sobre a trilha de aprendizado, como funcionará o curso e como você pode aproveitar ao máximo essa oportunidade. Para concluir essa missão, assista às aulas síncronas gravadas que estão disponíveis na aba de aulas.",
+    rewards: ["⭐", "🎖️"],
+  },
+  {
+    id: 2,
+    title: "Arquitetura WEB",
+    points: 200,
+    description:
+      "Aprenda os fundamentos da arquitetura web moderna e como os sistemas se comunicam.",
+    rewards: ["⭐"],
+  },
+  {
+    id: 3,
+    title: "Responda sobre Arquitetura Web.",
+    points: 200,
+    description:
+      "Teste seus conhecimentos sobre arquitetura web com este desafio.",
+    rewards: ["⭐"],
+  },
+  {
+    id: 4,
+    title: "Banco de Dados",
+    points: 200,
+    description:
+      "Explore os conceitos de banco de dados relacionais e não relacionais.",
+    rewards: ["⭐"],
+  },
+];
+
+export default function Missions() {
+  const [selectedMission, setSelectedMission] = useState(allMissions[0]);
+  const [completed, setCompleted] = useState([]);
+  const [activeTab, setActiveTab] = useState("ativas");
+
+  const handleStartMission = () => {
+    if (!completed.includes(selectedMission.id)) {
+      setCompleted([...completed, selectedMission.id]);
+    }
+  };
+
+  const activeMissions = allMissions.filter(
+    (m) => !completed.includes(m.id)
+  );
+  const completedMissions = allMissions.filter((m) =>
+    completed.includes(m.id)
+  );
+
+  const missionsToShow =
+    activeTab === "ativas" ? activeMissions : completedMissions;
+
+  return (
+    <div className="min-h-screen bg-gray-100 pt-[80px] px-6 pb-12">
+      {/* Tabs */}
+      <div className="max-w-7xl mx-auto mb-8 flex gap-6 justify-center">
+        <button
+          onClick={() => setActiveTab("ativas")}
+          className={`px-4 py-2 rounded-full font-semibold transition ${
+            activeTab === "ativas"
+              ? "bg-orange-500 text-white"
+              : "bg-white text-gray-700 border"
+          }`}
+        >
+          Missões Ativas
+        </button>
+        <button
+          onClick={() => setActiveTab("concluidas")}
+          className={`px-4 py-2 rounded-full font-semibold transition ${
+            activeTab === "concluidas"
+              ? "bg-orange-500 text-white"
+              : "bg-white text-gray-700 border"
+          }`}
+        >
+          Missões Concluídas
+        </button>
+      </div>
+
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-8">
+        {/* Lista de Missões */}
+        <div className="w-full md:w-1/3 bg-white rounded-xl shadow-md p-6 space-y-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Missões</h2>
+          {missionsToShow.length === 0 ? (
+            <p className="text-gray-500 text-sm">Nenhuma missão nesta aba.</p>
+          ) : (
+            missionsToShow.map((mission) => (
+              <button
+                key={mission.id}
+                onClick={() => setSelectedMission(mission)}
+                className={`w-full text-left px-4 py-3 rounded-lg border transition ${
+                  selectedMission.id === mission.id
+                    ? "bg-blue-100 border-blue-400"
+                    : "bg-gray-50 hover:bg-blue-50"
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-gray-700">
+                    {mission.title}
+                  </span>
+                  <span className="text-sm text-blue-600 font-bold">
+                    ⭐ {mission.points}
+                  </span>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+
+        {/* Detalhes da Missão */}
+        <div className="w-full md:w-2/3 bg-white rounded-xl shadow-md p-8">
+          <h3 className="text-3xl font-bold text-gray-800 mb-6">
+            {selectedMission.title}
+          </h3>
+          <p className="text- lg text-gray-700 mb-6">{selectedMission.description}</p>
+
+          <div className="mb-4">
+            <h4 className="font-semibold text-gray-800 mb-2">Recompensas</h4>
+            <div className="flex gap-4 text-2xl">
+              {selectedMission.rewards.map((reward, index) => (
+                <span key={index}>{reward}</span>
+              ))}
+            </div>
+          </div>
+
+          {completed.includes(selectedMission.id) ? (
+            <p className="mt-4 text-green-600 font-semibold">
+              ✅ Missão concluída!
+            </p>
+          ) : (
+            <button
+              onClick={handleStartMission}
+              className="mt-4 px-6 py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition"
+            >
+              Iniciar missão
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Missoes Animado:
+import { useState, useEffect } from "react";
+
+const allMissions = [
+  {
+    id: 1,
+    title: "Acabou de chegar!",
+    points: 150,
+    description:
+      "O objetivo dessa missão é te introduzir para esse mundo novo que você está prestes a desbravar. Você verá mais sobre a trilha de aprendizado, como funcionará o curso e como você pode aproveitar ao máximo essa oportunidade. Para concluir essa missão, assista às aulas síncronas gravadas que estão disponíveis na aba de aulas.",
+    rewards: ["⭐", "🎖️"],
+  },
+  {
+    id: 2,
+    title: "Arquitetura WEB",
+    points: 200,
+    description:
+      "Aprenda os fundamentos da arquitetura web moderna e como os sistemas se comunicam.",
+    rewards: ["⭐"],
+  },
+  {
+    id: 3,
+    title: "Responda sobre Arquitetura Web.",
+    points: 200,
+    description:
+      "Teste seus conhecimentos sobre arquitetura web com este desafio.",
+    rewards: ["⭐"],
+  },
+  {
+    id: 4,
+    title: "Banco de Dados",
+    points: 200,
+    description:
+      "Explore os conceitos de banco de dados relacionais e não relacionais.",
+    rewards: ["⭐"],
+  },
+];
+
+export default function Missions() {
+  const [selectedMission, setSelectedMission] = useState(allMissions[0]);
+  const [completed, setCompleted] = useState([]);
+  const [activeTab, setActiveTab] = useState("ativas");
+
+  // Carrega progresso salvo
+  useEffect(() => {
+    const saved = localStorage.getItem("completedMissions");
+    if (saved) {
+      setCompleted(JSON.parse(saved));
+    }
+  }, []);
+
+  // Salva progresso ao atualizar
+  useEffect(() => {
+    localStorage.setItem("completedMissions", JSON.stringify(completed));
+  }, [completed]);
+
+  const handleStartMission = () => {
+    if (!completed.includes(selectedMission.id)) {
+      setCompleted([...completed, selectedMission.id]);
+    }
+  };
+
+  const activeMissions = allMissions.filter(
+    (m) => !completed.includes(m.id)
+  );
+  const completedMissions = allMissions.filter((m) =>
+    completed.includes(m.id)
+  );
+
+  const missionsToShow =
+    activeTab === "ativas" ? activeMissions : completedMissions;
+
+  return (
+    <div className="min-h-screen bg-gray-100 pt-[200px] px-6 pb-12">
+      {/* Tabs */}
+      <div className="max-w-7xl mx-auto mb-8 flex gap-6 justify-center">
+        <button
+          onClick={() => setActiveTab("ativas")}
+          className={`px-4 py-2 rounded-full font-semibold transition ${
+            activeTab === "ativas"
+              ? "bg-orange-500 text-white"
+              : "bg-white text-gray-700 border"
+          }`}
+        >
+          Missões Ativas
+        </button>
+        <button
+          onClick={() => setActiveTab("concluidas")}
+          className={`px-4 py-2 rounded-full font-semibold transition ${
+            activeTab === "concluidas"
+              ? "bg-orange-500 text-white"
+              : "bg-white text-gray-700 border"
+          }`}
+        >
+          Missões Concluídas
+        </button>
+      </div>
+
+      <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-8">
+        {/* Lista de Missões */}
+        <div className="w-full md:w-1/3 bg-white rounded-xl shadow-md p-6 space-y-6">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Missões</h2>
+          {missionsToShow.length === 0 ? (
+            <p className="text-gray-500 text-sm">Nenhuma missão nesta aba.</p>
+          ) : (
+            missionsToShow.map((mission) => (
+              <button
+                key={mission.id}
+                onClick={() => setSelectedMission(mission)}
+                className={`w-full text-left px-4 py-3 rounded-lg border transition relative overflow-hidden ${
+                  selectedMission.id === mission.id
+                    ? "bg-blue-100 border-blue-500 shadow-md ring-2 ring-blue-300 animate-pulse"
+                    : "bg-gray-50 hover:bg-blue-50"
+                }`}
+              >
+                <div className="flex justify-between items-center">
+                  <span className="font-semibold text-gray-700">
+                    {mission.title}
+                  </span>
+                  <span className="text-sm text-blue-600 font-bold">
+                    ⭐ {mission.points}
+                  </span>
+                </div>
+              </button>
+            ))
+          )}
+        </div>
+
+        {/* Detalhes da Missão */}
+        <div className="w-full md:w-2/3 bg-white rounded-xl shadow-md p-8">
+          <h3 className="text-3xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+            <span className="animate-bounce">🚀</span> {selectedMission.title}
+          </h3>
+          <p className="text-lg text-gray-700 mb-6">
+            {selectedMission.description}
+          </p>
+
+          <div className="mb-4">
+            <h4 className="font-semibold text-gray-800 mb-2">Recompensas</h4>
+            <div className="flex gap-4 text-2xl">
+              {selectedMission.rewards.map((reward, index) => (
+                <span key={index}>{reward}</span>
+              ))}
+            </div>
+          </div>
+
+          {completed.includes(selectedMission.id) ? (
+            <p className="mt-4 text-green-600 font-semibold text-lg">
+              ✅ Missão concluída!
+            </p>
+          ) : (
+            <button
+              onClick={handleStartMission}
+              className="mt-4 px-6 py-3 bg-orange-500 text-white font-semibold rounded-lg hover:bg-orange-600 transition"
+            >
+              Iniciar missão
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
