@@ -1,0 +1,231 @@
+// Importa o Prisma Client
+const prisma = require('../config/prismaClient');
+
+/**
+ * @route   GET /api/quizzes/:quizId
+ * @desc    (Usuário) Buscar um quiz e suas perguntas (sem as respostas)
+ * @access  Privado
+ */
+const getQuizForUser = async (req, res) => {
+  try {
+    const quizId = parseInt(req.params.quizId, 10);
+    if (isNaN(quizId)) {
+      return res.status(400).json({ error: 'ID do Quiz inválido.' });
+    }
+
+    // 1. Buscar o Quiz e suas perguntas (substitui as 2 queries)
+    const quiz = await prisma.quizzes.findUnique({
+      where: { id: quizId, ativo: true },
+      select: {
+        id: true,
+        titulo: true,
+        descricao: true,
+        imagem_url: true,
+        // Inclui as perguntas, selecionando os campos
+        perguntas: {
+          select: {
+            id: true,
+            enunciado: true,
+            tipo: true,
+            ordem: true,
+            opcoes: true // Traz o JSON 'opcoes' completo
+          },
+          orderBy: {
+            ordem: 'asc'
+          }
+        }
+      }
+    });
+
+    if (!quiz) {
+      return res.status(404).json({ error: 'Quiz não encontrado ou inativo.' });
+    }
+    
+    // 2. Filtrar as respostas corretas do JSON 'opcoes'
+    // Movemos a lógica do SQL para o JavaScript
+    const filteredQuestions = quiz.perguntas.map(q => {
+      // 'opcoes' é um array de objetos, ex: [{ text: "A", isCorrect: true }]
+      // Removemos a chave 'isCorrect' de cada objeto no array
+      const filteredOptions = q.opcoes.map(option => {
+        const { isCorrect, ...rest } = option; // Remove 'isCorrect'
+        return rest; // Retorna o objeto sem a chave 'isCorrect'
+      });
+      
+      return { ...q, opcoes: filteredOptions };
+    });
+
+    const response = { ...quiz, perguntas: filteredQuestions };
+    res.json(response);
+
+  } catch (error) {
+    console.error('Erro ao buscar quiz:', error);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+};
+
+/**
+ * @route   POST /api/quizzes/:quizId/submit
+ * @desc    (Usuário) Submeter respostas de um quiz
+ * @access  Privado
+ * @body    { "answers": [{ "pergunta_id": 1, "resposta": "texto da resposta" }] }
+ */
+const submitQuiz = async (req, res) => {
+  const quizId = parseInt(req.params.quizId, 10);
+  if (isNaN(quizId)) {
+    return res.status(400).json({ error: 'ID do Quiz inválido.' });
+  }
+
+  const userId = req.user.id;
+  const { answers } = req.body; // Array de { pergunta_id, resposta }
+
+  if (!answers || !Array.isArray(answers) || answers.length === 0) {
+    return res.status(400).json({ error: 'O array "answers" é obrigatório.' });
+  }
+
+  try {
+    // Usamos $transaction para garantir que TODAS as operações
+    // falhem ou tenham sucesso juntas.
+    const result = await prisma.$transaction(async (tx) => {
+
+      // 1. Buscar o Quiz e sua Tarefa associada (usando o cliente de transação 'tx')
+      const quiz = await tx.quizzes.findFirstOrThrow({
+        where: { id: quizId, ativo: true },
+        select: { id: true, tarefa_id: true }
+      });
+      const { tarefa_id } = quiz;
+
+      // 2. Buscar as PERGUNTAS COM as respostas corretas
+      const questions = await tx.perguntasQuiz.findMany({
+        where: { quiz_id: quizId },
+        select: { id: true, opcoes: true }
+      });
+      
+      const correctAnswersMap = new Map();
+      questions.forEach(q => {
+        // Encontra a opção correta dentro do JSON 'opcoes'
+        const correctOption = q.opcoes.find(opt => opt.isCorrect === true);
+        correctAnswersMap.set(q.id, correctOption ? correctOption.text : null);
+      });
+
+      // 3. Validar se o usuário já completou esta tarefa
+      let taskPoints = 0;
+      if (tarefa_id) {
+        const tarefa = await tx.tarefas.findUnique({
+          where: { id: tarefa_id },
+          select: { pontos: true }
+        });
+        taskPoints = tarefa ? tarefa.pontos : 0;
+
+        const existingSub = await tx.usuariosTarefas.findUnique({
+          where: { 
+            usuario_id_tarefa_id: { usuario_id: userId, tarefa_id: tarefa_id }
+          },
+          select: { concluida: true }
+        });
+
+        if (existingSub && existingSub.concluida) {
+          throw new Error('Você já completou este quiz/tarefa.');
+        }
+      }
+
+      // 4. Corrigir e Salvar as respostas (dentro da transação)
+      let totalCorrect = 0;
+      const submissionResults = [];
+      
+      for (const answer of answers) {
+        const { pergunta_id, resposta } = answer;
+        const isCorrect = correctAnswersMap.get(pergunta_id) === resposta;
+
+        if (isCorrect) {
+          totalCorrect++;
+        }
+
+        const newAnswer = await tx.respostasQuizzes.create({
+          data: {
+            usuario_id: userId,
+            pergunta_id: pergunta_id,
+            resposta: resposta,
+            correta: isCorrect,
+            // data_resposta é default(now())
+          },
+          select: { id: true, pergunta_id: true, resposta: true, correta: true }
+        });
+        submissionResults.push(newAnswer);
+      }
+      
+      // 5. Verificar se passou (100% de acerto) e conceder pontos
+      let finalMessage = `Quiz submetido. Você acertou ${totalCorrect} de ${correctAnswersMap.size}.`;
+      
+      if (tarefa_id && totalCorrect === correctAnswersMap.size) {
+        finalMessage = `Parabéns! Você acertou todas e ganhou ${taskPoints} pontos!`;
+
+        // 5a. Inserir/Atualizar 'usuarios_tarefas' (UPSERT)
+        await tx.usuariosTarefas.upsert({
+          where: { 
+            usuario_id_tarefa_id: { usuario_id: userId, tarefa_id: tarefa_id }
+          },
+          create: {
+            usuario_id: userId,
+            tarefa_id: tarefa_id,
+            concluida: true,
+            pontos_obtidos: taskPoints,
+            data_conclusao: new Date(),
+          },
+          update: {
+            concluida: true,
+            pontos_obtidos: taskPoints,
+            data_conclusao: new Date(),
+          }
+        });
+
+        // 5b. Atualizar 'usuarios' (incremento atômico)
+        await tx.usuarios.update({
+          where: { id: userId },
+          data: {
+            pontos: { increment: taskPoints }
+          }
+        });
+
+        // 5c. Inserir 'logs_pontos'
+        await tx.logsPontos.create({
+          data: {
+            usuario_id: userId,
+            tarefa_id: tarefa_id,
+            pontos: taskPoints,
+            tipo: 'ganho_quiz',
+            descricao: 'Quiz concluído com 100% de acerto.'
+          }
+        });
+      }
+      
+      // Retorna os dados de dentro da transação
+      return {
+        message: finalMessage,
+        score: {
+          correct: totalCorrect,
+          total: correctAnswersMap.size,
+        },
+        results: submissionResults,
+      };
+    }); // FIM DO PRISMA TRANSACTION (Commit automático)
+
+    // Se a transação foi bem-sucedida, 'result' conterá o retorno
+    res.status(200).json(result);
+
+  } catch (error) {
+    // Se a transação falhar, o Prisma faz o ROLLBACK
+    if (error.message.includes('Quiz não encontrado') || error.message.includes('Você já completou')) {
+      return res.status(409).json({ error: error.message });
+    }
+    
+    console.error('Erro ao submeter quiz:', error);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+  // Não precisamos mais do 'finally { client.release() }'
+};
+
+
+module.exports = {
+  getQuizForUser,
+  submitQuiz,
+};
