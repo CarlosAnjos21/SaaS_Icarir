@@ -9,6 +9,7 @@ const adminAwardsRoutes = require('./adminAwardsRoutes');
 const adminQuizRoutes = require('./adminQuizRoutes');
 const adminCardsRoutes = require('./adminCardsRoutes');
 const adminUserRoutes = require('./adminUserRoutes');
+const adminEnrollmentsRoutes = require('./adminEnrollmentsRoutes');
 
 // APLICAÇÃO EM CASCATA DE MIDDLEWARE:
 // 1. Primeiro, verifica se o usuário está logado (authMiddleware).
@@ -34,6 +35,8 @@ router.post(
   '/submissions/:submissionId/validate',
   adminController.validateTaskSubmission
 );
+
+router.use('/enrollments', adminEnrollmentsRoutes);
 
 // --- PLUGAR AS NOVAS ROTAS DE CRUD DE MISSÃO ---
 // Todas as rotas em 'adminMissionRoutes' começarão com /api/admin/missions
