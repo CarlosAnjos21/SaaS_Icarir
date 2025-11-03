@@ -3,13 +3,12 @@ import { useEffect, useState } from "react";
 export default function Admin() {
   const [clientes, setClientes] = useState([]);
   const [missoes, setMissoes] = useState([]);
-  const [clientId, setClientId] = useState("");
   const [description, setDescription] = useState("");
   const [pointsEarned, setPointsEarned] = useState("");
+  const [steps, setSteps] = useState([{ id: 1, title: "" }]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  // Carrega os dados dos arquivos JSON ao montar o componente
   useEffect(() => {
     async function loadData() {
       try {
@@ -41,67 +40,90 @@ export default function Admin() {
 
   const handleSubmit = () => {
     const novaMissao = {
-      missionId: Date.now(),
-      clientId: parseInt(clientId),
+      id: Date.now(),
+      title: description,
+      points: parseInt(pointsEarned),
       description,
-      pointsEarned: parseInt(pointsEarned),
+      rewards: ["🎖 XP", "🏅 Medalha"],
+      steps: steps.map((step, index) => ({
+        id: index + 1,
+        title: step.title,
+        completedBy: [],
+      })),
     };
 
-    // Aqui você salvaria no backend ou atualizaria o arquivo JSON
     console.log("Missão criada:", novaMissao);
-
-    // Opcional: atualizar a lista local de missões
     setMissoes((prev) => [...prev, novaMissao]);
 
-    // Limpar os campos
-    setClientId("");
     setDescription("");
     setPointsEarned("");
+    setSteps([{ id: 1, title: "" }]);
   };
 
-  if (loading) return <p>Carregando dados...</p>;
-  if (error) return <p style={{ color: "red" }}>Erro: {error}</p>;
+  const handleStepChange = (index, value) => {
+    const updated = [...steps];
+    updated[index].title = value;
+    setSteps(updated);
+  };
+
+  const addStep = () => {
+    setSteps((prev) => [...prev, { id: prev.length + 1, title: "" }]);
+  };
+
+  if (loading) return <p className="text-center mt-20 text-[#394C97]">Carregando dados...</p>;
+  if (error) return <p className="text-center mt-20 text-red-600">Erro: {error}</p>;
 
   return (
-    <div className="p-6 max-w-xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">Criar Missão</h1>
+    <div className="min-h-screen bg-[#FEF7EC] text-[#394C97] px-6 py-12">
+      <div className="max-w-xl mx-auto bg-white rounded-xl shadow-md p-6">
+        <h1 className="text-3xl font-bold mb-6 text-center">Criar Missão</h1>
 
-      <label className="block mb-2">Participante:</label>
-      <select
-        value={clientId}
-        onChange={(e) => setClientId(e.target.value)}
-        className="border p-2 w-full mb-4"
-      >
-        <option value="">Selecione</option>
-        {clientes.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
+        <label className="block mb-2 font-semibold">Descrição da Missão:</label>
+        <input
+          type="text"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="border p-2 w-full mb-4 rounded"
+          placeholder="Ex: Explorar o laboratório secreto"
+        />
 
-      <label className="block mb-2">Descrição da Missão:</label>
-      <input
-        type="text"
-        value={description}
-        onChange={(e) => setDescription(e.target.value)}
-        className="border p-2 w-full mb-4"
-      />
+        <label className="block mb-2 font-semibold">Pontos:</label>
+        <input
+          type="number"
+          value={pointsEarned}
+          onChange={(e) => setPointsEarned(e.target.value)}
+          className="border p-2 w-full mb-4 rounded"
+          placeholder="Ex: 100"
+        />
 
-      <label className="block mb-2">Pontos:</label>
-      <input
-        type="number"
-        value={pointsEarned}
-        onChange={(e) => setPointsEarned(e.target.value)}
-        className="border p-2 w-full mb-4"
-      />
+        <label className="block mb-2 font-semibold">Etapas da Missão:</label>
+        <div className="space-y-3 mb-6">
+          {steps.map((step, index) => (
+            <input
+              key={step.id}
+              type="text"
+              value={step.title}
+              onChange={(e) => handleStepChange(index, e.target.value)}
+              className="border p-2 w-full rounded"
+              placeholder={`Etapa ${index + 1}`}
+            />
+          ))}
+          <button
+            type="button"
+            onClick={addStep}
+            className="text-sm text-[#FE5900] hover:underline"
+          >
+            + Adicionar Etapa
+          </button>
+        </div>
 
-      <button
-        onClick={handleSubmit}
-        className="bg-[#394C97] text-white px-4 py-2 rounded"
-      >
-        Criar Missão
-      </button>
+        <button
+          onClick={handleSubmit}
+          className="w-full py-3 bg-[#FE5900] text-white font-semibold rounded-lg hover:bg-orange-600 transition"
+        >
+          Criar Missão
+        </button>
+      </div>
     </div>
   );
 }

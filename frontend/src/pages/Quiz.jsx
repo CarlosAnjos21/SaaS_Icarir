@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import FeedbackBar from "../components/Feedbacks/FeedbackBar";
 
 export default function Quiz() {
   const [questions, setQuestions] = useState([]);
@@ -28,19 +29,17 @@ export default function Quiz() {
   };
 
   if (questions.length === 0)
-    return <p className="text-center mt-10 text-base">Carregando quiz...</p>;
+    return <p className="text-center mt-10 text-[#394C97]">Carregando quiz...</p>;
 
   const q = questions[current];
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 px-4 py-8">
+    <div className="min-h-screen bg-[#FEF7EC] text-[#394C97] px-4 py-12 flex items-center justify-center relative">
       <div className="w-full max-w-screen-sm bg-white rounded-xl shadow-lg p-6 sm:p-8">
-        <h2 className="text-2xl font-bold text-center text-gray-800 mb-6">
-          Quiz Interativo
-        </h2>
+        <h2 className="text-3xl font-bold text-center mb-6">Quiz Interativo</h2>
 
         <div className="mb-6">
-          <p className="text-lg font-medium text-gray-700 mb-4">
+          <p className="text-lg font-medium mb-4">
             {current + 1}. {q.question}
           </p>
 
@@ -52,7 +51,7 @@ export default function Quiz() {
                 className={`w-full text-left px-4 py-3 rounded-lg border transition-colors duration-200 focus:outline-none
                   ${
                     selected === i
-                      ? "bg-white text-orange hover:bg-gray-100"
+                      ? "bg-[#FEF7EC] text-[#394C97] border-[#FE5900]"
                       : "bg-gray-200 hover:bg-gray-300"
                   }
                   ${confirmed ? "cursor-not-allowed opacity-90" : "cursor-pointer"}
@@ -68,7 +67,7 @@ export default function Quiz() {
             <button
               onClick={handleConfirm}
               disabled={selected === null}
-              className="mt-6 w-full py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition"
+              className="mt-6 w-full py-3 bg-[#FE5900] text-white font-semibold rounded-lg hover:bg-orange-600 transition"
             >
               Confirmar Resposta
             </button>
@@ -79,19 +78,18 @@ export default function Quiz() {
                   selected === q.answer ? "text-green-600" : "text-red-600"
                 }`}
               >
-                {selected === q.answer ? "✅ Correto!" : "❌ Incorreto."}{" "}
-                {q.explanation}
+                {selected === q.answer ? "✅ Correto!" : "❌ Incorreto."} {q.explanation}
               </p>
 
               {current < questions.length - 1 ? (
                 <button
                   onClick={handleNext}
-                  className="mt-4 w-full py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition"
+                  className="mt-4 w-full py-3 bg-[#FE5900] text-white font-semibold rounded-lg hover:bg-[#394C97] transition"
                 >
                   Próxima Pergunta
                 </button>
               ) : (
-                <p className="mt-4 text-center font-semibold text-purple-600">
+                <p className="mt-4 text-center font-semibold text-[#394C97]">
                   🎉 Fim do quiz!
                 </p>
               )}
@@ -99,6 +97,8 @@ export default function Quiz() {
           )}
         </div>
       </div>
+
+      <FeedbackBar />
     </div>
   );
 }

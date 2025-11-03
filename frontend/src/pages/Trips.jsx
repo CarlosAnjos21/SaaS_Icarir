@@ -1,3 +1,5 @@
+import FeedbackBar from "../components/Feedbacks/FeedbackBar";
+
 export default function Trips() {
   return (
     <div className="min-h-screen bg-white text-black p-8">
