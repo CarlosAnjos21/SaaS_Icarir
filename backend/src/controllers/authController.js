@@ -1,9 +1,11 @@
-const db = require('../config/db');
+// Importa o Prisma Client no lugar do node-pg
+const prisma = require('../config/prismaClient');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-require('dotenv').config(); // Garante que o process.env.JWT_SECRET seja lido
+const { Prisma } = require('@prisma/client'); // Importante para capturar erros
+require('dotenv').config();
 
-// --- FUNÇÃO DE CADASTRO ---
+// --- FUNÇÃO DE CADASTRO (Refatorada) ---
 const register = async (req, res) => {
   const { nome, email, senha, codigo_empresa } = req.body;
 
@@ -12,51 +14,71 @@ const register = async (req, res) => {
   }
 
   try {
-    const emailCheck = await db.query(
-      'SELECT * FROM usuarios WHERE email = $1',
-      [email]
-    );
+    // 1. Verificar se o e-mail já existe
+    const existingUser = await prisma.usuarios.findUnique({
+      where: { email: email }
+    });
 
-    if (emailCheck.rows.length > 0) {
+    if (existingUser) {
       return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
     }
 
+    // 2. Criptografar a senha
     const salt = await bcrypt.genSalt(10);
     const senhaHash = await bcrypt.hash(senha, salt);
 
-    const query = `
-      INSERT INTO usuarios (nome, email, senha, empresa, role, ativo, data_criacao, data_atualizacao)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
-      RETURNING id, nome, email, empresa, role, ativo;
-    `;
-    
-    const values = [nome, email, senhaHash, codigo_empresa, 'user', true];
-    
-    const newUser = await db.query(query, values);
+    // 3. Criar o usuário usando o Prisma
+    const newUser = await prisma.usuarios.create({
+      data: {
+        nome: nome,
+        email: email,
+        senha: senhaHash,
+        empresa: codigo_empresa,
+        role: 'user', // Valor padrão definido no schema, mas bom ser explícito
+        ativo: true,  // Valor padrão definido no schema
+      },
+      // 4. Selecionar os campos para retornar (igual ao 'RETURNING' antigo)
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        empresa: true,
+        role: true,
+        ativo: true
+      }
+    });
 
     res.status(201).json({
       message: 'Usuário cadastrado com sucesso!',
-      user: newUser.rows[0],
+      user: newUser,
     });
 
   } catch (error) {
+    // Captura erro se o e-mail se tornou duplicado entre o SELECT e o INSERT
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
+    }
     console.error('Erro ao cadastrar usuário:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-// --- LOGIN (Refatorado para 2 tokens) ---
+// --- LOGIN (Refatorado) ---
 const login = async (req, res) => {
   const { email, senha } = req.body;
   if (!email || !senha) {
     return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
   }
   try {
-    const userResult = await db.query('SELECT * FROM usuarios WHERE email = $1', [email]);
-    if (userResult.rows.length === 0) {
+    // 1. Encontrar o usuário com Prisma
+    const user = await prisma.usuarios.findUnique({
+      where: { email: email }
+    });
+
+    // 2. Validar usuário e senha
+    if (!user) {
       return res.status(401).json({ error: 'Credenciais inválidas.' });
     }
-    const user = userResult.rows[0];
     if (!user.ativo) {
       return res.status(403).json({ error: 'Este usuário está inativo.' });
     }
@@ -65,7 +87,7 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Credenciais inválidas.' });
     }
 
-    // Payload que será compartilhado pelos dois tokens
+    // Payload (sem alteração)
     const payload = {
       user: {
         id: user.id,
@@ -75,29 +97,29 @@ const login = async (req, res) => {
       },
     };
 
-    // 1. GERAR ACCESS TOKEN (vida curta)
+    // 1. GERAR ACCESS TOKEN (sem alteração)
     const accessToken = jwt.sign(
       payload,
       process.env.JWT_ACCESS_SECRET,
       { expiresIn: process.env.JWT_ACCESS_EXPIRATION }
     );
 
-    // 2. GERAR REFRESH TOKEN (vida longa)
+    // 2. GERAR REFRESH TOKEN (sem alteração)
     const refreshToken = jwt.sign(
       payload,
       process.env.JWT_REFRESH_SECRET,
       { expiresIn: process.env.JWT_REFRESH_EXPIRATION }
     );
 
-    // 3. ENVIAR REFRESH TOKEN COMO HttpOnly COOKIE
+    // 3. ENVIAR REFRESH TOKEN COMO HttpOnly COOKIE (sem alteração)
     res.cookie('refreshToken', refreshToken, {
-      httpOnly: true, // Impede acesso via JavaScript
-      secure: process.env.NODE_ENV === 'production', // Use 'true' em produção (HTTPS)
-      sameSite: 'strict', // Proteção CSRF
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 dias (deve ser o mesmo do token)
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000
     });
 
-    // 4. ENVIAR ACCESS TOKEN E DADOS DO USUÁRIO NO JSON
+    // 4. ENVIAR ACCESS TOKEN E DADOS DO USUÁRIO NO JSON (sem alteração)
     res.json({
       message: 'Login bem-sucedido!',
       accessToken: accessToken,
@@ -110,19 +132,16 @@ const login = async (req, res) => {
   }
 };
 
-// --- REFRESH TOKEN (Novo) ---
+// --- REFRESH TOKEN (Sem alteração - não usa DB) ---
 const refreshToken = (req, res) => {
-  // 1. Pegar o refresh token do cookie
   const token = req.cookies.refreshToken;
   if (!token) {
     return res.status(401).json({ error: 'Acesso negado. Nenhum token de renovação.' });
   }
 
   try {
-    // 2. Verificar o refresh token
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
     
-    // O token é válido, gerar um NOVO Access Token
     const payload = { user: decoded.user };
     
     const accessToken = jwt.sign(
@@ -138,14 +157,12 @@ const refreshToken = (req, res) => {
     });
 
   } catch (error) {
-    // Refresh token é inválido ou expirou
     res.status(403).json({ error: 'Token de renovação inválido ou expirado. Faça login novamente.' });
   }
 };
 
-// --- LOGOUT (Novo) ---
+// --- LOGOUT (Sem alteração - não usa DB) ---
 const logout = (req, res) => {
-  // O logout simplesmente limpa o cookie HttpOnly
   res.clearCookie('refreshToken', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
@@ -154,27 +171,33 @@ const logout = (req, res) => {
   res.status(200).json({ message: 'Logout bem-sucedido.' });
 };
 
-// --- GET ME (Movido do userController) ---
+// --- GET ME (Refatorado) ---
 const getMe = async (req, res) => {
   try {
     // O ID vem do 'authMiddleware' que já rodou
     const userId = req.user.id; 
 
-    const query = `
-      SELECT
-        u.id, u.nome, u.email, u.empresa, u.role, u.pontos, u.foto_url,
-        p.curiosidades, p.linkedin_url, p.website, p.interesses, p.data_nascimento, p.telefone
-      FROM usuarios u
-      LEFT JOIN perfis p ON u.id = p.usuario_id
-      WHERE u.id = $1
-    `;
-    
-    const { rows } = await db.query(query, [userId]);
+    // 1. Buscar usuário e incluir seu perfil (substitui o LEFT JOIN)
+    const userWithProfile = await prisma.usuarios.findUnique({
+      where: { id: userId },
+      include: {
+        perfil: true, // Inclui o registro da tabela 'perfis'
+      },
+    });
 
-    if (rows.length === 0) {
+    if (!userWithProfile) {
       return res.status(404).json({ error: 'Usuário não encontrado.' });
     }
-    res.json(rows[0]);
+
+    // 2. Achatar o objeto para manter o formato de API anterior
+    // (O Prisma retorna { ...usuario, perfil: { ... } })
+    const { perfil, ...usuarioBase } = userWithProfile;
+    const response = { ...usuarioBase, ...(perfil || {}) };
+    
+    // Remove a senha da resposta por segurança
+    delete response.senha;
+
+    res.json(response);
 
   } catch (error) {
     console.error('Erro ao buscar perfil:', error);
