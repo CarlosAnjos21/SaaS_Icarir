@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 const db = require('../config/db');
+=======
+// Importa o Prisma Client
+const prisma = require('../config/prismaClient');
+const { Prisma } = require('@prisma/client'); // Para tratamento de erro
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
 
 /**
  * @route   POST /api/admin/missions
@@ -6,17 +12,29 @@ const db = require('../config/db');
  * @access  Admin
  */
 const createMission = async (req, res) => {
+<<<<<<< HEAD
   // Baseado nos campos da tabela 'missoes' [cite: 249]
+=======
+  // Baseado nos campos da tabela 'missoes' 
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
   const {
     titulo, // [cite: 254]
     descricao, // [cite: 257]
     foto_url, // [cite: 55]
     destino, // [cite: 258]
+<<<<<<< HEAD
     data_inicio, // [cite: 271]
     data_fim, // [cite: 271]
     preco, // [cite: 271]
     vagas_disponiveis, // [cite: 272]
     ativo, // [cite: 68]
+=======
+    data_inicio, // 
+    data_fim, // 
+    preco, // 
+    vagas_disponiveis, // 
+    ativo, // 
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
     missao_anterior_id // [cite: 280]
   } = req.body;
 
@@ -26,6 +44,7 @@ const createMission = async (req, res) => {
   }
 
   try {
+<<<<<<< HEAD
     const query = `
       INSERT INTO missoes (
         titulo, descricao, foto_url, destino, data_inicio, 
@@ -52,6 +71,30 @@ const createMission = async (req, res) => {
     res.status(201).json({ message: 'Missão criada com sucesso!', mission: rows[0] });
 
   } catch (error) {
+=======
+    const newMission = await prisma.missoes.create({
+      data: {
+        titulo: titulo,
+        descricao: descricao || null,
+        foto_url: foto_url || null,
+        destino: destino || null,
+        data_inicio: new Date(data_inicio), // Converte string para Date
+        data_fim: new Date(data_fim),       // Converte string para Date
+        preco: preco ? parseFloat(preco) : 0.00,
+        vagas_disponiveis: vagas_disponiveis ? parseInt(vagas_disponiveis, 10) : null,
+        ativo: ativo || false,
+        missao_anterior_id: missao_anterior_id ? parseInt(missao_anterior_id, 10) : null
+      }
+    });
+    
+    res.status(201).json({ message: 'Missão criada com sucesso!', mission: newMission });
+
+  } catch (error) {
+    // Erro de FK (missao_anterior_id não existe)
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+       return res.status(404).json({ error: 'ID da missão anterior (missao_anterior_id) é inválido.' });
+    }
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
     console.error('Erro ao criar missão:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
@@ -65,8 +108,17 @@ const createMission = async (req, res) => {
 const getAllMissions = async (req, res) => {
   try {
     // Admins veem tudo, não apenas as ativas
+<<<<<<< HEAD
     const { rows } = await db.query('SELECT * FROM missoes ORDER BY data_inicio DESC');
     res.json(rows);
+=======
+    const missions = await prisma.missoes.findMany({
+      orderBy: {
+        data_inicio: 'desc'
+      }
+    });
+    res.json(missions);
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
   } catch (error) {
     console.error('Erro ao buscar todas as missões:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
@@ -80,6 +132,7 @@ const getAllMissions = async (req, res) => {
  */
 const getMissionById = async (req, res) => {
   try {
+<<<<<<< HEAD
     const { missionId } = req.params;
     const { rows } = await db.query('SELECT * FROM missoes WHERE id = $1', [missionId]);
     
@@ -87,6 +140,21 @@ const getMissionById = async (req, res) => {
       return res.status(404).json({ error: 'Missão não encontrada.' });
     }
     res.json(rows[0]);
+=======
+    const missionId = parseInt(req.params.missionId, 10);
+    if (isNaN(missionId)) {
+        return res.status(400).json({ error: 'ID da missão inválido.' });
+    }
+    
+    const mission = await prisma.missoes.findUnique({
+      where: { id: missionId }
+    });
+    
+    if (!mission) {
+      return res.status(404).json({ error: 'Missão não encontrada.' });
+    }
+    res.json(mission);
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
 
   } catch (error) {
     console.error('Erro ao buscar missão por ID:', error);
@@ -101,7 +169,15 @@ const getMissionById = async (req, res) => {
  */
 const updateMission = async (req, res) => {
   try {
+<<<<<<< HEAD
     const { missionId } = req.params;
+=======
+    const missionId = parseInt(req.params.missionId, 10);
+    if (isNaN(missionId)) {
+        return res.status(400).json({ error: 'ID da missão inválido.' });
+    }
+
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
     const {
       titulo, descricao, foto_url, destino, data_inicio, 
       data_fim, preco, vagas_disponiveis, ativo, missao_anterior_id
@@ -111,6 +187,7 @@ const updateMission = async (req, res) => {
       return res.status(400).json({ error: 'Título, data de início e data de fim são obrigatórios.' });
     }
 
+<<<<<<< HEAD
     const updateQuery = `
       UPDATE missoes
       SET 
@@ -143,6 +220,35 @@ const updateMission = async (req, res) => {
     res.json({ message: 'Missão atualizada com sucesso!', mission: rows[0] });
 
   } catch (error) {
+=======
+    const updatedMission = await prisma.missoes.update({
+      where: { id: missionId },
+      data: {
+        titulo: titulo,
+        descricao: descricao || null,
+        foto_url: foto_url || null,
+        destino: destino || null,
+        data_inicio: new Date(data_inicio),
+        data_fim: new Date(data_fim),
+        preco: preco ? parseFloat(preco) : 0.00,
+        vagas_disponiveis: vagas_disponiveis ? parseInt(vagas_disponiveis, 10) : null,
+        ativo: ativo,
+        missao_anterior_id: missao_anterior_id ? parseInt(missao_anterior_id, 10) : null
+      }
+    });
+    
+    res.json({ message: 'Missão atualizada com sucesso!', mission: updatedMission });
+
+  } catch (error) {
+    // Erro se a missão a ser atualizada não for encontrada
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return res.status(404).json({ error: 'Missão não encontrada para atualizar.' });
+    }
+    // Erro de FK (missao_anterior_id não existe)
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
+       return res.status(404).json({ error: 'ID da missão anterior (missao_anterior_id) é inválido.' });
+    }
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
     console.error('Erro ao atualizar missão:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
@@ -154,6 +260,7 @@ const updateMission = async (req, res) => {
  * @access  Admin
  */
 const softDeleteMission = async (req, res) => {
+<<<<<<< HEAD
   // Nota: Vamos fazer um "soft delete" (apenas desativar) 
   // para preservar o histórico dos usuários que já a completaram.
   // Um DELETE real poderia quebrar foreign keys.
@@ -177,6 +284,29 @@ const softDeleteMission = async (req, res) => {
     res.json({ message: 'Missão desativada (soft delete) com sucesso!', mission: rows[0] });
 
   } catch (error) {
+=======
+  try {
+    const missionId = parseInt(req.params.missionId, 10);
+    if (isNaN(missionId)) {
+        return res.status(400).json({ error: 'ID da missão inválido.' });
+    }
+    
+    // Soft delete (apenas desativa)
+    const deletedMission = await prisma.missoes.update({
+      where: { id: missionId },
+      data: {
+        ativo: false, // 
+      }
+    });
+    
+    res.json({ message: 'Missão desativada (soft delete) com sucesso!', mission: deletedMission });
+
+  } catch (error) {
+    // Erro se a missão a ser deletada não for encontrada
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return res.status(404).json({ error: 'Missão não encontrada para deletar.' });
+    }
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
     console.error('Erro ao deletar missão:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }

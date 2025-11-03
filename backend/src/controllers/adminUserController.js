@@ -1,4 +1,10 @@
+<<<<<<< HEAD
 const db = require('../config/db');
+=======
+// Importa o Prisma Client
+const prisma = require('../config/prismaClient');
+const { Prisma } = require('@prisma/client'); // Para tratamento de erro
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
 const bcrypt = require('bcryptjs');
 
 /**
@@ -10,6 +16,7 @@ const bcrypt = require('bcryptjs');
 const getAllUsers = async (req, res) => {
   const { ativo, perfil, busca } = req.query;
 
+<<<<<<< HEAD
   let baseQuery = 'SELECT id, nome, email, empresa, role, ativo, pontos, foto_url FROM usuarios';
   const conditions = [];
   const params = [];
@@ -39,6 +46,43 @@ const getAllUsers = async (req, res) => {
   try {
     const { rows } = await db.query(baseQuery, params);
     res.json(rows);
+=======
+  // Objeto 'where' dinâmico do Prisma
+  let where = {};
+
+  if (ativo) {
+    where.ativo = (ativo === 'true');
+  }
+  if (perfil) {
+    where.role = perfil;
+  }
+  if (busca) {
+    // Substitui (nome ILIKE ... OR email ILIKE ...)
+    where.OR = [
+      { nome: { contains: busca, mode: 'insensitive' } },
+      { email: { contains: busca, mode: 'insensitive' } }
+    ];
+  }
+
+  try {
+    const users = await prisma.usuarios.findMany({
+      where: where,
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        empresa: true,
+        role: true,
+        ativo: true,
+        pontos: true,
+        foto_url: true
+      },
+      orderBy: {
+        nome: 'asc'
+      }
+    });
+    res.json(users);
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
   } catch (error) {
     console.error('Erro ao buscar usuários:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
@@ -58,6 +102,7 @@ const createUser = async (req, res) => {
   }
 
   try {
+<<<<<<< HEAD
     // Verificar se e-mail já existe
     const emailCheck = await db.query('SELECT * FROM usuarios WHERE email = $1', [email]);
     if (emailCheck.rows.length > 0) {
@@ -78,6 +123,48 @@ const createUser = async (req, res) => {
     res.status(201).json({ message: 'Usuário criado pelo admin com sucesso!', user: rows[0] });
 
   } catch (error) {
+=======
+    // 1. Verificar se e-mail já existe
+    const existingUser = await prisma.usuarios.findUnique({
+      where: { email: email }
+    });
+    if (existingUser) {
+      return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
+    }
+
+    // 2. Hash da senha
+    const salt = await bcrypt.genSalt(10);
+    const senhaHash = await bcrypt.hash(senha, salt);
+
+    // 3. Criar usuário
+    const newUser = await prisma.usuarios.create({
+      data: {
+        nome: nome,
+        email: email,
+        senha: senhaHash,
+        empresa: empresa || null,
+        role: role,
+        ativo: ativo || true
+      },
+      // 4. Selecionar campos de retorno (igual ao RETURNING)
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        empresa: true,
+        role: true,
+        ativo: true
+      }
+    });
+    
+    res.status(201).json({ message: 'Usuário criado pelo admin com sucesso!', user: newUser });
+
+  } catch (error) {
+    // Trata erro de e-mail duplicado (race condition)
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
+    }
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
     console.error('Erro ao criar usuário:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
@@ -90,6 +177,7 @@ const createUser = async (req, res) => {
  */
 const getUserById = async (req, res) => {
   try {
+<<<<<<< HEAD
     const { id } = req.params;
     const { rows } = await db.query('SELECT id, nome, email, empresa, role, ativo, pontos, foto_url FROM usuarios WHERE id = $1', [id]);
     
@@ -97,6 +185,31 @@ const getUserById = async (req, res) => {
       return res.status(404).json({ error: 'Usuário não encontrado.' });
     }
     res.json(rows[0]);
+=======
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'ID de usuário inválido.' });
+    }
+
+    const user = await prisma.usuarios.findUnique({
+      where: { id: id },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        empresa: true,
+        role: true,
+        ativo: true,
+        pontos: true,
+        foto_url: true
+      }
+    });
+    
+    if (!user) {
+      return res.status(404).json({ error: 'Usuário não encontrado.' });
+    }
+    res.json(user);
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
   } catch (error) {
     console.error('Erro ao buscar usuário por ID:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
@@ -109,6 +222,7 @@ const getUserById = async (req, res) => {
  * @access  Admin
  */
 const updateUser = async (req, res) => {
+<<<<<<< HEAD
   const { id } = req.params;
   // Campos que o admin pode atualizar
   const { nome, email, foto_url, role, ativo, pontos, empresa } = req.body;
@@ -145,6 +259,53 @@ const updateUser = async (req, res) => {
     if (error.code === '23505') { 
       return res.status(409).json({ error: 'Este e-mail já está em uso por outro usuário.' });
     }
+=======
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'ID de usuário inválido.' });
+    }
+    
+    // Campos que o admin pode atualizar
+    const { nome, email, foto_url, role, ativo, pontos, empresa } = req.body;
+
+    // Prisma ignora campos 'undefined', substituindo a lógica do COALESCE
+    const updatedUser = await prisma.usuarios.update({
+      where: { id: id },
+      data: {
+        nome: nome,
+        email: email,
+        foto_url: foto_url,
+        role: role,
+        ativo: ativo,
+        pontos: pontos,
+        empresa: empresa
+      },
+      // Seleciona os campos de retorno (igual ao RETURNING)
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        empresa: true,
+        role: true,
+        ativo: true,
+        pontos: true,
+        foto_url: true
+      }
+    });
+    
+    res.json({ message: 'Usuário atualizado com sucesso!', user: updatedUser });
+
+  } catch (error) {
+    // Erro de e-mail duplicado
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') { 
+      return res.status(409).json({ error: 'Este e-mail já está em uso por outro usuário.' });
+    }
+    // Erro se o usuário a ser atualizado não for encontrado
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return res.status(404).json({ error: 'Usuário não encontrado para atualizar.' });
+    }
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
     console.error('Erro ao atualizar usuário:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
@@ -156,6 +317,7 @@ const updateUser = async (req, res) => {
  * @access  Admin
  */
 const deleteUser = async (req, res) => {
+<<<<<<< HEAD
   // Vamos fazer um soft delete (apenas desativar) para manter
   // a integridade dos logs, submissões e pontos.
   try {
@@ -170,6 +332,28 @@ const deleteUser = async (req, res) => {
     }
     res.json({ message: 'Usuário desativado (soft delete) com sucesso!', user: rows[0] });
   } catch (error) {
+=======
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) {
+      return res.status(400).json({ error: 'ID de usuário inválido.' });
+    }
+
+    // Soft delete é um 'update'
+    const deletedUser = await prisma.usuarios.update({
+      where: { id: id },
+      data: { ativo: false },
+      select: { id: true, ativo: true } // Retorna os campos atualizados
+    });
+    
+    res.json({ message: 'Usuário desativado (soft delete) com sucesso!', user: deletedUser });
+    
+  } catch (error) {
+    // Erro se o usuário a ser deletado não for encontrado
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return res.status(404).json({ error: 'Usuário não encontrado para deletar.' });
+    }
+>>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
     console.error('Erro ao deletar usuário:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
