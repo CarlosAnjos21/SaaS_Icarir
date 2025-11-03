@@ -1,9 +1,5 @@
-<<<<<<< HEAD
-const db = require('../config/db');
-=======
 // Importa o Prisma Client
 const prisma = require('../config/prismaClient');
->>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
 
 /**
  * @route   GET /api/awards
@@ -12,21 +8,10 @@ const prisma = require('../config/prismaClient');
  */
 const listAvailableAwards = async (req, res) => {
   try {
-    // Lista os prêmios, ordenados pela posição do ranking
-<<<<<<< HEAD
-    const query = `
-      SELECT id, titulo, descricao, tipo, posicao_ranking, imagem_url
-      FROM premiacoes
-      WHERE ativo = true AND posicao_ranking IS NOT NULL
-      ORDER BY posicao_ranking ASC;
-    `;
-    const { rows } = await db.query(query);
-    res.json(rows);
-=======
     const awards = await prisma.premiacoes.findMany({
       where: {
         ativo: true,
-        posicao_ranking: { not: null } // Prisma para 'IS NOT NULL'
+        posicao_ranking: { not: null } // Apenas prêmios com posição no ranking
       },
       select: {
         id: true,
@@ -40,10 +25,8 @@ const listAvailableAwards = async (req, res) => {
         posicao_ranking: 'asc'
       }
     });
-    
-    res.json(awards);
->>>>>>> ed831e1596253d89afdf2edff1a6e96e60db7aa5
 
+    res.json(awards);
   } catch (error) {
     console.error('Erro ao listar premiações:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
@@ -51,5 +34,5 @@ const listAvailableAwards = async (req, res) => {
 };
 
 module.exports = {
-  listAvailableAwards,
+  listAvailableAwards
 };
