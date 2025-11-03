@@ -45,16 +45,17 @@ export default function Profile() {
         navigate("/register");
       }
     } catch (error) {
-      console.error("Erro ao carregar usuário:", error);
+      console.error("Error loading user:", error);
       navigate("/register");
     }
   }, [navigate]);
 
   const getDescricao = (name) => {
-    if (name.includes("Carlos")) return "Estudante de TI - Dev Full Stack";
-    if (name.includes("Ana")) return "Designer UX/UI apaixonada por inovação";
-    if (name.includes("João")) return "Especialista em dados e IA";
-    return "Membro da comunidade Atlântico Avanti";
+    if (name.includes("Carlos")) return "IT Student - Full Stack Dev";
+    if (name.includes("Ana"))
+      return "UX/UI Designer passionate about innovation";
+    if (name.includes("João")) return "Data and AI Specialist";
+    return "Member of the Atlântico Avanti community";
   };
 
   const handleLogout = () => {
@@ -90,7 +91,7 @@ export default function Profile() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-purple-700 font-semibold">Carregando perfil...</p>
+        <p className="text-[#394C97] font-semibold">Loading profile...</p>
       </div>
     );
   }
@@ -100,57 +101,55 @@ export default function Profile() {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="min-h-screen bg-gradient-to-br from-[#FEF7EC] to-[#394C97] flex justify-center items-start pt-[100px] px-4"
+      className="min-h-screen bg-gradient-to-br from-[#FEF7EC] to-[#394C97] flex flex-col items-center pt-[50px] px-4"
     >
       <div className="w-full max-w-4xl bg-white/30 backdrop-blur-md rounded-xl shadow-xl overflow-hidden border border-white/40">
-        {/* Parte superior */}
-        <div className="flex flex-col items-center py-8 px-6 border-b border-purple-200">
+        <div className="flex flex-col items-center py-8 px-6 border-b border-[#394C97]/30">
           <br />
           <br />
         </div>
 
-        {/* Imagem central */}
         <div className="flex justify-start -mt-12 mb-6 px-6">
-          <div className="w-32 h-32 ml-[80px] rounded-full overflow-hidden border-4 border-white shadow-lg bg-purple-100 flex items-center justify-center">
+          <div className="w-32 h-32 ml-[80px] rounded-full overflow-hidden border-2 border-white shadow-lg bg-[#FEF7EC] flex items-center justify-center">
             {form.image ? (
               <img
                 src={form.image}
-                alt="Foto de perfil"
+                alt="Profile"
                 className="w-full h-full object-cover rounded-full"
               />
             ) : (
-              <UserCircleIcon className="h-28 w-28 text-purple-500" />
+              <UserCircleIcon className="h-28 w-28 text-[#394C97]" />
             )}
           </div>
         </div>
 
-        {/* Parte inferior */}
         <div className="px-6 pb-8 text-left">
           <div className="flex justify-center gap-4 mb-4">
             <button
               onClick={() => setIsEditing(!isEditing)}
-              className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition"
+              className="flex items-center gap-2 px-4 py-2 bg-[#FEF7EC] text-[#394C97] rounded-full hover:bg-[#FE5900]/20 transition"
             >
               <PencilSquareIcon className="h-5 w-5" />
-              {isEditing ? "Cancelar" : "Editar"}
+              {isEditing ? "Cancel" : "Edit"}
             </button>
-            <button className="flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-700 rounded-full hover:bg-purple-200 transition">
+            <button className="flex items-center gap-2 px-4 py-2 bg-[#FEF7EC] text-[#394C97] rounded-full hover:bg-[#FE5900]/20 transition">
               <Cog6ToothIcon className="h-5 w-5" />
-              Configurações
+              Settings
             </button>
           </div>
+
           <div className="text-left mb-4 ml-[80px]">
-            <h1 className="text-2xl font-bold text-gray-800 mb-2">
+            <h1 className="text-2xl font-bold text-[#394C97] mb-2">
               {user.name}
             </h1>
-            <p className="text-sm text-purple-600">{user.description}</p>
+            <p className="text-sm text-[#FE5900]">{user.description}</p>
           </div>
 
           {isEditing ? (
             <div className="space-y-4 text-left max-w-md mx-auto">
               <input
                 type="text"
-                placeholder="Nome"
+                placeholder="Name"
                 value={form.name}
                 onChange={handleChange("name")}
                 className="w-full px-4 py-2 border rounded-lg"
@@ -163,23 +162,23 @@ export default function Profile() {
                 className="w-full px-4 py-2 border rounded-lg"
               />
               <textarea
-                placeholder="Descrição sobre você"
+                placeholder="About you"
                 value={form.description}
                 onChange={handleChange("description")}
                 className="w-full px-4 py-2 border rounded-lg h-24 resize-none"
               />
               <input
                 type="text"
-                placeholder="URL da imagem de perfil"
+                placeholder="Profile image URL"
                 value={form.image}
                 onChange={handleChange("image")}
                 className="w-full px-4 py-2 border rounded-lg"
               />
               <button
                 onClick={handleSave}
-                className="w-full py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition hover:shadow-md"
+                className="w-full py-2 bg-[#394C97] text-white rounded-lg hover:bg-[#FE5900] transition hover:shadow-md"
               >
-                Salvar alterações
+                Save changes
               </button>
             </div>
           ) : (
@@ -191,29 +190,28 @@ export default function Profile() {
                 <strong>ID:</strong> {user.id}
               </p>
               <p>
-                <strong>Inicial:</strong> {getInitials(user.name)}
+                <strong>Initials:</strong> {getInitials(user.name)}
               </p>
               <p>
-                <strong>Total de pontos:</strong> {user.pontos}
+                <strong>Total points:</strong> {user.pontos}
               </p>
             </div>
           )}
 
-          <div className="mt-6 flex justify-center gap-6 text-purple-700 font-semibold text-sm">
-            <span>Níveis</span>
-            <span>Comentários</span>
+          <div className="mt-6 flex justify-center gap-6 text-[#394C97] font-semibold text-sm">
+            <span>Level (0)</span>
+            <span>Comments (0)</span>
             <span>Posts (0)</span>
           </div>
-
-    
         </div>
       </div>
-      <div><button
-            onClick={handleLogout}
-            className="mt-6 mx-auto text-red-500 hover:text-red-700 block"
-          >
-            Sair da Conta
-          </button></div>
+
+      <button
+        onClick={handleLogout}
+        className="mt-8 px-6 py-2 bg-[#394C97] text-white rounded-full font-semibold shadow hover:bg-[#FE5900] transition duration-300"
+      >
+        Log Out
+      </button>
     </motion.div>
   );
 }
