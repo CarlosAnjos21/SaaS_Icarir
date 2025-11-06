@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 
-export default function HomeCard({ city, image }) {
+export default function HomeCard({ city, image, onStartMission, loading }) {
   const navigate = useNavigate();
 
   return (
@@ -14,6 +14,20 @@ export default function HomeCard({ city, image }) {
         <p className="text-sm text-dark">
           Complete missions to unlock discounts to {city}!
         </p>
+        <button
+          onClick={(e) => {
+            e.stopPropagation(); // evita que o clique no botão dispare a navegação
+            onStartMission(city);
+          }}
+          disabled={loading}
+          className={`mt-4 px-4 py-2 rounded text-white transition ${
+            loading
+              ? "bg-gray-400 cursor-not-allowed"
+              : "bg-[#394C97] hover:bg-[#FE5900]"
+          }`}
+        >
+          {loading ? "Iniciando..." : "Iniciar Missão"}
+        </button>
       </div>
     </div>
   );

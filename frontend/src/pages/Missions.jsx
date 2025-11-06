@@ -1,8 +1,10 @@
 import { useState, useEffect } from "react";
 import FeedbackBar from "../components/Feedbacks/FeedbackBar";
+import api from "../api/api"; // Assumindo que você tem um Axios configurado
+import { useUser } from "../hooks/useUser"; // Hook para pegar o usuário logado
 
 export default function Missions() {
-  const [clientes, setClientes] = useState([]);
+  const { user } = useUser(); // user.id deve estar disponível
   const [missoes, setMissoes] = useState([]);
   const [selectedMission, setSelectedMission] = useState(null);
   const [activeTab, setActiveTab] = useState("ativas");
@@ -10,77 +12,83 @@ export default function Missions() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadData() {
+    async function loadMissions() {
       try {
-        const [clientsRes, missionsRes] = await Promise.all([
-          fetch("/data/clients.json"),
-          fetch("/data/missions.json"),
+        const [missionsRes, progressRes] = await Promise.all([
+          api.get("/missions"),
+          api.get(`/user/${user.id}/missions`),
         ]);
 
-        const [clientsData, missionsData] = await Promise.all([
-          clientsRes.json(),
-          missionsRes.json(),
-        ]);
+        const missions = missionsRes.data;
+        const progress = progressRes.data;
 
-        const storedClients = JSON.parse(
-          localStorage.getItem("clients") || "[]"
-        );
-        const allClients = [...clientsData, ...storedClients];
-        setClientes(allClients);
-
-        const storedMissions = JSON.parse(
-          localStorage.getItem("missionsProgress") || "[]"
-        );
-        const mergedMissions = missionsData.map((mission) => {
-          const saved = storedMissions.find((m) => m.id === mission.id);
+        const merged = missions.map((mission) => {
+          const saved = progress.find((m) => m.id === mission.id);
           return saved ? { ...mission, steps: saved.steps } : mission;
         });
 
-        setMissoes(mergedMissions);
-        setSelectedMission(mergedMissions[0] || null);
+        setMissoes(merged);
+        setSelectedMission(merged[0] || null);
       } catch (err) {
-        setError(err.message);
+        setError("Erro ao carregar missões");
+        console.error(err);
       } finally {
         setLoading(false);
       }
     }
 
-    loadData();
-  }, []);
+    if (user?.id) loadMissions();
+  }, [user]);
 
-  useEffect(() => {
-    localStorage.setItem("missionsProgress", JSON.stringify(missoes));
-  }, [missoes]);
+  const handleCompleteStep = async (stepId) => {
+    try {
+      await api.post(
+        `/user/${user.id}/missions/${selectedMission.id}/steps/${stepId}/complete`
+      );
 
-  const handleCompleteStep = (stepId) => {
-    const updatedMissions = missoes.map((mission) => {
-      if (mission.id === selectedMission.id) {
-        const updatedSteps = mission.steps.map((step) => {
-          if (step.id === stepId && !step.completedBy.includes(0)) {
-            return {
-              ...step,
-              completedBy: [...step.completedBy, 0],
-            };
-          }
-          return step;
+      const updatedMissions = missoes.map((mission) => {
+        if (mission.id === selectedMission.id) {
+          const updatedSteps = mission.steps.map((step) => {
+            if (step.id === stepId && !step.completedBy.includes(user.id)) {
+              return {
+                ...step,
+                completedBy: [...step.completedBy, user.id],
+              };
+            }
+            return step;
+          });
+          return { ...mission, steps: updatedSteps };
+        }
+        return mission;
+      });
+
+      setMissoes(updatedMissions);
+      const updatedSelected = updatedMissions.find(
+        (m) => m.id === selectedMission.id
+      );
+      setSelectedMission(updatedSelected);
+
+      // Se missão estiver completa, envia pontos
+      if (
+        updatedSelected.steps.every((step) =>
+          step.completedBy.includes(user.id)
+        )
+      ) {
+        await api.post(`/user/${user.id}/addPoints`, {
+          points: updatedSelected.points,
         });
-        return { ...mission, steps: updatedSteps };
       }
-      return mission;
-    });
-
-    setMissoes(updatedMissions);
-    const updatedSelected = updatedMissions.find(
-      (m) => m.id === selectedMission.id
-    );
-    setSelectedMission(updatedSelected);
+    } catch (err) {
+      console.error("Erro ao concluir etapa:", err);
+    }
   };
 
   const isMissionComplete = (mission) =>
     Array.isArray(mission.steps) &&
     mission.steps.length > 0 &&
     mission.steps.every(
-      (step) => Array.isArray(step.completedBy) && step.completedBy.includes(0)
+      (step) =>
+        Array.isArray(step.completedBy) && step.completedBy.includes(user.id)
     );
 
   const activeMissions = missoes.filter((m) => !isMissionComplete(m));
@@ -176,7 +184,7 @@ export default function Missions() {
               </h4>
               <ul className="space-y-2">
                 {selectedMission.steps.map((step) => {
-                  const isDone = step.completedBy.includes(0);
+                  const isDone = step.completedBy.includes(user.id);
                   return (
                     <li
                       key={step.id}

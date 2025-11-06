@@ -6,8 +6,12 @@ import {
   UserCircleIcon,
 } from "@heroicons/react/24/solid";
 import { motion } from "framer-motion";
+import api from "../api/api"; // Axios configurado com baseURL
 
 export default function Profile() {
+  const getLevel = (points) => Math.floor(points / 1000);
+  const getProgress = (points) => (points % 1000) / 10; // em %
+
   const [user, setUser] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm] = useState({
@@ -20,34 +24,47 @@ export default function Profile() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    try {
-      const storedUser = localStorage.getItem("loggedUser");
-      if (storedUser) {
-        const parsed = JSON.parse(storedUser);
-        const pontos = parsed.pontos || 1200;
-        const descricaoPersonalizada = getDescricao(parsed.name);
+    const token = localStorage.getItem("token");
+    if (!token) {
+      navigate("/register");
+      return;
+    }
+
+    const fetchUser = async () => {
+      try {
+        const res = await api.get("/auth/me", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = res.data;
+        const descricaoPersonalizada = getDescricao(data.nome);
 
         const enrichedUser = {
-          ...parsed,
-          pontos,
-          descricao: descricaoPersonalizada,
+          ...data,
+          name: data.nome,
+          pontos: data.pontos || 1200,
+          description: descricaoPersonalizada,
+          image: data.foto_url || "",
         };
 
         setUser(enrichedUser);
         setForm({
           name: enrichedUser.name,
           email: enrichedUser.email,
-          description: enrichedUser.descricao,
-          image: enrichedUser.image || "",
+          description: enrichedUser.description,
+          image: enrichedUser.image,
         });
-        setLoading(false);
-      } else {
+      } catch (err) {
+        console.error("Erro ao buscar perfil:", err);
         navigate("/register");
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      console.error("Error loading user:", error);
-      navigate("/register");
-    }
+    };
+
+    fetchUser();
   }, [navigate]);
 
   const getDescricao = (name) => {
@@ -59,7 +76,7 @@ export default function Profile() {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem("loggedUser");
+    localStorage.removeItem("token");
     navigate("/logout");
   };
 
@@ -71,7 +88,6 @@ export default function Profile() {
       description: form.description,
       image: form.image,
     };
-    localStorage.setItem("loggedUser", JSON.stringify(updatedUser));
     setUser(updatedUser);
     setIsEditing(false);
   };
@@ -202,6 +218,44 @@ export default function Profile() {
             <span>Level (0)</span>
             <span>Comments (0)</span>
             <span>Posts (0)</span>
+          </div>
+        </div>
+
+        {/* ABA DE PROGRESSO E CONQUISTAS */}
+        <div className="mt-12 px-6">
+          <h2 className="text-xl font-bold text-[#394C97] mb-4">
+            Progresso e Conquistas
+          </h2>
+
+          {/* Nível e barra de progresso */}
+          <div className="mb-6">
+            <p className="text-sm text-gray-700 mb-2">
+              Nível atual:{" "}
+              <span className="font-semibold">{getLevel(user.pontos)}</span>
+            </p>
+            <div className="w-full bg-gray-200 rounded-full h-4">
+              <div
+                className="bg-[#FE5900] h-4 rounded-full transition-all"
+                style={{ width: `${getProgress(user.pontos)}%` }}
+              ></div>
+            </div>
+            <p className="text-xs text-gray-500 mt-1">
+              {user.pontos % 1000} / 1000 pontos para o próximo nível
+            </p>
+          </div>
+
+          {/* Conquistas desbloqueadas */}
+          <div>
+            <h3 className="text-md font-semibold text-[#394C97] mb-2">
+              Conquistas desbloqueadas:
+            </h3>
+            <ul className="list-disc ml-6 text-sm text-gray-700 space-y-1">
+              {user.pontos >= 100 && <li>🎯 Primeiros 100 pontos</li>}
+              {user.pontos >= 500 && <li>🚀 Meio caminho andado</li>}
+              {user.pontos >= 1000 && <li>🏆 Nível 1 completo</li>}
+              {user.pontos >= 2000 && <li>🌟 Nível 2 desbloqueado</li>}
+              {user.pontos >= 5000 && <li>🔥 Mestre das missões</li>}
+            </ul>
           </div>
         </div>
       </div>
