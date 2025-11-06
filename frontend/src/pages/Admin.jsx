@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
+import { Navigate } from "react-router-dom";
 
 export default function Admin() {
-  const [clientes, setClientes] = useState([]);
   const [missoes, setMissoes] = useState([]);
   const [description, setDescription] = useState("");
   const [pointsEarned, setPointsEarned] = useState("");
@@ -9,25 +9,26 @@ export default function Admin() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    async function loadData() {
-      try {
-        const [clientsRes, missionsRes] = await Promise.all([
-          fetch("/data/clients.json"),
-          fetch("/data/missions.json"),
-        ]);
+  const token = localStorage.getItem("token");
 
-        if (!clientsRes.ok || !missionsRes.ok) {
-          throw new Error("Falha ao carregar os arquivos JSON.");
+  // Redireciona se não estiver logado
+  if (!token) return <Navigate to="/login" replace />;
+
+  useEffect (() => {
+    async function loadMissions() {
+      try {
+        const res = await fetch("http://localhost:3001/api/missions", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error("Erro ao carregar missões do backend.");
         }
 
-        const [clientsData, missionsData] = await Promise.all([
-          clientsRes.json(),
-          missionsRes.json(),
-        ]);
-
-        setClientes(clientsData);
-        setMissoes(missionsData);
+        const data = await res.json();
+        setMissoes(data);
       } catch (err) {
         setError(err.message);
       } finally {
@@ -35,12 +36,11 @@ export default function Admin() {
       }
     }
 
-    loadData();
-  }, []);
+    loadMissions();
+  }, [token]);
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const novaMissao = {
-      id: Date.now(),
       title: description,
       points: parseInt(pointsEarned),
       description,
@@ -52,12 +52,28 @@ export default function Admin() {
       })),
     };
 
-    console.log("Missão criada:", novaMissao);
-    setMissoes((prev) => [...prev, novaMissao]);
+    try {
+      const res = await fetch("http://localhost:3001/api/missions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(novaMissao),
+      });
 
-    setDescription("");
-    setPointsEarned("");
-    setSteps([{ id: 1, title: "" }]);
+      if (!res.ok) {
+        throw new Error("Erro ao criar missão.");
+      }
+
+      const created = await res.json();
+      setMissoes((prev) => [...prev, created]);
+      setDescription("");
+      setPointsEarned("");
+      setSteps([{ id: 1, title: "" }]);
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
   const handleStepChange = (index, value) => {
@@ -70,8 +86,12 @@ export default function Admin() {
     setSteps((prev) => [...prev, { id: prev.length + 1, title: "" }]);
   };
 
-  if (loading) return <p className="text-center mt-20 text-[#394C97]">Carregando dados...</p>;
-  if (error) return <p className="text-center mt-20 text-red-600">Erro: {error}</p>;
+  if (loading)
+    return (
+      <p className="text-center mt-20 text-[#394C97]">Carregando dados...</p>
+    );
+  if (error)
+    return <p className="text-center mt-20 text-red-600">Erro: {error}</p>;
 
   return (
     <div className="min-h-screen bg-[#FEF7EC] text-[#394C97] px-6 py-12">
@@ -123,6 +143,36 @@ export default function Admin() {
         >
           Criar Missão
         </button>
+
+        {missoes.length > 0 && (
+          <div className="mt-12">
+            <h2 className="text-xl font-bold mb-4 text-center">
+              Missões Criadas
+            </h2>
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200 rounded-lg">
+                <thead className="bg-[#FEF7EC] text-[#394C97]">
+                  <tr>
+                    <th className="py-2 px-4 border-b text-left">Título</th>
+                    <th className="py-2 px-4 border-b text-left">Pontos</th>
+                    <th className="py-2 px-4 border-b text-left">Etapas</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {missoes.map((missao) => (
+                    <tr key={missao.id} className="hover:bg-gray-50">
+                      <td className="py-2 px-4 border-b">{missao.title}</td>
+                      <td className="py-2 px-4 border-b">{missao.points}</td>
+                      <td className="py-2 px-4 border-b">
+                        {missao.steps?.length || 0}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

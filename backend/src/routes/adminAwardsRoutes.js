@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const awardsController = require('../controllers/awardsController');
+const awardsController = require('../controllers/adminAwardsController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
 // Protege todas as rotas

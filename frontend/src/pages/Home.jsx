@@ -1,7 +1,10 @@
+import { useState } from "react";
 import Header from "../components/Header";
 import Navbar from "../components/Navbar";
 import HomeCard from "../components/HomeCard";
 import bannerImg from "../assets/airport.jpg";
+import logoIcarir from "../assets/logo_icarir.png";
+import api from "../api/api"; // Axios configurado
 
 // Imagens dos destinos
 import parisImg from "../assets/destinations/paris.jpg";
@@ -33,6 +36,28 @@ const destinations = [
 ];
 
 export default function Home() {
+  const [loadingCity, setLoadingCity] = useState(null);
+
+  const iniciarMissao = async (city) => {
+    setLoadingCity(city);
+    try {
+      const res = await api.get(`/missions/by-destination/${city}`);
+      const missao = res.data[0];
+
+      if (missao) {
+        alert(`Missão iniciada: ${missao.title} (+${missao.pontos} pontos)`);
+        // Aqui você pode redirecionar ou atualizar o estado global
+      } else {
+        alert("Nenhuma missão disponível para esse destino.");
+      }
+    } catch (err) {
+      console.error("Erro ao iniciar missão:", err);
+      alert("Erro ao conectar com o servidor.");
+    } finally {
+      setLoadingCity(null);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white text-black transition-colors duration-300">
       <Navbar />
@@ -58,14 +83,27 @@ export default function Home() {
         </div>
       </div>
 
-      {/* Cards de destinos */}
-      <section className="max-w-[1800px] mx-auto py-[200px] px-6">
-        <h2 className="text-3xl font-bold text-blue mb-6">
+      {/* Cards de destinos com imagem de fundo */}
+      <section className="relative max-w-[1800px] mx-auto py-[200px] px-6">
+        {/* Imagem de fundo atrás dos cards */}
+        <img
+          src={logoIcarir}
+          alt="Logo Icarir"
+          className="absolute inset-0 w-full h-full object-contain opacity-10 pointer-events-none"
+        />
+
+        <h2 className="text-3xl font-bold text-blue mb-6 relative z-10">
           Choose Your Destination
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 relative z-10">
           {destinations.map((dest) => (
-            <HomeCard key={dest.id} city={dest.city} image={dest.image} />
+            <HomeCard
+              key={dest.id}
+              city={dest.city}
+              image={dest.image}
+              onStartMission={iniciarMissao}
+              loading={loadingCity === dest.city}
+            />
           ))}
         </div>
       </section>
