@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
 import FeedbackBar from "../components/Feedbacks/FeedbackBar";
-import api from "../api/api"; // Assumindo que você tem um Axios configurado
-import { useUser } from "../hooks/useUser"; // Hook para pegar o usuário logado
+import api from "../api/api";
 
 export default function Missions() {
-  const { user } = useUser(); // user.id deve estar disponível
+  const [user, setUser] = useState(null);
   const [missoes, setMissoes] = useState([]);
   const [selectedMission, setSelectedMission] = useState(null);
   const [activeTab, setActiveTab] = useState("ativas");
@@ -12,11 +11,15 @@ export default function Missions() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function loadMissions() {
+    async function fetchUserAndMissions() {
       try {
+        const userRes = await api.get("/users/me");
+        const userData = userRes.data;
+        setUser(userData);
+
         const [missionsRes, progressRes] = await Promise.all([
           api.get("/missions"),
-          api.get(`/user/${user.id}/missions`),
+          api.get(`/user/${userData.id}/missions`)
         ]);
 
         const missions = missionsRes.data;
@@ -37,8 +40,8 @@ export default function Missions() {
       }
     }
 
-    if (user?.id) loadMissions();
-  }, [user]);
+    fetchUserAndMissions();
+  }, []);
 
   const handleCompleteStep = async (stepId) => {
     try {
@@ -68,7 +71,6 @@ export default function Missions() {
       );
       setSelectedMission(updatedSelected);
 
-      // Se missão estiver completa, envia pontos
       if (
         updatedSelected.steps.every((step) =>
           step.completedBy.includes(user.id)
