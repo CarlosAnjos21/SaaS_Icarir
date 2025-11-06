@@ -9,6 +9,7 @@ const authMiddleware = require('../middlewares/authMiddleware');
  * @access  Privado
  */
 router.put('/me', authMiddleware, userController.updateMyProfile);
+router.get('/me', authMiddleware, userController.getMyProfile); //carlos adicionou
 
 /**
  * @route   GET /api/users/:id/profile
