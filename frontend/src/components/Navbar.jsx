@@ -4,22 +4,42 @@ import {
   BellIcon,
   UserCircleIcon,
 } from "@heroicons/react/24/outline";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import logoIcarir from "../assets/símbolo-icarir.png";
 
 export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolledEnough, setScrolledEnough] = useState(false);
   const location = useLocation();
   const isHome = location.pathname === "/";
 
-  return (
-    <nav
-      className={`w-full px-6 py-4 flex justify-between items-center fixed top-0 left-0 z-50 ${
-        isHome ? "bg-transparent text-[#FEF7EC]" : "bg-[#394C97] text-[#FEF7EC]"
-      }`}
-    >
-      <h1 className="text-xl font-bold text-orange">Gamification</h1>
+  useEffect(() => {
+    const handleScroll = () => {
+      const scrollY = window.scrollY;
+      setScrolledEnough(scrollY > 700);
+    };
 
-      <ul className="flex gap-6 text-sm">
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
+  const isTransparent = isHome && !scrolledEnough;
+
+  const navbarClasses = `w-full px-8 py-3 flex justify-between items-center fixed top-0 left-0 z-50 backdrop-blur-md transition-all duration-500 ${
+    isTransparent ? "bg-transparent text-white" : "bg-white text-[#394C97] shadow-md"
+  }`;
+
+  return (
+    <nav className={navbarClasses}>
+      <Link to="/" className="flex items-center gap-2">
+        <img
+          src={logoIcarir}
+          alt="Logo ICARIR"
+          className="h-10 w-auto transition-transform duration-300 hover:scale-105"
+        />
+      </Link>
+
+      <ul className="flex gap-8 text-sm font-medium tracking-wide">
         {[
           { name: "Home", path: "/" },
           { name: "Register", path: "/register" },
@@ -31,9 +51,9 @@ export default function Navbar() {
           <li key={index} className="relative group">
             <Link
               to={item.path}
-              className={`hover:text-orange transition duration-300 ${
-                isHome ? "text-[#FEF7EC]" : "text-[#FEF7EC]"
-              }`}
+              className={`transition duration-300 ${
+                isTransparent ? "text-white" : "text-[#394C97]"
+              } hover:text-orange`}
             >
               {item.name}
               <span className="absolute left-0 -bottom-1 w-full h-[2px] bg-orange scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300"></span>
@@ -42,48 +62,40 @@ export default function Navbar() {
         ))}
       </ul>
 
-      <div className="relative flex items-center gap-4">
-        <button className="hover:text-orange transition">
+      <div className="relative flex items-center gap-5">
+        <button className="hover:text-orange transition focus:outline-none focus:ring-0 focus:shadow-none">
           <MagnifyingGlassIcon className="h-6 w-6" />
         </button>
-        <button className="hover:text-orange transition">
+        <button className="hover:text-orange transition focus:outline-none focus:ring-0 focus:shadow-none">
           <BellIcon className="h-6 w-6" />
         </button>
 
         <div className="relative">
           <button
             onClick={() => setMenuOpen(!menuOpen)}
-            className="hover:text-orange transition"
+            className="hover:text-orange transition focus:outline-none focus:ring-0 focus:shadow-none"
           >
             <UserCircleIcon className="h-6 w-6" />
           </button>
 
           {menuOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded shadow-lg z-50">
-              <Link
-                to="/profile"
-                className="block px-4 py-2 hover:bg-gray-100 transition"
-              >
-                Perfil
-              </Link>
-              <Link
-                to="/dashboard"
-                className="block px-4 py-2 hover:bg-gray-100 transition"
-              >
-                Painel
-              </Link>
-              <Link
-                to="/trips"
-                className="block px-4 py-2 hover:bg-gray-100 transition"
-              >
-                Viagens
-              </Link>
-              <Link
-                to="/logout"
-                className="block px-4 py-2 hover:bg-gray-100 text-red-500 transition"
-              >
-                Sair da Conta
-              </Link>
+            <div className="absolute right-0 mt-3 w-52 bg-white text-[#394C97] rounded-lg shadow-xl overflow-hidden animate-fade-in z-50">
+              {[
+                { name: "Perfil", path: "/profile" },
+                { name: "Painel", path: "/dashboard" },
+                { name: "Viagens", path: "/trips" },
+                { name: "Sair da Conta", path: "/logout", danger: true },
+              ].map((item, index) => (
+                <Link
+                  key={index}
+                  to={item.path}
+                  className={`block px-5 py-3 text-sm hover:bg-gray-100 transition ${
+                    item.danger ? "text-red-500" : ""
+                  }`}
+                >
+                  {item.name}
+                </Link>
+              ))}
             </div>
           )}
         </div>

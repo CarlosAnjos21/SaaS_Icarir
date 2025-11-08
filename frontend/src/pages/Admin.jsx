@@ -1,179 +1,210 @@
-import { useEffect, useState } from "react";
-import { Navigate } from "react-router-dom";
+import { useState } from "react";
 
-export default function Admin() {
-  const [missoes, setMissoes] = useState([]);
-  const [description, setDescription] = useState("");
-  const [pointsEarned, setPointsEarned] = useState("");
-  const [steps, setSteps] = useState([{ id: 1, title: "" }]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+export default function AdminPage() {
+  const [missions, setMissions] = useState([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [newMission, setNewMission] = useState({
+    title: "",
+    steps: [{ description: "", points: 0 }],
+    quiz: null,
+  });
 
-  const token = localStorage.getItem("token");
+  const handleAddStep = () => {
+    setNewMission((prev) => ({
+      ...prev,
+      steps: [...prev.steps, { description: "", points: 0 }],
+    }));
+  };
 
-  // Redireciona se não estiver logado
-  if (!token) return <Navigate to="/login" replace />;
-
-  useEffect (() => {
-    async function loadMissions() {
-      try {
-        const res = await fetch("http://localhost:3001/api/missions", {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-
-        if (!res.ok) {
-          throw new Error("Erro ao carregar missões do backend.");
-        }
-
-        const data = await res.json();
-        setMissoes(data);
-      } catch (err) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    loadMissions();
-  }, [token]);
-
-  const handleSubmit = async () => {
-    const novaMissao = {
-      title: description,
-      points: parseInt(pointsEarned),
-      description,
-      rewards: ["🎖 XP", "🏅 Medalha"],
-      steps: steps.map((step, index) => ({
-        id: index + 1,
-        title: step.title,
-        completedBy: [],
-      })),
-    };
-
-    try {
-      const res = await fetch("http://localhost:3001/api/missions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+  const handleQuizToggle = () => {
+    setShowQuiz(!showQuiz);
+    if (!showQuiz) {
+      setNewMission((prev) => ({
+        ...prev,
+        quiz: {
+          question: "",
+          options: ["", "", "", ""],
+          correctIndex: 0,
         },
-        body: JSON.stringify(novaMissao),
-      });
-
-      if (!res.ok) {
-        throw new Error("Erro ao criar missão.");
-      }
-
-      const created = await res.json();
-      setMissoes((prev) => [...prev, created]);
-      setDescription("");
-      setPointsEarned("");
-      setSteps([{ id: 1, title: "" }]);
-    } catch (err) {
-      setError(err.message);
+      }));
+    } else {
+      setNewMission((prev) => ({ ...prev, quiz: null }));
     }
   };
-
-  const handleStepChange = (index, value) => {
-    const updated = [...steps];
-    updated[index].title = value;
-    setSteps(updated);
-  };
-
-  const addStep = () => {
-    setSteps((prev) => [...prev, { id: prev.length + 1, title: "" }]);
-  };
-
-  if (loading)
-    return (
-      <p className="text-center mt-20 text-[#394C97]">Carregando dados...</p>
-    );
-  if (error)
-    return <p className="text-center mt-20 text-red-600">Erro: {error}</p>;
 
   return (
-    <div className="min-h-screen bg-[#FEF7EC] text-[#394C97] px-6 py-12">
-      <div className="max-w-xl mx-auto bg-white rounded-xl shadow-md p-6">
-        <h1 className="text-3xl font-bold mb-6 text-center">Criar Missão</h1>
-
-        <label className="block mb-2 font-semibold">Descrição da Missão:</label>
-        <input
-          type="text"
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          className="border p-2 w-full mb-4 rounded"
-          placeholder="Ex: Explorar o laboratório secreto"
-        />
-
-        <label className="block mb-2 font-semibold">Pontos:</label>
-        <input
-          type="number"
-          value={pointsEarned}
-          onChange={(e) => setPointsEarned(e.target.value)}
-          className="border p-2 w-full mb-4 rounded"
-          placeholder="Ex: 100"
-        />
-
-        <label className="block mb-2 font-semibold">Etapas da Missão:</label>
-        <div className="space-y-3 mb-6">
-          {steps.map((step, index) => (
-            <input
-              key={step.id}
-              type="text"
-              value={step.title}
-              onChange={(e) => handleStepChange(index, e.target.value)}
-              className="border p-2 w-full rounded"
-              placeholder={`Etapa ${index + 1}`}
-            />
-          ))}
-          <button
-            type="button"
-            onClick={addStep}
-            className="text-sm text-[#FE5900] hover:underline"
-          >
-            + Adicionar Etapa
-          </button>
-        </div>
-
+    <div className="p-8 max-w-6xl mx-auto pt-[100px]">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-[#394C97]">Administração de Missões</h1>
         <button
-          onClick={handleSubmit}
-          className="w-full py-3 bg-[#FE5900] text-white font-semibold rounded-lg hover:bg-orange-600 transition"
+          onClick={() => setShowCreateModal(true)}
+          className="bg-orange text-white px-4 py-2 rounded hover:bg-orange-600 transition"
         >
           Criar Missão
         </button>
+      </div>
 
-        {missoes.length > 0 && (
-          <div className="mt-12">
-            <h2 className="text-xl font-bold mb-4 text-center">
-              Missões Criadas
-            </h2>
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border border-gray-200 rounded-lg">
-                <thead className="bg-[#FEF7EC] text-[#394C97]">
-                  <tr>
-                    <th className="py-2 px-4 border-b text-left">Título</th>
-                    <th className="py-2 px-4 border-b text-left">Pontos</th>
-                    <th className="py-2 px-4 border-b text-left">Etapas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {missoes.map((missao) => (
-                    <tr key={missao.id} className="hover:bg-gray-50">
-                      <td className="py-2 px-4 border-b">{missao.title}</td>
-                      <td className="py-2 px-4 border-b">{missao.points}</td>
-                      <td className="py-2 px-4 border-b">
-                        {missao.steps?.length || 0}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+      {/* Lista de Missões */}
+      <div className="grid gap-4">
+        {missions.map((mission, index) => (
+          <div key={index} className="bg-white shadow p-4 rounded border">
+            <h2 className="text-xl font-semibold">{mission.title}</h2>
+            <ul className="mt-2 text-sm text-gray-700">
+              {mission.steps.map((step, i) => (
+                <li key={i}>Etapa {i + 1}: {step.description} ({step.points} pts)</li>
+              ))}
+            </ul>
+            {mission.quiz && (
+              <div className="mt-2 text-sm text-blue-600">
+                Quiz: {mission.quiz.question}
+              </div>
+            )}
+            <div className="mt-4 flex gap-3">
+              <button className="text-blue-600 hover:underline">Editar</button>
+              <button className="text-red-500 hover:underline">Excluir</button>
             </div>
           </div>
-        )}
+        ))}
       </div>
+
+      {/* Modal de Criação */}
+      {showCreateModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg w-full max-w-xl shadow-xl relative">
+            <h2 className="text-xl font-bold mb-4">Nova Missão</h2>
+
+            <input
+              type="text"
+              placeholder="Nome da missão"
+              className="w-full border p-2 mb-4"
+              value={newMission.title}
+              onChange={(e) =>
+                setNewMission({ ...newMission, title: e.target.value })
+              }
+            />
+
+            <div className="space-y-3 mb-4">
+              {newMission.steps.map((step, i) => (
+                <div key={i} className="flex gap-2">
+                  <input
+                    type="text"
+                    placeholder={`Etapa ${i + 1}`}
+                    className="flex-1 border p-2"
+                    value={step.description}
+                    onChange={(e) => {
+                      const updated = [...newMission.steps];
+                      updated[i].description = e.target.value;
+                      setNewMission({ ...newMission, steps: updated });
+                    }}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Pontos"
+                    className="w-24 border p-2"
+                    value={step.points}
+                    onChange={(e) => {
+                      const updated = [...newMission.steps];
+                      updated[i].points = Number(e.target.value);
+                      setNewMission({ ...newMission, steps: updated });
+                    }}
+                  />
+                </div>
+              ))}
+              <button
+                onClick={handleAddStep}
+                className="text-sm text-blue-600 hover:underline"
+              >
+                + Adicionar Etapa
+              </button>
+            </div>
+
+            {/* Quiz Toggle */}
+            <div className="mb-4">
+              <label className="flex items-center gap-2">
+                <input type="checkbox" checked={showQuiz} onChange={handleQuizToggle} />
+                Incluir Quiz
+              </label>
+            </div>
+
+            {/* Quiz Form */}
+            {showQuiz && newMission.quiz && (
+              <div className="space-y-3 border-t pt-4">
+                <input
+                  type="text"
+                  placeholder="Pergunta do Quiz"
+                  className="w-full border p-2"
+                  value={newMission.quiz.question}
+                  onChange={(e) =>
+                    setNewMission({
+                      ...newMission,
+                      quiz: { ...newMission.quiz, question: e.target.value },
+                    })
+                  }
+                />
+                {newMission.quiz.options.map((opt, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      name="correct"
+                      checked={newMission.quiz.correctIndex === i}
+                      onChange={() =>
+                        setNewMission({
+                          ...newMission,
+                          quiz: { ...newMission.quiz, correctIndex: i },
+                        })
+                      }
+                    />
+                    <input
+                      type="text"
+                      placeholder={`Opção ${i + 1}`}
+                      className="flex-1 border p-2"
+                      value={opt}
+                      onChange={(e) => {
+                        const updated = [...newMission.quiz.options];
+                        updated[i] = e.target.value;
+                        setNewMission({
+                          ...newMission,
+                          quiz: { ...newMission.quiz, options: updated },
+                        });
+                      }}
+                    />
+                  </div>
+                ))}
+                {newMission.quiz.options.length < 5 && (
+                  <button
+                    onClick={() =>
+                      setNewMission({
+                        ...newMission,
+                        quiz: {
+                          ...newMission.quiz,
+                          options: [...newMission.quiz.options, ""],
+                        },
+                      })
+                    }
+                    className="text-sm text-blue-600 hover:underline"
+                  >
+                    + Adicionar Opção
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* Ações */}
+            <div className="mt-6 flex justify-end gap-4">
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="text-gray-600 hover:underline"
+              >
+                Cancelar
+              </button>
+              <button className="bg-[#394C97] text-white px-4 py-2 rounded hover:bg-[#2f3f7a]">
+                Salvar Missão
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

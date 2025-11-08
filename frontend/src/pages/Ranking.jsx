@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import api from "../api/api";
+import FeedbackBar from "../components/Feedbacks/FeedbackBar";
 
 export default function Ranking() {
   const [rankingData, setRankingData] = useState([]);
@@ -118,6 +119,8 @@ export default function Ranking() {
           </span>
         </p>
       </section>
+      {/* Barra de Feedback flutuante */}
+      <FeedbackBar />
     </div>
   );
 }
