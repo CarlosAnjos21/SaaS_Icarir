@@ -1,5 +1,8 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
+// Prisma schema for Umbrella Corporation backend (PostgreSQL)
+// Pre-reqs:
+// - Set DATABASE_URL in prisma/.env
+// - To create from these models: npx prisma migrate dev --name init
+// - To introspect an existing DB instead: npx prisma db pull
 
 generator client {
   provider = "prisma-client-js"
@@ -10,255 +13,380 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model Usuarios {
-  id                 Int                  @id @default(autoincrement())
-  nome               String               @db.VarChar(100)
-  email              String               @unique @db.VarChar(100)
-  senha              String               @db.VarChar(255)
-  empresa            String?              @db.VarChar(100)
-  role               String               @default("user") @db.VarChar(50)
-  pontos             Int                  @default(0)
-  foto_url           String?              @db.VarChar(255)
-  ativo              Boolean              @default(true)
-  data_criacao       DateTime             @default(now())
-  data_atualizacao   DateTime             @updatedAt
-  perfil             Perfis?
-  missoes            UsuariosMissoes[]
-  tarefas            UsuariosTarefas[]
-  respostas_quiz     RespostasQuizzes[]
-  cards              UsuariosCards[]
-  premiacoes         UsuariosPremiacoes[]
-  logs_pontos        LogsPontos[]
-  tarefas_validadas  UsuariosTarefas[]    @relation("Validador")
-  
+// ==========================
+// Enums (based on CHECKs)
+// ==========================
+
+enum Role {
+  participante
+  admin
+  validador
+}
+
+enum TipoTarefa {
+  administrativa
+  conhecimento
+  engajamento
+  social
+  feedback
+}
+
+enum Dificuldade {
+  facil
+  medio
+  dificil
+}
+
+enum StatusPagamento {
+  pendente
+  pago
+  cancelado
+  reembolsado
+}
+
+enum StatusParticipacao {
+  inscrito
+  confirmado
+  concluido
+  cancelado
+}
+
+enum TipoCard {
+  empresa
+  destino
+  lider
+}
+
+enum Raridade {
+  comum
+  raro
+  epico
+}
+
+enum TipoPremiacao {
+  consultoria
+  gadget
+  certificado
+  outro
+}
+
+enum TipoPergunta {
+  multipla_escolha
+  verdadeiro_falso
+  texto
+}
+
+// ==========================
+// Models
+// ==========================
+
+model Usuario {
+  id               Int              @id @default(autoincrement())
+  nome             String
+  email            String           @unique
+  senha            String
+  empresa          String?
+  role             Role             @default(participante)
+  pontos           Int              @default(0)
+  foto_url         String?
+  ativo            Boolean          @default(true)
+  data_criacao     DateTime         @default(now())
+  data_atualizacao DateTime         @default(now())
+
+  // Relations
+  perfil           Perfil?
+  missoes          UsuarioMissao[]
+  tarefas          UsuarioTarefa[]
+  validacoes       UsuarioTarefa[]  @relation("Validacoes")
+  respostas        RespostaQuiz[]
+  cards            UsuarioCard[]
+  premiacoes       UsuarioPremiacao[]
+  logs             LogsPontos[]     @relation("LogUsuario")
+  validacoesLogs   LogsPontos[]     @relation("LogValidador")
+
   @@map("usuarios")
 }
 
-model Perfis {
-  id              Int       @id @default(autoincrement())
-  usuario_id      Int       @unique
-  curiosidades    String?   @db.Text
-  linkedin_url    String?   @db.VarChar(255)
-  website         String?   @db.VarChar(255)
-  interesses      String?   @db.Text
-  data_nascimento DateTime? @db.Date
-  telefone        String?   @db.VarChar(20)
-  data_criacao    DateTime  @default(now())
-  data_atualizacao DateTime  @updatedAt
-  usuario         Usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+model Perfil {
+  id               Int       @id @default(autoincrement())
+  usuario_id       Int       @unique
+  curiosidades     String?
+  linkedin_url     String?
+  website          String?
+  interesses       String?
+  data_nascimento  DateTime? @db.Date
+  telefone         String?
+  data_criacao     DateTime  @default(now())
+  data_atualizacao DateTime  @default(now())
+
+  // Relations
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
 
   @@map("perfis")
 }
 
-model Missoes {
-  id                 Int               @id @default(autoincrement())
-  titulo             String            @db.VarChar(255)
-  descricao          String?           @db.Text
-  foto_url           String?           @db.VarChar(255)
-  destino            String?           @db.VarChar(255)
-  data_inicio        DateTime          @db.Date
-  data_fim           DateTime          @db.Date
-  preco              Decimal?          @default(0.00) @db.Decimal(8, 2)
+model Missao {
+  id                 Int        @id @default(autoincrement())
+  titulo             String
+  descricao          String?
+  destino            String?
+  data_inicio        DateTime?  @db.Date
+  data_fim           DateTime?  @db.Date
+  preco              Decimal?   @db.Decimal(10, 2)
   vagas_disponiveis  Int?
-  ativo              Boolean           @default(false)
+  ativa              Boolean    @default(true)
   missao_anterior_id Int?
-  data_criacao       DateTime          @default(now())
-  data_atualizacao   DateTime          @updatedAt
-  tarefas            Tarefas[]
-  usuarios           UsuariosMissoes[]
+  data_criacao       DateTime   @default(now())
+  data_atualizacao   DateTime   @default(now())
+
+  // Relations
+  missaoAnterior  Missao?   @relation("MissaoAnterior", fields: [missao_anterior_id], references: [id], onDelete: SetNull)
+  proximasMissoes Missao[]  @relation("MissaoAnterior")
+  tarefas         Tarefa[]
+  usuarios        UsuarioMissao[]
+  logs            LogsPontos[]
 
   @@map("missoes")
 }
 
-model CategoriasTarefas {
-  id        Int       @id @default(autoincrement())
-  nome      String    @db.VarChar(100)
-  descricao String?   @db.Text
-  icone     String?   @db.VarChar(50)
-  ordem     Int       @default(0)
-  tarefas   Tarefas[]
+model CategoriaTarefa {
+  id        Int      @id @default(autoincrement())
+  nome      String
+  descricao String?
+  icone     String?
+  cor       String?
+  ordem     Int      @default(0)
+
+  // Relations
+  tarefas Tarefa[]
 
   @@map("categorias_tarefas")
 }
 
-model Tarefas {
-  id                 Int               @id @default(autoincrement())
+model Tarefa {
+  id                 Int          @id @default(autoincrement())
   missao_id          Int
   categoria_id       Int?
-  titulo             String            @db.VarChar(255)
-  descricao          String?           @db.Text
-  instrucoes         String?           @db.Text
-  pontos             Int
-  tipo               String            @db.VarChar(50)
-  dificuldade        String            @db.VarChar(50)
-  ativo              Boolean           @default(true)
-  ordem              Int               @default(0)
-  requisitos         Json?             @db.JsonB
+  titulo             String
+  descricao          String?
+  instrucoes         String?
+  pontos             Int          @default(0)
+  tipo               TipoTarefa?
+  dificuldade        Dificuldade  @default(facil)
+  ativa              Boolean      @default(true)
+  ordem              Int          @default(0)
+  requisitos         Json?        @db.JsonB
   tarefa_anterior_id Int?
-  data_criacao       DateTime          @default(now())
-  data_atualizacao   DateTime          @updatedAt
-  missao             Missoes           @relation(fields: [missao_id], references: [id], onDelete: Cascade)
-  categoria          CategoriasTarefas? @relation(fields: [categoria_id], references: [id])
-  quizzes            Quizzes[]
-  cards              Cards[]
-  usuarios_tarefas   UsuariosTarefas[]
-  logs_pontos        LogsPontos[]
+  data_criacao       DateTime     @default(now())
+  data_atualizacao   DateTime     @default(now())
+
+  // Relations
+  missao           Missao           @relation(fields: [missao_id], references: [id], onDelete: Cascade)
+  categoria        CategoriaTarefa? @relation(fields: [categoria_id], references: [id])
+  tarefaAnterior   Tarefa?          @relation("TarefaAnterior", fields: [tarefa_anterior_id], references: [id], onDelete: SetNull)
+  proximasTarefas  Tarefa[]        @relation("TarefaAnterior")
+  usuarios         UsuarioTarefa[]
+  quiz             Quiz?
+  cards            Card[]
+  logs             LogsPontos[]
 
   @@map("tarefas")
 }
 
-model UsuariosMissoes {
-  id                   Int       @id @default(autoincrement())
-  usuario_id           Int
-  missao_id            Int
-  valor_pago           Decimal?  @db.Decimal(8, 2)
-  forma_pagamento      String?   @db.VarChar(50)
-  status_pagamento     String?   @db.VarChar(50)
-  codigo_transacao     String?   @db.VarChar(100)
-  data_compra          DateTime? @default(now())
-  status_participacao  String?   @db.VarChar(50)
-  data_criacao         DateTime  @default(now())
-  data_atualizacao     DateTime  @updatedAt
-  usuario              Usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
-  missao               Missoes   @relation(fields: [missao_id], references: [id], onDelete: Cascade)
-  
+model TarefaPadrao {
+  id           Int         @id @default(autoincrement())
+  titulo       String
+  descricao    String?
+  instrucoes   String?
+  pontos       Int         @default(0)
+  tipo         TipoTarefa?
+  dificuldade  Dificuldade @default(facil)
+  ativa        Boolean     @default(true)
+  ordem        Int         @default(0)
+  requisitos   Json?       @db.JsonB
+  data_criacao DateTime    @default(now())
+
+  @@map("tarefas_padrao")
+}
+
+model UsuarioMissao {
+  id                  Int                @id @default(autoincrement())
+  usuario_id          Int
+  missao_id           Int
+  valor_pago          Decimal?           @db.Decimal(10, 2) @default(0.00)
+  forma_pagamento     String?
+  status_pagamento    StatusPagamento    @default(pendente)
+  codigo_transacao    String?
+  data_compra         DateTime           @default(now())
+  status_participacao StatusParticipacao @default(inscrito)
+
+  // Relations
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  missao  Missao  @relation(fields: [missao_id], references: [id], onDelete: Cascade)
+
   @@unique([usuario_id, missao_id])
   @@map("usuarios_missoes")
 }
 
-model UsuariosTarefas {
-  id              Int       @id @default(autoincrement())
-  usuario_id      Int
-  tarefa_id       Int
-  concluida       Boolean   @default(false)
-  pontos_obtidos  Int       @default(0)
-  evidencias      String?   @db.Text
-  data_conclusao  DateTime?
-  tentativas      Int       @default(0)
-  validado_por    Int?
-  data_validacao  DateTime?
-  data_criacao    DateTime  @default(now())
-  data_atualizacao DateTime  @updatedAt
-  usuario         Usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
-  tarefa          Tarefas   @relation(fields: [tarefa_id], references: [id], onDelete: Cascade)
-  validador       Usuarios? @relation("Validador", fields: [validado_por], references: [id], onDelete: SetNull)
+model UsuarioTarefa {
+  id             Int       @id @default(autoincrement())
+  usuario_id     Int
+  tarefa_id      Int
+  concluida      Boolean   @default(false)
+  pontos_obtidos Int       @default(0)
+  evidencias     Json?     @db.JsonB
+  data_conclusao DateTime?
+  tentativas     Int       @default(0)
+  validado_por   Int?
+  data_validacao DateTime?
+  data_criacao   DateTime  @default(now())
+
+  // Relations
+  usuario   Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  tarefa    Tarefa  @relation(fields: [tarefa_id], references: [id], onDelete: Cascade)
+  validador Usuario? @relation("Validacoes", fields: [validado_por], references: [id], onDelete: SetNull)
 
   @@unique([usuario_id, tarefa_id])
   @@map("usuarios_tarefas")
 }
 
-model Quizzes {
-  id            Int              @id @default(autoincrement())
-  tarefa_id     Int?             @unique // Um quiz pode estar ligado a uma única tarefa
-  titulo        String           @db.VarChar(255)
-  descricao     String?          @db.Text
-  imagem_url    String?          @db.VarChar(255)
-  empresa_nome  String?          @db.VarChar(100)
-  ativo         Boolean          @default(false)
-  data_criacao  DateTime         @default(now())
-  data_atualizacao DateTime?     @updatedAt
-  tarefa        Tarefas?         @relation(fields: [tarefa_id], references: [id], onDelete: SetNull)
-  perguntas     PerguntasQuiz[]
+model Quiz {
+  id           Int       @id @default(autoincrement())
+  tarefa_id    Int       @unique
+  titulo       String
+  descricao    String?
+  ativo        Boolean   @default(true)
+  data_criacao DateTime  @default(now())
+
+  // Relations
+  tarefa     Tarefa         @relation(fields: [tarefa_id], references: [id], onDelete: Cascade)
+  perguntas  PerguntaQuiz[]
 
   @@map("quizzes")
 }
 
-model PerguntasQuiz {
-  id            Int                @id @default(autoincrement())
-  quiz_id       Int
-  enunciado     String             @db.Text
-  tipo          String?            @db.VarChar(50)
-  opcoes        Json               @db.JsonB // Ex: [{"text": "A", "isCorrect": true}, ...]
-  explicacao    String?            @db.Text
-  ordem         Int                @default(0)
-  data_criacao  DateTime           @default(now())
-  data_atualizacao DateTime?       @updatedAt
-  quiz          Quizzes            @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
-  respostas     RespostasQuizzes[]
+model PerguntaQuiz {
+  id               Int          @id @default(autoincrement())
+  quiz_id          Int
+  enunciado        String
+  tipo             TipoPergunta @default(multipla_escolha)
+  opcoes           Json?        @db.JsonB
+  resposta_correta String
+  explicacao       String?
+  ordem            Int          @default(0)
+  data_criacao     DateTime     @default(now())
+
+  // Relations
+  quiz      Quiz            @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  respostas RespostaQuiz[]
 
   @@map("perguntas_quiz")
 }
 
-model RespostasQuizzes {
-  id             Int           @id @default(autoincrement())
+model RespostaQuiz {
+  id             Int       @id @default(autoincrement())
   usuario_id     Int
   pergunta_id    Int
-  resposta       String        @db.Text
-  correta        Boolean       @default(false)
-  pontos_obtidos Int           @default(0)
-  data_resposta  DateTime      @default(now())
-  usuario        Usuarios      @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
-  pergunta       PerguntasQuiz @relation(fields: [pergunta_id], references: [id], onDelete: Cascade)
+  resposta       String
+  correta        Boolean   @default(false)
+  pontos_obtidos Int       @default(0)
+  data_resposta  DateTime  @default(now())
+
+  // Relations
+  usuario  Usuario      @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  pergunta PerguntaQuiz @relation(fields: [pergunta_id], references: [id], onDelete: Cascade)
 
   @@map("respostas_quizzes")
 }
 
-model Cards {
-  id            Int             @id @default(autoincrement())
-  tarefa_id     Int
-  titulo        String          @db.VarChar(150)
-  descricao     String?         @db.Text
-  ativo         Boolean         @default(true)
-  data_criacao  DateTime        @default(now())
-  data_atualizacao DateTime?    @updatedAt
-  tarefa        Tarefas         @relation(fields: [tarefa_id], references: [id], onDelete: Cascade)
-  usuarios_cards UsuariosCards[]
+model Card {
+  id               Int        @id @default(autoincrement())
+  titulo           String
+  descricao        String?
+  tipo             TipoCard
+  imagem_url       String?
+  empresa_nome     String?
+  cargo            String?
+  pais             String?
+  cidade           String?
+  curiosidades     String[]
+  tarefa_requerida Int?
+  raridade         Raridade   @default(comum)
+  ativo            Boolean    @default(true)
+  ordem            Int        @default(0)
+  data_criacao     DateTime   @default(now())
+
+  // Relations
+  tarefa   Tarefa?        @relation(fields: [tarefa_requerida], references: [id])
+  usuarios UsuarioCard[]
 
   @@map("cards")
 }
 
-model UsuariosCards {
-  id                Int       @id @default(autoincrement())
-  usuario_id        Int
-  card_id           Int
-  data_desbloqueio  DateTime  @default(now())
-  usuario           Usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
-  card              Cards     @relation(fields: [card_id], references: [id], onDelete: Cascade)
+model UsuarioCard {
+  id               Int      @id @default(autoincrement())
+  usuario_id       Int
+  card_id          Int
+  data_desbloqueio DateTime @default(now())
+
+  // Relations
+  usuario Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  card    Card    @relation(fields: [card_id], references: [id], onDelete: Cascade)
 
   @@unique([usuario_id, card_id])
   @@map("usuarios_cards")
 }
 
-model Premiacoes {
-  id                    Int                  @id @default(autoincrement())
-  titulo                String               @db.VarChar(255)
-  descricao             String?              @db.Text
-  tipo                  String               @db.VarChar(50)
-  posicao_ranking       Int?
-  pontos_necessarios    Int?
-  quantidade_disponivel Int?
-  imagem_url            String?              @db.VarChar(255)
-  ativo                 Boolean              @default(false)
-  data_criacao          DateTime             @default(now())
-  data_atualizacao      DateTime?            @updatedAt
-  usuarios_premiacoes   UsuariosPremiacoes[]
+model Premiacao {
+  id                     Int               @id @default(autoincrement())
+  titulo                 String
+  descricao              String?
+  tipo                   TipoPremiacao
+  posicao_ranking        Int?
+  pontos_necessarios     Int?
+  quantidade_disponivel  Int               @default(1)
+  imagem_url             String?
+  ativo                  Boolean           @default(true)
+  data_criacao           DateTime          @default(now())
+
+  // Relations
+  usuarios UsuarioPremiacao[]
 
   @@map("premiacoes")
 }
 
-model UsuariosPremiacoes {
-  id           Int        @id @default(autoincrement())
-  usuario_id   Int
-  premiacao_id Int
-  data_premiacao DateTime @default(now())
-  entregue     Boolean    @default(false)
-  data_criacao DateTime   @default(now())
-  usuario      Usuarios   @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
-  premiacao    Premiacoes @relation(fields: [premiacao_id], references: [id], onDelete: Cascade)
+model UsuarioPremiacao {
+  id             Int       @id @default(autoincrement())
+  usuario_id     Int
+  premiacao_id   Int
+  data_premiacao DateTime  @default(now())
+  entregue       Boolean   @default(false)
+  data_entrega   DateTime?
 
+  // Relations
+  usuario   Usuario   @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  premiacao Premiacao @relation(fields: [premiacao_id], references: [id], onDelete: Cascade)
+
+  @@unique([usuario_id, premiacao_id])
   @@map("usuarios_premiacoes")
 }
 
 model LogsPontos {
-  id           Int       @id @default(autoincrement())
+  id           Int      @id @default(autoincrement())
   usuario_id   Int
   tarefa_id    Int?
+  missao_id    Int?
+  validador_id Int?
   pontos       Int
-  tipo         String    @db.VarChar(50) // "ganho_tarefa", "ganho_quiz", "resgate_premio"
-  descricao    String?   @db.Text
-  data_criacao DateTime  @default(now())
-  usuario      Usuarios  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
-  tarefa       Tarefas?  @relation(fields: [tarefa_id], references: [id], onDelete: SetNull)
+  tipo         String
+  descricao    String?
+  data_criacao DateTime @default(now())
+
+  // Relations
+  usuario   Usuario @relation("LogUsuario", fields: [usuario_id], references: [id], onDelete: Cascade)
+  tarefa    Tarefa?  @relation(fields: [tarefa_id], references: [id], onDelete: SetNull)
+  missao    Missao?  @relation(fields: [missao_id], references: [id], onDelete: SetNull)
+  validador Usuario? @relation("LogValidador", fields: [validador_id], references: [id], onDelete: SetNull)
 
   @@map("logs_pontos")
 }
