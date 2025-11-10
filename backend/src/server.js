@@ -3,17 +3,20 @@ require("dotenv").config();
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const path = require("path");
+const setupSwagger = require("./swagger");
 
 const app = express();
-
-// ✅ CORS ajustado para Vite (porta 5173)
-app.use(cors({
-  origin: "http://localhost:5173", // porta correta do front-end com Vite
-  credentials: true
-}));
-
 app.use(express.json());
 app.use(cookieParser());
+setupSwagger(app);
+
+// ✅ CORS ajustado para Vite (porta 5173)
+app.use(
+  cors({
+    origin: "http://localhost:5173", // porta correta do front-end com Vite
+    credentials: true,
+  })
+);
 
 // ✅ Rotas da API
 const mainRouter = require("./routes/index");
