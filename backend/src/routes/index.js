@@ -20,9 +20,9 @@ router.use('/admin', adminRoutes);
 const quizRoutes = require('./quizRoutes');
 router.use('/quizzes', quizRoutes);
 
-// Rotas de Premiações (Ver prêmios)
-const awardsRoutes = require('./awardsRoutes');
-router.use('/awards', awardsRoutes);
+// // Rotas de Premiações (Ver prêmios)
+// const awardsRoutes = require('./awardsRoutes');
+// router.use('/awards', awardsRoutes);
 
 // Rota do Ranking
 const rankingRoutes = require('./rankingRoutes');
