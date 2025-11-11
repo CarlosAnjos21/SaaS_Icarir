@@ -4,8 +4,6 @@ const missionController = require('../controllers/missionController');
 const authMiddleware = require('../middlewares/authMiddleware');
 const taskRoutes = require('./taskRoutes');
 
-// 1. Importar as rotas de tarefas
-const taskRoutes = require('./taskRoutes');
 
 // Aplica o middleware de autenticação a TODAS as rotas de missão e sub-rotas
 router.use(authMiddleware);
