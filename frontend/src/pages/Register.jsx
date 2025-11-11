@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import FeedbackBar from "../components/Feedbacks/FeedbackBar";
 
 export default function Register() {
   const [isLogin, setIsLogin] = useState(false);
@@ -155,6 +156,7 @@ export default function Register() {
           </button>
         </p>
       </div>
+      <FeedbackBar />
     </div>
   );
 }
