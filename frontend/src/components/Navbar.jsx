@@ -82,7 +82,7 @@ export default function Navbar() {
             <div className="absolute right-0 mt-3 w-52 bg-white text-[#394C97] rounded-lg shadow-xl overflow-hidden animate-fade-in z-50">
               {[
                 { name: "Perfil", path: "/profile" },
-                { name: "Painel", path: "/dashboard" },
+                { name: "Painel", path: "/carreira" },
                 { name: "Viagens", path: "/trips" },
                 { name: "Sair da Conta", path: "/logout", danger: true },
               ].map((item, index) => (

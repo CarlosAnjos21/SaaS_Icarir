@@ -4,6 +4,8 @@ export default function AdminPage() {
   const [missions, setMissions] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showQuiz, setShowQuiz] = useState(false);
+  const [activeTab, setActiveTab] = useState("missões");
+
   const [newMission, setNewMission] = useState({
     title: "",
     steps: [{ description: "", points: 0 }],
@@ -35,38 +37,72 @@ export default function AdminPage() {
 
   return (
     <div className="p-8 max-w-6xl mx-auto pt-[100px]">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold text-[#394C97]">Administração de Missões</h1>
+      <h1 className="text-3xl font-bold text-[#394C97] mb-6">
+        Administração de Missões
+      </h1>
+
+      {/* Abas de Navegação */}
+      <div className="flex gap-4 border-b mb-6">
+        {["missões", "criar", "estatísticas"].map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`pb-2 px-4 font-medium capitalize ${
+              activeTab === tab
+                ? "border-b-2 border-[#394C97] text-[#394C97]"
+                : "text-gray-500 hover:text-[#394C97]"
+            }`}
+          >
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {/* Conteúdo da Aba Ativa */}
+      {activeTab === "missões" && (
+        <div className="grid gap-4">
+          {missions.length === 0 ? (
+            <p className="text-gray-500">Nenhuma missão criada ainda.</p>
+          ) : (
+            missions.map((mission, index) => (
+              <div key={index} className="bg-white shadow p-4 rounded border">
+                <h2 className="text-xl font-semibold">{mission.title}</h2>
+                <ul className="mt-2 text-sm text-gray-700">
+                  {mission.steps.map((step, i) => (
+                    <li key={i}>
+                      Etapa {i + 1}: {step.description} ({step.points} pts)
+                    </li>
+                  ))}
+                </ul>
+                {mission.quiz && (
+                  <div className="mt-2 text-sm text-blue-600">
+                    Quiz: {mission.quiz.question}
+                  </div>
+                )}
+                <div className="mt-4 flex gap-3">
+                  <button className="text-blue-600 hover:underline">Editar</button>
+                  <button className="text-red-500 hover:underline">Excluir</button>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {activeTab === "criar" && (
         <button
           onClick={() => setShowCreateModal(true)}
           className="bg-orange text-white px-4 py-2 rounded hover:bg-orange-600 transition"
         >
-          Criar Missão
+          Abrir Criador de Missão
         </button>
-      </div>
+      )}
 
-      {/* Lista de Missões */}
-      <div className="grid gap-4">
-        {missions.map((mission, index) => (
-          <div key={index} className="bg-white shadow p-4 rounded border">
-            <h2 className="text-xl font-semibold">{mission.title}</h2>
-            <ul className="mt-2 text-sm text-gray-700">
-              {mission.steps.map((step, i) => (
-                <li key={i}>Etapa {i + 1}: {step.description} ({step.points} pts)</li>
-              ))}
-            </ul>
-            {mission.quiz && (
-              <div className="mt-2 text-sm text-blue-600">
-                Quiz: {mission.quiz.question}
-              </div>
-            )}
-            <div className="mt-4 flex gap-3">
-              <button className="text-blue-600 hover:underline">Editar</button>
-              <button className="text-red-500 hover:underline">Excluir</button>
-            </div>
-          </div>
-        ))}
-      </div>
+      {activeTab === "estatísticas" && (
+        <div className="text-gray-600">
+          <p>📊 Em breve: painel com estatísticas das missões e desempenho dos usuários.</p>
+        </div>
+      )}
 
       {/* Modal de Criação */}
       {showCreateModal && (

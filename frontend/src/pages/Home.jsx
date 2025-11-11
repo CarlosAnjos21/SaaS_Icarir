@@ -20,6 +20,8 @@ import bangkokImg from "../assets/destinations/bangkok.jpg";
 import barcelonaImg from "../assets/destinations/barcelona.jpg";
 import torontoImg from "../assets/destinations/toronto.jpg";
 
+import FeedbackBar from "../components/Feedbacks/FeedbackBar";
+
 const destinations = [
   { id: 1, city: "Paris", image: parisImg },
   { id: 2, city: "Tokyo", image: tokyoImg },
@@ -112,6 +114,7 @@ export default function Home() {
           ))}
         </div>
       </section>
+      <FeedbackBar />
     </div>
   );
 }
