@@ -37,3 +37,153 @@ router.delete('/:missionId', adminMissionController.softDeleteMission);
 
 
 module.exports = router;
+
+/**
+ * @swagger
+ * tags:
+ *   name: Admin - Missões
+ *   description: Rotas administrativas para gerenciamento de missões
+ */
+
+/**
+ * @swagger
+ * /admin/missions:
+ *   post:
+ *     summary: Cria uma nova missão
+ *     tags: [Admin - Missões]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               titulo:
+ *                 type: string
+ *                 example: "Missão: Concluir primeiro quiz"
+ *               descricao:
+ *                 type: string
+ *                 example: "Responda o primeiro quiz corretamente para completar esta missão."
+ *               pontuacao:
+ *                 type: integer
+ *                 example: 100
+ *               ativa:
+ *                 type: boolean
+ *                 example: true
+ *     responses:
+ *       201:
+ *         description: Missão criada com sucesso
+ *       400:
+ *         description: Dados inválidos
+ *       401:
+ *         description: Não autorizado
+ *       500:
+ *         description: Erro interno do servidor
+ *
+ *   get:
+ *     summary: Lista todas as missões
+ *     tags: [Admin - Missões]
+ *     responses:
+ *       200:
+ *         description: Lista de missões retornada com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: array
+ *               items:
+ *                 type: object
+ *                 properties:
+ *                   id:
+ *                     type: integer
+ *                   titulo:
+ *                     type: string
+ *                   descricao:
+ *                     type: string
+ *                   pontuacao:
+ *                     type: integer
+ *                   ativa:
+ *                     type: boolean
+ *       401:
+ *         description: Não autorizado
+ *       500:
+ *         description: Erro interno do servidor
+ */
+
+/**
+ * @swagger
+ * /admin/missions/{missionId}:
+ *   get:
+ *     summary: Busca uma missão pelo ID
+ *     tags: [Admin - Missões]
+ *     parameters:
+ *       - in: path
+ *         name: missionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID da missão
+ *     responses:
+ *       200:
+ *         description: Missão encontrada
+ *       404:
+ *         description: Missão não encontrada
+ *       401:
+ *         description: Não autorizado
+ *
+ *   put:
+ *     summary: Atualiza uma missão existente
+ *     tags: [Admin - Missões]
+ *     parameters:
+ *       - in: path
+ *         name: missionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID da missão
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               titulo:
+ *                 type: string
+ *                 example: "Missão Atualizada"
+ *               descricao:
+ *                 type: string
+ *                 example: "Nova descrição da missão"
+ *               pontuacao:
+ *                 type: integer
+ *                 example: 150
+ *               ativa:
+ *                 type: boolean
+ *                 example: true
+ *     responses:
+ *       200:
+ *         description: Missão atualizada com sucesso
+ *       400:
+ *         description: Dados inválidos
+ *       404:
+ *         description: Missão não encontrada
+ *       401:
+ *         description: Não autorizado
+ *
+ *   delete:
+ *     summary: Desativa (soft delete) uma missão
+ *     tags: [Admin - Missões]
+ *     parameters:
+ *       - in: path
+ *         name: missionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID da missão
+ *     responses:
+ *       200:
+ *         description: Missão desativada com sucesso
+ *       404:
+ *         description: Missão não encontrada
+ *       401:
+ *         description: Não autorizado
+ */

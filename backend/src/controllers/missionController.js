@@ -158,7 +158,4 @@ module.exports = {
   getMissionById,
   joinMission,
 };
-<<<<<<< HEAD
-=======
 
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121

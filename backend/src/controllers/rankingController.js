@@ -1,9 +1,5 @@
 // Importa o Prisma Client
-<<<<<<< HEAD
-const prisma = require('../config/prismaClient');
-=======
 const prisma = require("../config/prismaClient");
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
 
 /**
  * @route   GET /api/ranking
@@ -12,14 +8,8 @@ const prisma = require("../config/prismaClient");
  */
 const getGlobalRanking = async (req, res) => {
   try {
-<<<<<<< HEAD
-    // Busca o ranking usando o Prisma, que é muito mais legível
-    const ranking = await prisma.usuarios.findMany({
-      // WHERE ativo = true AND role = 'user'
-=======
     // Busca usuários ativos com role 'user'
     const usuarios = await prisma.Usuarios.findMany({
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
       where: {
         ativo: true,
         role: "user",
@@ -36,11 +26,6 @@ const getGlobalRanking = async (req, res) => {
       ],
       take: 100,
     });
-<<<<<<< HEAD
-    
-    res.json(ranking);
-=======
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
 
     // Gera as iniciais dinamicamente (caso não estejam salvas no banco)
     const ranking = usuarios.map((user) => {
