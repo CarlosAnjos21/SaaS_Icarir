@@ -10,6 +10,9 @@ import Profile from "./pages/Profile";
 import Ranking from "./pages/Ranking";
 import Trips from "./pages/Trips";
 import Logout from "./pages/Logout";
+import Login from "./components/Login";
+import CareerPanel from "./pages/CareerPanel";
+
 
 export default function App() {
   return (
@@ -18,7 +21,6 @@ export default function App() {
         <Navbar />
         <Routes>
           <Route path="/" element={<Home />} />
-          <Route path="/admin" element={<Admin />} />
           <Route path="/register" element={<Register />} />
           <Route path="/feedbacks" element={<Feedbacks />} />
           <Route path="/missions" element={<Missions />} />
@@ -27,6 +29,11 @@ export default function App() {
           <Route path="/ranking" element={<Ranking />} />
           <Route path="/trips" element={<Trips />} />
           <Route path="/logout" element={<Logout />} />
+          <Route path="/admin" element={<Admin />} />
+          <Route path="/login" element={<Login />} />
+
+          {/* Novas rotas */}
+          <Route path="/carreira" element={<CareerPanel />} />
         </Routes>
       </div>
     </Router>

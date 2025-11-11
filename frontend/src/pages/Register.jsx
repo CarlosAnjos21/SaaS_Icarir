@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import FeedbackBar from "../components/Feedbacks/FeedbackBar";
 
 export default function Register() {
   const [isLogin, setIsLogin] = useState(false);
@@ -20,11 +21,8 @@ export default function Register() {
     setSuccess("");
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
-    const clients = JSON.parse(localStorage.getItem("clients") || "[]");
 
     if (!isLogin) {
       if (form.password !== form.confirmPassword) {
@@ -32,47 +30,54 @@ export default function Register() {
         return;
       }
 
-      const userExists = users.find((u) => u.email === form.email);
-      if (userExists) {
-        setError("Este e-mail já está cadastrado.");
-        return;
+      try {
+        const res = await fetch("http://localhost:3001/api/auth/register", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            nome: form.name,
+            email: form.email,
+            senha: form.password,
+            codigo_empresa: "empresa123", // você pode tornar isso dinâmico se quiser
+          }),
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          setSuccess("Conta criada com sucesso! Agora você pode entrar.");
+          setForm({ name: "", email: "", password: "", confirmPassword: "" });
+          setIsLogin(true);
+        } else {
+          setError(data.error || "Erro ao cadastrar.");
+        }
+      } catch (err) {
+        setError("Erro de conexão com o servidor.");
       }
-
-      const newUser = {
-        id: Date.now(),
-        name: form.name,
-        email: form.email,
-        password: form.password,
-      };
-
-      const newClient = {
-        id: newUser.id,
-        name: newUser.name,
-        initials: form.name
-          .split(" ")
-          .map((n) => n[0])
-          .join("")
-          .toUpperCase(),
-      };
-
-      localStorage.setItem("users", JSON.stringify([...users, newUser]));
-      localStorage.setItem("clients", JSON.stringify([...clients, newClient]));
-
-      setSuccess("Conta criada com sucesso! Agora você pode entrar.");
-      setForm({ name: "", email: "", password: "", confirmPassword: "" });
-      setIsLogin(true);
     } else {
-      const user = users.find(
-        (u) => u.email === form.email && u.password === form.password
-      );
+      try {
+        const res = await fetch("http://localhost:3001/api/auth/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            email: form.email,
+            senha: form.password,
+          }),
+        });
 
-      if (!user) {
-        setError("E-mail ou senha inválidos.");
-        return;
+        const data = await res.json();
+        if (res.ok) {
+          localStorage.setItem("token", data.accessToken);
+          navigate("/profile");
+        } else {
+          setError(data.error || "E-mail ou senha inválidos.");
+        }
+      } catch (err) {
+        setError("Erro de conexão com o servidor.");
       }
-
-      localStorage.setItem("loggedUser", JSON.stringify(user));
-      navigate("/profile"); // Redireciona para a página de perfil
     }
   };
 
@@ -151,6 +156,7 @@ export default function Register() {
           </button>
         </p>
       </div>
+      <FeedbackBar />
     </div>
   );
 }

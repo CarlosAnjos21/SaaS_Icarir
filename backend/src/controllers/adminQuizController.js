@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 // Importa o Prisma Client
 const prisma = require('../config/prismaClient');
 const { Prisma } = require('@prisma/client'); // Para tratamento de erro
@@ -12,51 +13,80 @@ const createQuiz = async (req, res) => {
   const { tarefa_id, titulo, descricao, imagem_url, empresa_nome, ativo } = req.body;
 
   // De acordo com o schema, apenas 'titulo' é obrigatório
+=======
+// src/controllers/adminQuizController.js
+const prisma = require('../config/prismaClient');
+const { Prisma } = require('@prisma/client');
+
+/**
+ * @route   POST /api/admin/quizzes
+ * @desc    Criar um novo quiz
+ * @access  Admin
+ */
+const createQuiz = async (req, res) => {
+  const { titulo, descricao, ativo } = req.body;
+
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
   if (!titulo) {
-    return res.status(400).json({ error: 'O campo "titulo" é obrigatório.' });
+    return res.status(400).json({ error: 'O título do quiz é obrigatório.' });
   }
 
   try {
-    const newQuiz = await prisma.quizzes.create({
+    const novoQuiz = await prisma.quiz.create({
       data: {
-        tarefa_id: tarefa_id ? parseInt(tarefa_id, 10) : null,
-        titulo: titulo,
-        descricao: descricao || null,
-        imagem_url: imagem_url || null,
-        empresa_nome: empresa_nome || null,
-        ativo: ativo !== undefined ? ativo : true // Default para true
-      }
+        titulo,
+        descricao: descricao || '',
+        ativo: ativo ?? true,
+      },
     });
-    res.status(201).json({ message: 'Quiz criado com sucesso!', quiz: newQuiz });
 
+    res.status(201).json({
+      message: 'Quiz criado com sucesso!',
+      quiz: novoQuiz,
+    });
   } catch (error) {
-    // Erro de FK (tarefa_id não existe) ou erro de registro único
-    if (error instanceof Prisma.PrismaClientKnownRequestError && (error.code === 'P2003' || error.code === 'P2002')) {
-      return res.status(404).json({ error: 'A tarefa (tarefa_id) especificada não existe ou já está associada a outro quiz.' });
-    }
     console.error('Erro ao criar quiz:', error);
+<<<<<<< HEAD
     res.status(500).json({ error: 'Erro interno do servidor.' });
+=======
+    res.status(500).json({ error: 'Erro interno ao criar quiz.' });
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
   }
 };
 
 /**
  * @route   GET /api/admin/quizzes
+<<<<<<< HEAD
  * @desc    (Admin) Listar todos os quizzes
  */
 const getAllQuizzes = async (req, res) => {
   try {
     const quizzes = await prisma.quizzes.findMany({
       orderBy: { data_criacao: 'desc' }
+=======
+ * @desc    Listar todos os quizzes
+ * @access  Admin
+ */
+const getAllQuizzes = async (req, res) => {
+  try {
+    const quizzes = await prisma.quiz.findMany({
+      include: {
+        perguntas: true,
+      },
+      orderBy: { id: 'asc' },
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
     });
+
     res.json(quizzes);
   } catch (error) {
     console.error('Erro ao buscar quizzes:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
+    res.status(500).json({ error: 'Erro interno ao buscar quizzes.' });
   }
 };
 
 /**
  * @route   GET /api/admin/quizzes/:quizId
+<<<<<<< HEAD
  * @desc    (Admin) Buscar um quiz específico (e suas perguntas)
  */
 const getQuizById = async (req, res) => {
@@ -65,31 +95,43 @@ const getQuizById = async (req, res) => {
     if (isNaN(quizId)) {
       return res.status(400).json({ error: 'ID de Quiz inválido.' });
     }
+=======
+ * @desc    Buscar quiz por ID
+ * @access  Admin
+ */
+const getQuizById = async (req, res) => {
+  const quizId = parseInt(req.params.quizId, 10);
 
-    // Busca o Quiz e suas Perguntas em uma única chamada
-    const quiz = await prisma.quizzes.findUnique({
+  if (isNaN(quizId)) {
+    return res.status(400).json({ error: 'ID de quiz inválido.' });
+  }
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
+
+  try {
+    const quiz = await prisma.quiz.findUnique({
       where: { id: quizId },
-      include: {
-        perguntas: { // Substitui a segunda query
-          orderBy: { ordem: 'asc' }
-        }
-      }
+      include: { perguntas: true },
     });
 
     if (!quiz) {
       return res.status(404).json({ error: 'Quiz não encontrado.' });
     }
+<<<<<<< HEAD
     
     res.json(quiz); // Retorna { ...quiz, perguntas: [...] }
+=======
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
 
+    res.json(quiz);
   } catch (error) {
     console.error('Erro ao buscar quiz por ID:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
+    res.status(500).json({ error: 'Erro interno ao buscar quiz.' });
   }
 };
 
 /**
  * @route   PUT /api/admin/quizzes/:quizId
+<<<<<<< HEAD
  * @desc    (Admin) Atualizar um quiz
  */
 const updateQuiz = async (req, res) => {
@@ -127,11 +169,42 @@ const updateQuiz = async (req, res) => {
     }
     console.error('Erro ao atualizar quiz:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
+=======
+ * @desc    Atualizar quiz
+ * @access  Admin
+ */
+const updateQuiz = async (req, res) => {
+  const quizId = parseInt(req.params.quizId, 10);
+  const { titulo, descricao, ativo } = req.body;
+
+  if (isNaN(quizId)) {
+    return res.status(400).json({ error: 'ID de quiz inválido.' });
+  }
+
+  try {
+    const quizAtualizado = await prisma.quiz.update({
+      where: { id: quizId },
+      data: { titulo, descricao, ativo },
+    });
+
+    res.json({
+      message: 'Quiz atualizado com sucesso!',
+      quiz: quizAtualizado,
+    });
+  } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return res.status(404).json({ error: 'Quiz não encontrado para atualizar.' });
+    }
+
+    console.error('Erro ao atualizar quiz:', error);
+    res.status(500).json({ error: 'Erro interno ao atualizar quiz.' });
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
   }
 };
 
 /**
  * @route   DELETE /api/admin/quizzes/:quizId
+<<<<<<< HEAD
  * @desc    (Admin) Desativar (soft delete) um quiz
  */
 const deleteQuiz = async (req, res) => {
@@ -151,60 +224,84 @@ const deleteQuiz = async (req, res) => {
 
   } catch (error) {
     // Erro se o quiz não for encontrado
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      return res.status(404).json({ error: 'Quiz não encontrado.' });
-    }
-    console.error('Erro ao deletar quiz:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
-  }
-};
-
-
-// --- CRUD DE PERGUNTAS_QUIZ (Aninhado) ---
-
-/**
- * @route   POST /api/admin/quizzes/:quizId/questions
- * @desc    (Admin) Criar uma nova pergunta para um quiz
- * @body    { "enunciado": "...", "tipo": "...", "opcoes": [{"text": "A", "isCorrect": true}, ...] }
+=======
+ * @desc    Deletar (ou desativar) quiz
+ * @access  Admin
  */
-const createQuestionForQuiz = async (req, res) => {
+const deleteQuiz = async (req, res) => {
   const quizId = parseInt(req.params.quizId, 10);
-  if (isNaN(quizId)) {
-    return res.status(400).json({ error: 'ID de Quiz inválido.' });
-  }
-  
-  // Corrigido para alinhar com o schema.prisma (opcoes é um JSON)
-  const { enunciado, tipo, opcoes, explicacao, ordem } = req.body;
 
-  if (!enunciado || !opcoes) {
-    return res.status(400).json({ error: 'Campos "enunciado" e "opcoes" (JSON) são obrigatórios.' });
+  if (isNaN(quizId)) {
+    return res.status(400).json({ error: 'ID de quiz inválido.' });
   }
 
   try {
-    const newQuestion = await prisma.perguntasQuiz.create({
-      data: {
-        quiz_id: quizId,
-        enunciado: enunciado,
-        tipo: tipo || 'single-choice',
-        opcoes: opcoes, // Prisma aceita o JSON diretamente
-        explicacao: explicacao || null,
-        ordem: ordem ? parseInt(ordem, 10) : 0
-      }
-    });
-    res.status(201).json({ message: 'Pergunta criada com sucesso!', question: newQuestion });
+    await prisma.quiz.delete({ where: { id: quizId } });
 
+    res.json({ message: 'Quiz deletado com sucesso!' });
   } catch (error) {
-    // Erro de FK (quiz_id não existe)
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-      return res.status(404).json({ error: 'O quiz (quiz_id) especificado não existe.' });
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return res.status(404).json({ error: 'Quiz não encontrado para deletar.' });
     }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
+    console.error('Erro ao deletar quiz:', error);
+    res.status(500).json({ error: 'Erro interno ao deletar quiz.' });
+  }
+};
+
+/**
+ * @route   POST /api/admin/quizzes/:quizId/questions
+<<<<<<< HEAD
+ * @desc    (Admin) Criar uma nova pergunta para um quiz
+ * @body    { "enunciado": "...", "tipo": "...", "opcoes": [{"text": "A", "isCorrect": true}, ...] }
+=======
+ * @desc    Criar uma nova pergunta para um quiz
+ * @access  Admin
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
+ */
+const createQuestionForQuiz = async (req, res) => {
+  const quizId = parseInt(req.params.quizId, 10);
+  const { enunciado, alternativas, resposta_correta } = req.body;
+
+  if (isNaN(quizId)) {
+    return res.status(400).json({ error: 'ID de quiz inválido.' });
+  }
+
+  if (!enunciado || !Array.isArray(alternativas) || alternativas.length < 2) {
+    return res.status(400).json({ error: 'A pergunta precisa de enunciado e pelo menos duas alternativas.' });
+  }
+
+  try {
+    const novaPergunta = await prisma.perguntas.create({
+      data: {
+        enunciado,
+        alternativas,
+        resposta_correta,
+        quiz_id: quizId,
+      },
+    });
+
+    res.status(201).json({
+      message: 'Pergunta criada com sucesso!',
+      pergunta: novaPergunta,
+    });
+  } catch (error) {
     console.error('Erro ao criar pergunta:', error);
+<<<<<<< HEAD
     res.status(500).json({ error: 'Erro interno do servidor.' });
+=======
+    res.status(500).json({ error: 'Erro interno ao criar pergunta.' });
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
   }
 };
 
 /**
  * @route   GET /api/admin/quizzes/:quizId/questions
+<<<<<<< HEAD
  * @desc    (Admin) Listar todas as perguntas de um quiz
  */
 const getQuestionsForQuiz = async (req, res) => {
@@ -213,23 +310,40 @@ const getQuestionsForQuiz = async (req, res) => {
     if (isNaN(quizId)) {
       return res.status(400).json({ error: 'ID de Quiz inválido.' });
     }
+=======
+ * @desc    Listar perguntas de um quiz
+ * @access  Admin
+ */
+const getQuestionsForQuiz = async (req, res) => {
+  const quizId = parseInt(req.params.quizId, 10);
 
-    // Busca as perguntas. Se o quizId não existir, retorna array vazio.
-    const questions = await prisma.perguntasQuiz.findMany({
+  if (isNaN(quizId)) {
+    return res.status(400).json({ error: 'ID de quiz inválido.' });
+  }
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
+
+  try {
+    const perguntas = await prisma.perguntas.findMany({
       where: { quiz_id: quizId },
-      orderBy: { ordem: 'asc' }
+      orderBy: { id: 'asc' },
     });
+<<<<<<< HEAD
     
     res.json(questions);
     
+=======
+
+    res.json(perguntas);
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
   } catch (error) {
     console.error('Erro ao buscar perguntas:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
+    res.status(500).json({ error: 'Erro interno ao buscar perguntas.' });
   }
 };
 
 /**
  * @route   PUT /api/admin/quizzes/:quizId/questions/:questionId
+<<<<<<< HEAD
  * @desc    (Admin) Atualizar uma pergunta
  */
 const updateQuestion = async (req, res) => {
@@ -257,22 +371,45 @@ const updateQuestion = async (req, res) => {
         explicacao: explicacao,
         ordem: ordem ? parseInt(ordem, 10) : undefined
       }
-    });
-    
-    res.json({ message: 'Pergunta atualizada com sucesso!', question: updatedQuestion });
+=======
+ * @desc    Atualizar pergunta de um quiz
+ * @access  Admin
+ */
+const updateQuestion = async (req, res) => {
+  const questionId = parseInt(req.params.questionId, 10);
+  const { enunciado, alternativas, resposta_correta } = req.body;
 
+  if (isNaN(questionId)) {
+    return res.status(400).json({ error: 'ID de pergunta inválido.' });
+  }
+
+  try {
+    const perguntaAtualizada = await prisma.perguntas.update({
+      where: { id: questionId },
+      data: { enunciado, alternativas, resposta_correta },
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
+    });
+
+    res.json({
+      message: 'Pergunta atualizada com sucesso!',
+      pergunta: perguntaAtualizada,
+    });
   } catch (error) {
-    // Erro se a pergunta não for encontrada
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      return res.status(404).json({ error: 'Pergunta não encontrada ou não pertence a este quiz.' });
+      return res.status(404).json({ error: 'Pergunta não encontrada para atualizar.' });
     }
+<<<<<<< HEAD
+=======
+
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
     console.error('Erro ao atualizar pergunta:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
+    res.status(500).json({ error: 'Erro interno ao atualizar pergunta.' });
   }
 };
 
 /**
  * @route   DELETE /api/admin/quizzes/:quizId/questions/:questionId
+<<<<<<< HEAD
  * @desc    (Admin) Deletar uma pergunta
  */
 const deleteQuestion = async (req, res) => {
@@ -292,29 +429,46 @@ const deleteQuestion = async (req, res) => {
 
   } catch (error) {
     // Erro se a pergunta não for encontrada
+=======
+ * @desc    Deletar pergunta de um quiz
+ * @access  Admin
+ */
+const deleteQuestion = async (req, res) => {
+  const questionId = parseInt(req.params.questionId, 10);
+
+  if (isNaN(questionId)) {
+    return res.status(400).json({ error: 'ID de pergunta inválido.' });
+  }
+
+  try {
+    await prisma.perguntas.delete({ where: { id: questionId } });
+    res.json({ message: 'Pergunta deletada com sucesso!' });
+  } catch (error) {
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      return res.status(404).json({ error: 'Pergunta não encontrada ou não pertence a este quiz.' });
+      return res.status(404).json({ error: 'Pergunta não encontrada para deletar.' });
     }
+<<<<<<< HEAD
     // Erro se a pergunta já tiver respostas (proteção de FK)
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
       return res.status(409).json({ error: 'Não é possível deletar, pois esta pergunta já possui respostas de usuários.' });
     }
+=======
+
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
     console.error('Erro ao deletar pergunta:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
+    res.status(500).json({ error: 'Erro interno ao deletar pergunta.' });
   }
 };
 
-
 module.exports = {
-  // Funções do Quiz
   createQuiz,
   getAllQuizzes,
   getQuizById,
   updateQuiz,
   deleteQuiz,
-  // Funções das Perguntas
   createQuestionForQuiz,
   getQuestionsForQuiz,
   updateQuestion,
-  deleteQuestion
+  deleteQuestion,
 };
