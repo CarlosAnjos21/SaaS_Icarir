@@ -1,26 +1,49 @@
-const express = require('express');
-require('dotenv').config(); // Carrega as variáveis de ambiente
-const cookieParser = require('cookie-parser');
+const express = require("express");
+require("dotenv").config();
+const cookieParser = require("cookie-parser");
+const cors = require("cors");
+const path = require("path");
 
 const app = express();
-app.use(express.json()); // Middleware para ler JSON
+
+// ✅ CORS ajustado para Vite (porta 5173)
+app.use(
+  cors({
+    origin: "http://localhost:5173", // porta correta do front-end com Vite
+    credentials: true,
+  })
+);
+
+app.use(express.json());
 app.use(cookieParser());
 
-// Importa o roteador mestre
-const mainRouter = require('./routes/index');
+// ✅ Rotas da API
+const mainRouter = require("./routes/index");
+app.use("/api", mainRouter);
 
-// Diz ao app para usar o roteador mestre
-// Todas as rotas agora começarão com /api
-app.use('/api', mainRouter);
+// ✅ Redirecionar a raiz para o front-end
+app.get("/", (req, res) => {
+  res.redirect("http://localhost:5173");
 
-// Rota "catch-all" para rotas não encontradas
-app.use((req, res) => {
-  res.status(404).json({ error: 'Rota não encontrada.' });
+  // ✅ Middleware para rotas não encontradas
+  app.use((req, res, next) => {
+    res.status(404).json({ error: "Rota não encontrada." });
+  });
+
+  // ✅ Middleware para rotas não encontradas
+  app.use((req, res, next) => {
+    res.status(404).json({ error: "Rota não encontrada." });
+  });
+
+  // ✅ Middleware global de tratamento de erros
+  app.use((err, req, res, next) => {
+    console.error("Erro interno:", err);
+    res.status(500).json({ error: "Erro interno do servidor." });
+  });
 });
 
-// Iniciar o servidor
+// ✅ Iniciar servidor
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`Servidor rodando na porta ${PORT}`);
-  console.log(`API disponível em http://localhost:${PORT}/api`);
+  console.log(`Servidor rodando em http://localhost:${PORT}`);
 });

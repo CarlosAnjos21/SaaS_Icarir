@@ -20,12 +20,20 @@ router.use('/admin', adminRoutes);
 const quizRoutes = require('./quizRoutes');
 router.use('/quizzes', quizRoutes);
 
+<<<<<<< HEAD
 // // Rotas de Premiações (Ver prêmios)
+=======
+>>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
 // const awardsRoutes = require('./awardsRoutes');
 // router.use('/awards', awardsRoutes);
 
-// Rota do Ranking
 const rankingRoutes = require('./rankingRoutes');
 router.use('/ranking', rankingRoutes);
+
+const taskRoutes = require('./taskRoutes');
+router.use('/tasks', taskRoutes);
+
+const destinationRoutes = require('./destinationRoutes');
+router.use('/destinations', destinationRoutes);
 
 module.exports = router;
