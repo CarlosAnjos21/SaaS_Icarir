@@ -15,7 +15,7 @@ const getTasksByMissionId = async (req, res) => {
     }
 
     // Busca as tarefas daquela missão, ordenadas pela coluna 'ordem'
-    const tarefas = await prisma.tarefas.findMany({
+    const tarefas = await prisma.tarefa.findMany({
       where: {
         missao_id: missionId,
         ativo: true,
@@ -136,7 +136,7 @@ const getTaskById = async (req, res) => {
       return res.status(400).json({ error: 'IDs de missão ou tarefa inválidos.' });
     }
 
-    const tarefa = await prisma.tarefas.findFirst({
+    const tarefa = await prisma.tarefa.findFirst({
       where: {
         id: taskId,
         missao_id: missionId,
@@ -184,7 +184,7 @@ const createTaskForMission = async (req, res) => {
       return res.status(400).json({ error: 'Campos obrigatórios (titulo, pontos, tipo, dificuldade) estão faltando.' });
     }
 
-    const newTask = await prisma.tarefas.create({
+    const newTask = await prisma.tarefa.create({
       data: {
         missao_id: missionId,
         categoria_id: categoria_id ? parseInt(categoria_id, 10) : null,
