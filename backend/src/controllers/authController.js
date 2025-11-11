@@ -2,20 +2,20 @@
 const prisma = require('../config/prismaClient');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const { Prisma } = require('@prisma/client'); // Importante para capturar erros
+const { Prisma } = require('@prisma/client');
 require('dotenv').config();
 
 // --- FUNÇÃO DE CADASTRO (Refatorada) ---
 const register = async (req, res) => {
-  const { nome, email, senha, codigo_empresa } = req.body;
+  const { nome, email, senha,} = req.body;
 
-  if (!nome || !email || !senha || !codigo_empresa) {
+  if (!nome || !email || !senha) {
     return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
   }
 
   try {
     // 1. Verificar se o e-mail já existe
-    const existingUser = await prisma.usuarios.findUnique({
+    const existingUser = await prisma.usuario.findUnique({
       where: { email: email }
     });
 
@@ -28,13 +28,12 @@ const register = async (req, res) => {
     const senhaHash = await bcrypt.hash(senha, salt);
 
     // 3. Criar o usuário usando o Prisma
-    const newUser = await prisma.usuarios.create({
+    const newUser = await prisma.usuario.create({
       data: {
         nome: nome,
         email: email,
         senha: senhaHash,
-        empresa: codigo_empresa,
-        role: 'user', // Valor padrão definido no schema, mas bom ser explícito
+        role: 'participante', // Valor padrão definido no schema, mas bom ser explícito
         ativo: true,  // Valor padrão definido no schema
       },
       // 4. Selecionar os campos para retornar (igual ao 'RETURNING' antigo)
@@ -42,7 +41,6 @@ const register = async (req, res) => {
         id: true,
         nome: true,
         email: true,
-        empresa: true,
         role: true,
         ativo: true
       }
@@ -71,7 +69,7 @@ const login = async (req, res) => {
   }
   try {
     // 1. Encontrar o usuário com Prisma
-    const user = await prisma.usuarios.findUnique({
+    const user = await prisma.usuario.findUnique({
       where: { email: email }
     });
 
@@ -93,7 +91,6 @@ const login = async (req, res) => {
         id: user.id,
         email: user.email,
         role: user.role,
-        empresa: user.empresa
       },
     };
 
@@ -178,7 +175,7 @@ const getMe = async (req, res) => {
     const userId = req.user.id; 
 
     // 1. Buscar usuário e incluir seu perfil (substitui o LEFT JOIN)
-    const userWithProfile = await prisma.usuarios.findUnique({
+    const userWithProfile = await prisma.usuario.findUnique({
       where: { id: userId },
       include: {
         perfil: true, // Inclui o registro da tabela 'perfis'

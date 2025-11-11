@@ -309,7 +309,7 @@ model Card {
   cargo            String?
   pais             String?
   cidade           String?
-  curiosidades     String[]  @db.Text
+  curiosidades     String[]
   tarefa_requerida Int?
   raridade         Raridade   @default(comum)
   ativo            Boolean    @default(true)

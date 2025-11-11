@@ -76,11 +76,6 @@ const submitQuiz = async (req, res) => {
   }
 
   try {
-<<<<<<< HEAD
-    // Usamos $transaction para garantir que TODAS as operações
-    // falhem ou tenham sucesso juntas.
-=======
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
     const result = await prisma.$transaction(async (tx) => {
       const quiz = await tx.quizzes.findFirstOrThrow({
         where: { id: quizId, ativo: true },
@@ -198,10 +193,6 @@ const submitQuiz = async (req, res) => {
     console.error('Erro ao submeter quiz:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
-<<<<<<< HEAD
-  // Não precisamos mais do 'finally { client.release() }'
-=======
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
 };
 
 module.exports = {

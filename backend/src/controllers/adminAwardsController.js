@@ -8,10 +8,6 @@ const prisma = require('../config/prismaClient');
  */
 const listAvailableAwards = async (req, res) => {
   try {
-<<<<<<< HEAD
-    // Lista os prêmios, ordenados pela posição do ranking
-=======
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
     const awards = await prisma.premiacoes.findMany({
       where: {
         ativo: true,
@@ -29,11 +25,6 @@ const listAvailableAwards = async (req, res) => {
         posicao_ranking: 'asc'
       }
     });
-<<<<<<< HEAD
-    
-    res.json(awards);
-=======
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
 
     res.json(awards);
   } catch (error) {

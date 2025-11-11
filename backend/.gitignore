@@ -50,10 +50,3 @@ Thumbs.db
 
 
 /src/generated/prisma
-
-# Ignore environment files (local secrets)
-# Keep .env local and out of the repo
-.env
-.env.*
-.env.local
-.env.local_backup

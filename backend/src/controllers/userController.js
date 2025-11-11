@@ -40,11 +40,7 @@ const getMyProfile = async (req, res) => {
  */
 const updateMyProfile = async (req, res) => {
   const userId = req.user.id;
-<<<<<<< HEAD
-  
-=======
 
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
   // Dados da tabela 'usuarios'
   const { nome, foto_url } = req.body;
 
@@ -99,14 +95,8 @@ const updateMyProfile = async (req, res) => {
 
     res.json({ message: "Perfil atualizado com sucesso!" });
   } catch (error) {
-<<<<<<< HEAD
-    // O Prisma gerencia o ROLLBACK automaticamente em caso de erro
-    console.error('Erro ao atualizar perfil:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
-=======
     console.error("Erro ao atualizar perfil:", error);
     res.status(500).json({ error: "Erro interno do servidor." });
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
   }
 };
 
@@ -157,11 +147,6 @@ const getUserProfileById = async (req, res) => {
       ...usuarioBase,
       ...(perfil || {}),
     };
-<<<<<<< HEAD
-    
-    res.json(response);
-=======
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
 
     res.json(response);
   } catch (error) {
@@ -172,11 +157,6 @@ const getUserProfileById = async (req, res) => {
 
 module.exports = {
   updateMyProfile,
-<<<<<<< HEAD
-  getUserProfileById, // Corrigido para exportar ambas as funções
-};
-=======
   getUserProfileById,
   getMyProfile, // 👈 novo export
 };
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121

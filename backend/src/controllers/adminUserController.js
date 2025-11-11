@@ -1,13 +1,7 @@
 // Importa o Prisma Client
-<<<<<<< HEAD
-const prisma = require('../config/prismaClient');
-const { Prisma } = require('@prisma/client'); // Para tratamento de erro
-const bcrypt = require('bcryptjs');
-=======
 const prisma = require("../config/prismaClient");
 const { Prisma } = require("@prisma/client"); // Para tratamento de erros específicos do Prisma
 const bcrypt = require("bcryptjs");
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
 
 /**
  * @route   GET /api/admin/users
@@ -18,24 +12,10 @@ const bcrypt = require("bcryptjs");
 const getAllUsers = async (req, res) => {
   const { ativo, perfil, busca } = req.query;
 
-<<<<<<< HEAD
-  // Objeto 'where' dinâmico do Prisma
-  let where = {};
-
-  if (ativo) {
-    where.ativo = (ativo === 'true');
-  }
-  if (perfil) {
-    where.role = perfil;
-  }
-  if (busca) {
-    // Substitui (nome ILIKE ... OR email ILIKE ...)
-=======
   const where = {};
   if (ativo) where.ativo = ativo === "true";
   if (perfil) where.role = perfil;
   if (busca) {
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
     where.OR = [
       { nome: { contains: busca, mode: "insensitive" } },
       { email: { contains: busca, mode: "insensitive" } },
@@ -83,14 +63,7 @@ const createUser = async (req, res) => {
   const finalRole = allowedRoles.includes(role) ? role : "user";
 
   try {
-<<<<<<< HEAD
-    // 1. Verificar se e-mail já existe
-    const existingUser = await prisma.usuarios.findUnique({
-      where: { email: email }
-    });
-=======
     const existingUser = await prisma.usuarios.findUnique({ where: { email } });
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
     if (existingUser) {
       return res.status(409).json({ error: "Este e-mail já está cadastrado." });
     }
@@ -128,13 +101,8 @@ const createUser = async (req, res) => {
     ) {
       return res.status(409).json({ error: "Este e-mail já está cadastrado." });
     }
-<<<<<<< HEAD
-    console.error('Erro ao criar usuário:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
-=======
     console.error("Erro ao criar usuário:", error);
     res.status(500).json({ error: "Erro interno do servidor." });
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
   }
 };
 
@@ -226,17 +194,8 @@ const updateUser = async (req, res) => {
           .json({ error: "Usuário não encontrado para atualizar." });
       }
     }
-<<<<<<< HEAD
-    // Erro se o usuário a ser atualizado não for encontrado
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      return res.status(404).json({ error: 'Usuário não encontrado para atualizar.' });
-    }
-    console.error('Erro ao atualizar usuário:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
-=======
     console.error("Erro ao atualizar usuário:", error);
     res.status(500).json({ error: "Erro interno do servidor." });
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
   }
 };
 
@@ -267,13 +226,8 @@ const deleteUser = async (req, res) => {
         .status(404)
         .json({ error: "Usuário não encontrado para deletar." });
     }
-<<<<<<< HEAD
-    console.error('Erro ao deletar usuário:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
-=======
     console.error("Erro ao deletar usuário:", error);
     res.status(500).json({ error: "Erro interno do servidor." });
->>>>>>> 163c8d2fff6990e3cc44935d6edf510ddff2c121
   }
 };
 module.exports = {
