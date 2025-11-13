@@ -32,3 +32,8 @@ const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
   console.log(`Servidor rodando em http://localhost:${PORT}`);
 });
+
+// ✅ Servir arquivos estáticos (imagens enviadas)
+// Servir uploads estáticos (permitir acesso via /uploads/...)
+app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+

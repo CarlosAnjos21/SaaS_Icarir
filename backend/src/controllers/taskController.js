@@ -214,10 +214,73 @@ const createTaskForMission = async (req, res) => {
   }
 };
 
+/** 
+ * @route   POST /api/missions/:missionId/tasks/:taskId/evidences
+ * @desc    Upload de evidências (arquivos) para uma tarefa
+ * @access  Private (bearer token)
+ */
+const uploadEvidence = async (req, res) => {
+  try {
+    const missionId = parseInt(req.params.missionId, 10);
+    const taskId = parseInt(req.params.taskId, 10);
+    const userId = req.user.id;
+
+    if (isNaN(missionId) || isNaN(taskId)) {
+      return res.status(400).json({ error: 'IDs inválidos.' });
+    }
+
+    // Checar se arquivos foram enviados
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
+    }
+
+    // Preparar array de evidências com metadados
+    const evidencias = req.files.map(file => {
+      return {
+        filename: file.filename,
+        originalName: file.originalname,
+        mimeType: file.mimetype,
+        size: file.size,
+        url: `${req.protocol}://${req.get('host')}/uploads/evidences/${file.filename}`
+      };
+    });
+
+    // Vamos buscar se já há uma submissão para incrementar tentativas:
+    const existingSubmission = await prisma.usuariosTarefas.findUnique({
+      where: { usuario_id_tarefa_id: { usuario_id: userId, tarefa_id: taskId } }
+    });
+
+    const submissionPayload = {
+      usuario_id: userId,
+      tarefa_id: taskId,
+      evidencias: evidencias,
+      concluida: false,
+      pontos_obtidos: existingSubmission ? existingSubmission.pontos_obtidos : 0,
+      data_conclusao: existingSubmission ? existingSubmission.data_conclusao : null,
+      validado_por: existingSubmission ? existingSubmission.validado_por : null,
+      tentativas: existingSubmission ? existingSubmission.tentativas + 1 : 1,
+      data_criacao: existingSubmission ? existingSubmission.data_criacao : undefined
+    };
+
+    const result = await prisma.usuariosTarefas.upsert({
+      where: { usuario_id_tarefa_id: { usuario_id: userId, tarefa_id: taskId } },
+      update: submissionPayload,
+      create: submissionPayload
+    });
+
+    return res.status(201).json({ message: 'Evidências recebidas.', submission: result });
+
+  } catch (error) {
+    console.error('Erro ao receber evidências:', error);
+    return res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+};
+
 module.exports = {
   getTasksByMissionId,
   submitTask,
   getTaskById,
   createTaskForMission,
+  uploadEvidence,
 };
 

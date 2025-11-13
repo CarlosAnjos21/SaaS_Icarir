@@ -29,6 +29,9 @@ router.use('/ranking', rankingRoutes);
 const taskRoutes = require('./taskRoutes');
 router.use('/tasks', taskRoutes);
 
+const categoriasTarefasRoutes = require('./categoriasTarefasRoutes');
+router.use('/categorias-tarefas', categoriasTarefasRoutes);
+
 const destinationRoutes = require('./destinationRoutes');
 router.use('/destinations', destinationRoutes);
 

@@ -42,6 +42,12 @@ router.get("/", missionController.getAllActiveMissions);
 router.get("/:missionId", missionController.getMissionById);
 
 /**
+ * @route   GET /api/missions/:missionId/full
+ * @desc    Retorna os dados completos de uma missão para o front (tarefas, inscritos, logs, contagens)
+ */
+router.get("/:missionId/full", missionController.getMissionFullById);
+
+/**
  * @route   POST /api/missions/:missionId/join
  * @desc    Inscrever o usuário logado em uma missão
  * @access  Privado

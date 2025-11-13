@@ -187,3 +187,45 @@ module.exports = router;
  *       401:
  *         description: Não autorizado
  */
+
+/**
+ * @swagger
+ * /missions/{missionId}/tasks/{taskId}/evidences:
+ *   post:
+ *     summary: Upload de evidências para uma tarefa
+ *     tags: [Tasks]
+ *     parameters:
+ *       - in: path
+ *         name: missionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       201:
+ *         description: Evidências recebidas com sucesso
+ *       400:
+ *         description: Requisição inválida
+ *       401:
+ *         description: Não autorizado
+ */
+
+module.exports = router;

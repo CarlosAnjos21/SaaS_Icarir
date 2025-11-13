@@ -11,6 +11,7 @@ const adminQuizRoutes = require("./adminQuizRoutes");
 const adminCardsRoutes = require("./adminCardsRoutes");
 const adminUserRoutes = require("./adminUserRoutes");
 const adminEnrollmentsRoutes = require("./adminEnrollmentsRoutes");
+const adminTaskRoutes = require('./adminTaskRoutes');
 
 // ✅ MIDDLEWARES DE PROTEÇÃO
 // 1. Verifica se o usuário está autenticado via JWT
@@ -45,5 +46,6 @@ router.use("/users", adminUserRoutes);              // /api/admin/users
 router.use("/quizzes", adminQuizRoutes);            // /api/admin/quizzes
 router.use("/awards", adminAwardsRoutes);           // /api/admin/awards
 router.use("/cards", adminCardsRoutes);             // /api/admin/cards
+router.use('/tasks', adminTaskRoutes);              // /api/admin/tasks
 
 module.exports = router;
