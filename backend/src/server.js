@@ -3,6 +3,7 @@ require("dotenv").config();
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const path = require("path");
+const fs = require('fs');
 const setupSwagger = require("./swagger");
 
 const app = express();
@@ -26,6 +27,16 @@ app.use("/api", mainRouter);
 app.get("/", (req, res) => {
   res.redirect("http://localhost:5173");
 });
+
+// Garantir que a pasta de uploads exista antes de iniciar o servidor
+try {
+  const uploadsPath = path.join(__dirname, '..', 'uploads', 'evidences');
+  fs.mkdirSync(uploadsPath, { recursive: true });
+  // opcional: também garantir a pasta uploads (pai)
+  fs.mkdirSync(path.join(__dirname, '..', 'uploads'), { recursive: true });
+} catch (err) {
+  console.error('Erro criando pasta de uploads:', err);
+}
 
 // ✅ Iniciar servidor
 const PORT = process.env.PORT || 3001;
