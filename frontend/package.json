@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "@heroicons/react": "^2.2.0",
+    "aos": "^2.3.4",
     "axios": "^1.13.1",
     "chart.js": "^4.5.1",
     "framer-motion": "^12.23.24",
