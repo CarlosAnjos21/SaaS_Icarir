@@ -1,11 +1,12 @@
 import { useNavigate } from "react-router-dom";
 
-export default function HomeCard({ city, image, onStartMission, loading }) {
+export default function HomeCard({ city, image, onStartMission, loading, animation }) {
   const navigate = useNavigate();
 
   return (
     <div
-      className="cursor-pointer bg-white rounded-xl shadow-lg transition-all duration-300 ease-in-out overflow-hidden hover:shadow-2xl hover:h-[calc(100%+2px)] hover:w-[calc(100%+2px)] animate-fade-in"
+      data-aos={animation}
+      className="cursor-pointer bg-white rounded-xl shadow-lg transition-all duration-300 ease-in-out overflow-hidden hover:shadow-2xl hover:h-[calc(100%+2px)] hover:w-[calc(100%+2px)]"
       onClick={() => navigate("/missions")}
     >
       <img src={image} alt={city} className="w-full h-[240px] object-cover" />
@@ -16,7 +17,7 @@ export default function HomeCard({ city, image, onStartMission, loading }) {
         </p>
         <button
           onClick={(e) => {
-            e.stopPropagation(); // evita que o clique no botão dispare a navegação
+            e.stopPropagation();
             onStartMission(city);
           }}
           disabled={loading}
