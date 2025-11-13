@@ -65,6 +65,60 @@ const getMissionById = async (req, res) => {
 
 
 /**
+ * @route   GET /api/missions/:missionId/full
+ * @desc    Buscar dados completos de uma missão (tarefas, inscritos, logs, contagens)
+ * @access  Privado (requer token)
+ */
+const getMissionFullById = async (req, res) => {
+  try {
+    const missionId = parseInt(req.params.missionId, 10);
+    if (isNaN(missionId)) {
+      return res.status(400).json({ error: 'ID da missão inválido.' });
+    }
+
+    const missao = await prisma.missoes.findFirst({
+      where: { id: missionId },
+      include: {
+        // Incluir tarefas da missão com categoria e quiz
+        tarefas: {
+          where: { ativa: true },
+          orderBy: { ordem: 'asc' },
+          include: {
+            categoria: { select: { id: true, nome: true, icone: true, cor: true } },
+            quiz: { select: { id: true, titulo: true, descricao: true } },
+          },
+        },
+        // Incluir inscrições com dados básicos do usuário
+        usuarios: {
+          include: {
+            usuario: { select: { id: true, nome: true, email: true, foto_url: true } },
+          },
+        },
+        // Incluir logs relacionados à missão (últimos primeiro)
+        logs: {
+          orderBy: { data_criacao: 'desc' },
+          select: { id: true, usuario_id: true, pontos: true, tipo: true, descricao: true, data_criacao: true },
+        },
+        // Incluir referência à missão anterior (se houver)
+        missaoAnterior: { select: { id: true, titulo: true } },
+        proximasMissoes: { select: { id: true, titulo: true } },
+        _count: { select: { usuarios: true, tarefas: true } },
+      },
+    });
+
+    if (!missao) {
+      return res.status(404).json({ error: 'Missão não encontrada.' });
+    }
+
+    res.json(missao);
+  } catch (error) {
+    console.error('Erro ao buscar missão completa por ID:', error);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+};
+
+
+/**
  * @route   POST /api/missions/:missionId/join
  * @desc    Inscrever o usuário logado em uma missão
  * @access  Privado
@@ -156,6 +210,7 @@ const joinMission = async (req, res) => {
 module.exports = {
   getAllActiveMissions,
   getMissionById,
+  getMissionFullById,
   joinMission,
 };
 

@@ -23,7 +23,8 @@ const getAllUsers = async (req, res) => {
   }
 
   try {
-    const users = await prisma.usuarios.findMany({
+    // Usuario Singular
+  const users = await prisma.usuario.findMany({
       where,
       select: {
         id: true,
@@ -59,11 +60,12 @@ const createUser = async (req, res) => {
       .json({ error: "Nome, email e senha são obrigatórios." });
   }
 
-  const allowedRoles = ["user", "admin"];
-  const finalRole = allowedRoles.includes(role) ? role : "user";
+  // Role values come from Prisma enum Role: participante | admin | validador
+  const allowedRoles = ["participante", "admin", "validador"];
+  const finalRole = allowedRoles.includes(role) ? role : "participante";
 
   try {
-    const existingUser = await prisma.usuarios.findUnique({ where: { email } });
+  const existingUser = await prisma.usuario.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(409).json({ error: "Este e-mail já está cadastrado." });
     }
@@ -72,7 +74,7 @@ const createUser = async (req, res) => {
     const senhaHash = await bcrypt.hash(senha, salt);
 
     // 3️⃣ Cria o novo usuário
-    const newUser = await prisma.usuarios.create({
+  const newUser = await prisma.usuario.create({
       data: {
         nome,
         email,
@@ -117,7 +119,7 @@ const getUserById = async (req, res) => {
     if (isNaN(id))
       return res.status(400).json({ error: "ID de usuário inválido." });
 
-    const user = await prisma.usuarios.findUnique({
+  const user = await prisma.usuario.findUnique({
       where: { id },
       select: {
         id: true,
@@ -153,10 +155,11 @@ const updateUser = async (req, res) => {
 
     const { nome, email, foto_url, role, ativo, pontos, empresa } = req.body;
 
-    const allowedRoles = ["user", "admin"];
-    const finalRole = allowedRoles.includes(role) ? role : undefined;
+  // Role values come from Prisma enum Role: participante | admin | validador
+  const allowedRoles = ["participante", "admin", "validador"];
+  const finalRole = allowedRoles.includes(role) ? role : undefined;
 
-    const updatedUser = await prisma.usuarios.update({
+  const updatedUser = await prisma.usuario.update({
       where: { id },
       data: {
         nome,
@@ -210,7 +213,7 @@ const deleteUser = async (req, res) => {
     if (isNaN(id))
       return res.status(400).json({ error: "ID de usuário inválido." });
 
-    const deletedUser = await prisma.usuarios.update({
+  const deletedUser = await prisma.usuario.update({
       where: { id },
       data: { ativo: false, data_atualizacao: new Date() },
       select: { id: true, ativo: true },
