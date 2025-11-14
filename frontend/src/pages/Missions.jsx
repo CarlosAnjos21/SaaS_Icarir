@@ -3,7 +3,6 @@ import FeedbackBar from "../components/Feedbacks/FeedbackBar";
 import api from "../api/api";
 
 export default function Missions() {
-  const [user, setUser] = useState(null);
   const [missoes, setMissoes] = useState([]);
   const [selectedMission, setSelectedMission] = useState(null);
   const [activeTab, setActiveTab] = useState("ativas");
@@ -11,51 +10,46 @@ export default function Missions() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    async function fetchUserAndMissions() {
+    async function fetchMissions() {
       try {
-        const userRes = await api.get("/users/me");
-        const userData = userRes.data;
-        setUser(userData);
+        const res = await api.get("/admin/missions");
 
-        const [missionsRes, progressRes] = await Promise.all([
-          api.get("/missions"),
-          api.get(`/user/${userData.id}/missions`)
-        ]);
+        const missions = res.data;
 
-        const missions = missionsRes.data;
-        const progress = progressRes.data;
+        const missionsWithProgress = missions.map((mission) => ({
+          ...mission,
+          steps: mission.steps.map((step) => ({
+            ...step,
+            completedBy: [], // Inicialmente vazio
+          })),
+        }));
 
-        const merged = missions.map((mission) => {
-          const saved = progress.find((m) => m.id === mission.id);
-          return saved ? { ...mission, steps: saved.steps } : mission;
-        });
-
-        setMissoes(merged);
-        setSelectedMission(merged[0] || null);
+        setMissoes(missionsWithProgress);
+        setSelectedMission(missionsWithProgress[0] || null);
       } catch (err) {
-        setError("Erro ao carregar missões");
+        if (err.response?.status === 401) {
+          setError("Não autorizado. Verifique suas credenciais.");
+        } else {
+          setError("Erro ao carregar missões.");
+        }
         console.error(err);
       } finally {
         setLoading(false);
       }
     }
 
-    fetchUserAndMissions();
+    fetchMissions();
   }, []);
 
   const handleCompleteStep = async (stepId) => {
     try {
-      await api.post(
-        `/user/${user.id}/missions/${selectedMission.id}/steps/${stepId}/complete`
-      );
-
       const updatedMissions = missoes.map((mission) => {
         if (mission.id === selectedMission.id) {
           const updatedSteps = mission.steps.map((step) => {
-            if (step.id === stepId && !step.completedBy.includes(user.id)) {
+            if (step.id === stepId && !step.completedBy.includes("admin")) {
               return {
                 ...step,
-                completedBy: [...step.completedBy, user.id],
+                completedBy: [...step.completedBy, "admin"],
               };
             }
             return step;
@@ -70,16 +64,6 @@ export default function Missions() {
         (m) => m.id === selectedMission.id
       );
       setSelectedMission(updatedSelected);
-
-      if (
-        updatedSelected.steps.every((step) =>
-          step.completedBy.includes(user.id)
-        )
-      ) {
-        await api.post(`/user/${user.id}/addPoints`, {
-          points: updatedSelected.points,
-        });
-      }
     } catch (err) {
       console.error("Erro ao concluir etapa:", err);
     }
@@ -90,7 +74,7 @@ export default function Missions() {
     mission.steps.length > 0 &&
     mission.steps.every(
       (step) =>
-        Array.isArray(step.completedBy) && step.completedBy.includes(user.id)
+        Array.isArray(step.completedBy) && step.completedBy.includes("admin")
     );
 
   const activeMissions = missoes.filter((m) => !isMissionComplete(m));
@@ -186,7 +170,7 @@ export default function Missions() {
               </h4>
               <ul className="space-y-2">
                 {selectedMission.steps.map((step) => {
-                  const isDone = step.completedBy.includes(user.id);
+                  const isDone = step.completedBy.includes("admin");
                   return (
                     <li
                       key={step.id}

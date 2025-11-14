@@ -7,7 +7,7 @@ import HomeCard from "../components/HomeCard";
 import FeedbackBar from "../components/Feedbacks/FeedbackBar";
 
 import bannerImg from "../assets/airport.jpg";
-import logoIcarir from "../assets/logo_icarir.png";
+import logoIcarir from "../assets/símbolo-icarir.png";
 import api from "../api/api";
 
 // Imagens dos destinos
@@ -23,6 +23,10 @@ import capetownImg from "../assets/destinations/cape-town.jpg";
 import bangkokImg from "../assets/destinations/bangkok.jpg";
 import barcelonaImg from "../assets/destinations/barcelona.jpg";
 import torontoImg from "../assets/destinations/toronto.jpg";
+
+//imagens de voos
+import aircraftImg from "../assets/aircraft.jpg";
+import christmasImg from "../assets/merry-christmas.jpg";
 
 const destinations = [
   { id: 1, city: "Paris", image: parisImg },
@@ -44,7 +48,8 @@ export default function Home() {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    AOS.init({ duration: 800, once: true });
+    AOS.init({ duration: 800, once: false });
+    AOS.refresh();
   }, []);
 
   useEffect(() => {
@@ -72,7 +77,7 @@ export default function Home() {
     }
   };
 
-  const carouselImages = [bannerImg, parisImg, tokyoImg];
+  const carouselImages = [bannerImg, aircraftImg, christmasImg];
 
   const prevSlide = () => {
     setCurrentIndex((prevIndex) =>
@@ -83,13 +88,12 @@ export default function Home() {
   const nextSlide = () => {
     setCurrentIndex((prevIndex) => (prevIndex + 1) % carouselImages.length);
   };
-
   return (
-    <div className="min-h-screen bg-white text-black transition-colors duration-300">
+    <div className="min-h-screen bg-background text-dark transition-colors duration-300">
       <Navbar />
 
+      {/* Banner com carrossel */}
       <div className="relative h-[900px] overflow-hidden">
-        {/* Camada das imagens */}
         <div className="absolute top-0 left-0 w-full h-full">
           {carouselImages.map((img, index) => (
             <img
@@ -107,8 +111,7 @@ export default function Home() {
           ))}
         </div>
 
-        {/* Gradiente e conteúdo fixo */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#394C97]/60 via-transparent to-white z-10"></div>
+        <div className="absolute inset-0 bg-gradient-to-b from-primary/60 via-transparent to-background z-10"></div>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center text-white px-4 z-20">
           <h1 className="text-5xl md:text-6xl font-extrabold mb-4 tracking-tight">
             Explore the World
@@ -117,44 +120,65 @@ export default function Home() {
             Complete missions and earn rewards on your next flight
           </p>
           <div className="mt-6 flex justify-center gap-4">
-            <button className="bg-orange text-white px-6 py-2 rounded-full hover:bg-white hover:text-orange transition font-semibold">
+            <button className="border border-transparent border-2 bg-accent text-white px-6 py-2 rounded-full hover:bg-primary hover:text-white transition font-semibold">
               Start Now
             </button>
-            <button className="border border-white px-6 py-2 rounded-full text-white hover:bg-white hover:text-[#394C97] transition font-semibold">
+            <button className="border border-primary border-2 px-6 py-2 rounded-full text-white hover:bg-primary hover:border-transparent hover:text-background transition font-semibold">
               Learn More
             </button>
           </div>
         </div>
 
-        {/* Botões de navegação */}
         <button
           onClick={prevSlide}
-          className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-transparent hover:bg-white/20 active:bg-transparent text-[#394C97] hover:text-black p-3 rounded-full shadow-md transition duration-300 z-30"
+          className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-transparent hover:bg-white/20 active:bg-transparent text-primary hover:text-dark p-3 rounded-full shadow-md transition duration-300 z-30"
           aria-label="Previous Slide"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M15 19l-7-7 7-7"
+            />
           </svg>
         </button>
         <button
           onClick={nextSlide}
-          className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-transparent hover:bg-white/20 active:bg-transparent text-[#394C97] hover:text-black p-3 rounded-full shadow-md transition duration-300 z-30"
+          className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-transparent hover:bg-white/20 active:bg-transparent text-primary hover:text-dark p-3 rounded-full shadow-md transition duration-300 z-30"
           aria-label="Next Slide"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-6 w-6"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M9 5l7 7-7 7"
+            />
           </svg>
         </button>
       </div>
 
-      {/* Cards de destinos com efeito AOS */}
+      {/* Cards com animação AOS */}
       <section className="relative max-w-[1800px] mx-auto py-[120px] px-6">
         <img
           src={logoIcarir}
           alt="Logo Icarir"
           className="absolute inset-0 w-full h-full object-contain opacity-5 pointer-events-none"
         />
-        <h2 className="text-4xl font-bold text-[#394C97] mb-10 text-center relative z-10">
+        <h2 className="text-4xl font-bold text-primary mb-10 text-center relative z-10">
           Choose Your Destination
         </h2>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-10 relative z-10">
