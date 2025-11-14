@@ -1,7 +1,21 @@
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import AOS from "aos";
+import "aos/dist/aos.css";
 
-export default function HomeCard({ city, image, onStartMission, loading, animation }) {
+export default function HomeCard({
+  city,
+  image,
+  onStartMission,
+  loading,
+  animation = "fade-up",
+}) {
   const navigate = useNavigate();
+
+  useEffect(() => {
+    AOS.init({ duration: 800, once: true });
+    AOS.refresh(); // garante que novos elementos sejam animados ao subir
+  }, []);
 
   return (
     <div
