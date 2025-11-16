@@ -30,7 +30,7 @@ module.exports = router;
 
 /**
  * @swagger
- * /quizzes/respostasQuizzes:
+ * /quizzes/{quizId}/submit:
  *   post:
  *     summary: Responde um quiz
  *     tags: [Quiz]
@@ -61,3 +61,18 @@ module.exports = router;
  *       500:
  *         description: Erro interno do servidor
  */                                        
+
+/**
+ * @swagger
+ * /quizzes/{quizId}:
+ *   get:
+ *     summary: Retorna os quizzes
+ *     tags: [Quiz]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dados do quiz respondido
+ *       401:
+ *         description: Token inválido ou expirado
+ */
