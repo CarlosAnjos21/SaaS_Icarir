@@ -57,6 +57,57 @@ const getQuizForUser = async (req, res) => {
 };
 
 /**
+ * @route   GET /api/quizzes/task/:taskId
+ * @desc    (Usuário) Listar quizzes associados a uma tarefa (pelo id da tarefa)
+ * @access  Privado
+ */
+const getQuizzesByTask = async (req, res) => {
+  try {
+    const taskId = parseInt(req.params.taskId, 10);
+    if (isNaN(taskId)) {
+      return res.status(400).json({ error: 'ID da tarefa inválido.' });
+    }
+
+    const quizzes = await prisma.quizzes.findMany({
+      where: { tarefa_id: taskId, ativo: true },
+      select: {
+        id: true,
+        titulo: true,
+        descricao: true,
+        imagem_url: true,
+        perguntas: {
+          select: {
+            id: true,
+            enunciado: true,
+            tipo: true,
+            ordem: true,
+            opcoes: true
+          },
+          orderBy: { ordem: 'asc' }
+        }
+      }
+    });
+
+    // Remover campo `isCorrect` das opções antes de enviar
+    const sanitized = quizzes.map(q => {
+      const perguntas = q.perguntas.map(p => {
+        const opcoes = p.opcoes.map(opt => {
+          const { isCorrect, ...rest } = opt;
+          return rest;
+        });
+        return { ...p, opcoes };
+      });
+      return { ...q, perguntas };
+    });
+
+    res.json(sanitized);
+  } catch (error) {
+    console.error('Erro ao listar quizzes por tarefa:', error);
+    res.status(500).json({ error: 'Erro interno do servidor.' });
+  }
+};
+
+/**
  * @route   POST /api/quizzes/:quizId/submit
  * @desc    (Usuário) Submeter respostas de um quiz
  * @access  Privado
@@ -197,5 +248,6 @@ const submitQuiz = async (req, res) => {
 
 module.exports = {
   getQuizForUser,
+  getQuizzesByTask,
   submitQuiz
 };

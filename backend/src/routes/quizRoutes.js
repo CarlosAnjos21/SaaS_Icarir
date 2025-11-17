@@ -7,6 +7,12 @@ const authMiddleware = require('../middlewares/authMiddleware');
 router.use(authMiddleware);
 
 /**
+ * @route   GET /api/quizzes/task/:taskId
+ * @desc    (Usuário) Listar quizzes associados a uma tarefa
+ */
+router.get('/task/:taskId', quizController.getQuizzesByTask);
+
+/**
  * @route   GET /api/quizzes/:quizId
  * @desc    (Usuário) Buscar um quiz e suas perguntas (sem respostas)
  */
