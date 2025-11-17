@@ -20,6 +20,9 @@ router.use('/admin', adminRoutes);
 const quizRoutes = require('./quizRoutes');
 router.use('/quizzes', quizRoutes);
 
+const validatorRoutes = require('./validatorRoutes');
+router.use('/validations', validatorRoutes);
+
 // const awardsRoutes = require('./awardsRoutes');
 // router.use('/awards', awardsRoutes);
 
