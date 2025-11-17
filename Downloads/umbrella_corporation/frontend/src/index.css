@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+.feedback-form {
+  width: 450px;
+}
+
+@media (max-width: 1490px) {
+  .feedback-form {
+    width: 425px;
+  }
+}
+@media (max-width: 1390px) {
+  .feedback-form {
+    width: 405px;
+  }
+}
+@media (max-width: 1290px) {
+  .feedback-form {
+    width: 385px;
+  }
+}
+@media (max-width: 1190px) {
+  .feedback-form {
+    width: 365px;
+  }
+}
+@media (max-width: 1090px) {
+  .feedback-form {
+    width: 345px;
+  }
+}
+@media (max-width: 990px) {
+  .feedback-form {
+    width: 325px;
+  }
+}
+@media (max-width: 890px) {
+  .feedback-form {
+    width: 305px;
+  }
+}
+@media (max-width: 790px) {
+  .feedback-form {
+    width: 285px;
+  }
+}
+@media (max-width: 690px) {
+  .feedback-form {
+    width: 265px;
+  }
+}
