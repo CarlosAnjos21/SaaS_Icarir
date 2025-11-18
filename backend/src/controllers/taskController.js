@@ -18,7 +18,7 @@ const getTasksByMissionId = async (req, res) => {
     const tarefas = await prisma.tarefa.findMany({
       where: {
         missao_id: missionId,
-        ativo: true,
+        ativa: true,
       },
       orderBy: {
         ordem: 'asc',
@@ -54,7 +54,7 @@ const submitTask = async (req, res) => {
     const submissionResult = await prisma.$transaction(async (tx) => {
       // 1️⃣ Validar tarefa
       const task = await tx.tarefas.findFirst({
-        where: { id: taskId, missao_id: missionId, ativo: true },
+        where: { id: taskId, missao_id: missionId, ativa: true },
       });
       if (!task) {
         throw new Error('Tarefa não encontrada, inativa ou não pertence a esta missão.');
@@ -194,7 +194,7 @@ const createTaskForMission = async (req, res) => {
         pontos: parseInt(pontos, 10),
         tipo,
         dificuldade,
-        ativo: true,
+        ativa: true,
         ordem: ordem ? parseInt(ordem, 10) : 0,
         requisitos: requisitos || Prisma.JsonNull,
         tarefa_anterior_id: tarefa_anterior_id ? parseInt(tarefa_anterior_id, 10) : null,
