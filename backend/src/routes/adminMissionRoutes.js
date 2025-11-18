@@ -51,6 +51,8 @@ module.exports = router;
  *   post:
  *     summary: Cria uma nova missão
  *     tags: [Admin - Missões]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
@@ -60,16 +62,37 @@ module.exports = router;
  *             properties:
  *               titulo:
  *                 type: string
- *                 example: "Missão: Concluir primeiro quiz"
+ *                 example: "Missão Nubank"
  *               descricao:
  *                 type: string
- *                 example: "Responda o primeiro quiz corretamente para completar esta missão."
- *               pontuacao:
+ *                 example: "Nesta missão vamos a sede da Nubank em São Paulo."
+ *               foto_url:
+ *                 type: string
+ *                 example: "imagem.com"
+ *               destino:
+ *                 type: string
+ *                 example: "São Paulo"
+ *               data_inicio:
+ *                 type: string
+ *                 format: date
+ *                 example: "2025-01-20"
+ *               data_fim:
+ *                 type: string
+ *                 format: date
+ *                 example: "2025-01-30"
+ *               preco:
+ *                 type: number
+ *                 example: 1500.50
+ *               vagas_disponiveis:
  *                 type: integer
- *                 example: 100
- *               ativa:
+ *                 example: 20
+ *               ativo:
  *                 type: boolean
  *                 example: true
+ *               missao_anterior_id:
+ *                 type: integer
+ *                 nullable: true
+ *                 example: 1
  *     responses:
  *       201:
  *         description: Missão criada com sucesso
@@ -79,7 +102,8 @@ module.exports = router;
  *         description: Não autorizado
  *       500:
  *         description: Erro interno do servidor
- *
+ * 
+ * 
  *   get:
  *     summary: Lista todas as missões
  *     tags: [Admin - Missões]
@@ -141,7 +165,7 @@ module.exports = router;
  *           type: integer
  *         description: ID da missão
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         application/json:
  *           schema:
@@ -153,9 +177,9 @@ module.exports = router;
  *               descricao:
  *                 type: string
  *                 example: "Nova descrição da missão"
- *               pontuacao:
+ *               preco:
  *                 type: integer
- *                 example: 150
+ *                 example: 1500
  *               ativa:
  *                 type: boolean
  *                 example: true

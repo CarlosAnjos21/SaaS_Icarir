@@ -26,17 +26,17 @@ const createMission = async (req, res) => {
   }
 
   try {
-    const newMission = await prisma.missoes.create({
+    const newMission = await prisma.missao.create({
       data: {
         titulo,
         descricao: descricao || null,
-        foto_url: foto_url || null,
+        // foto_url: foto_url || null,
         destino: destino || null,
         data_inicio: new Date(data_inicio),
         data_fim: new Date(data_fim),
         preco: preco ? parseFloat(preco) : 0.00,
         vagas_disponiveis: vagas_disponiveis ? parseInt(vagas_disponiveis, 10) : null,
-        ativo: ativo ?? true,
+        ativa: ativo ?? true,
         missao_anterior_id: missao_anterior_id ? parseInt(missao_anterior_id, 10) : null
       }
     });
@@ -62,7 +62,7 @@ const createMission = async (req, res) => {
  */
 const getAllMissions = async (req, res) => {
   try {
-    const missions = await prisma.missoes.findMany({
+    const missions = await prisma.missao.findMany({
       orderBy: { data_inicio: 'desc' }
     });
 
@@ -85,7 +85,7 @@ const getMissionById = async (req, res) => {
   }
 
   try {
-    const mission = await prisma.missoes.findUnique({
+    const mission = await prisma.missao.findUnique({
       where: { id: missionId }
     });
 
@@ -124,31 +124,36 @@ const updateMission = async (req, res) => {
     missao_anterior_id
   } = req.body;
 
-  if (!titulo || !data_inicio || !data_fim) {
-    return res.status(400).json({ error: 'Título, data de início e data de fim são obrigatórios.' });
+  // Objeto para armazenar dados enviados para atualização de missão.
+  const dataToUpdate = {};
+
+  if (titulo !== undefined) dataToUpdate.titulo = titulo;
+  if (descricao !== undefined) dataToUpdate.descricao = descricao;
+  if (foto_url !== undefined) dataToUpdate.foto_url = foto_url;
+  if (destino !== undefined) dataToUpdate.destino = destino;
+
+  if (data_inicio !== undefined) dataToUpdate.data_inicio = new Date(data_inicio);
+  if (data_fim !== undefined) dataToUpdate.data_fim = new Date(data_fim);
+
+  if (preco !== undefined) dataToUpdate.preco = parseFloat(preco);
+  if (vagas_disponiveis !== undefined) dataToUpdate.vagas_disponiveis = parseInt(vagas_disponiveis, 10);
+
+  if (ativo !== undefined) dataToUpdate.ativo = ativo;
+  if (missao_anterior_id !== undefined) {
+    dataToUpdate.missao_anterior_id = missao_anterior_id ? parseInt(missao_anterior_id, 10) : null;
   }
 
   try {
-    const updatedMission = await prisma.missoes.update({
+    const updatedMission = await prisma.missao.update({
       where: { id: missionId },
-      data: {
-        titulo,
-        descricao: descricao || null,
-        foto_url: foto_url || null,
-        destino: destino || null,
-        data_inicio: new Date(data_inicio),
-        data_fim: new Date(data_fim),
-        preco: preco ? parseFloat(preco) : 0.00,
-        vagas_disponiveis: vagas_disponiveis ? parseInt(vagas_disponiveis, 10) : null,
-        ativo,
-        missao_anterior_id: missao_anterior_id ? parseInt(missao_anterior_id, 10) : null
-      }
+      data: dataToUpdate
     });
 
     res.json({
       message: 'Missão atualizada com sucesso!',
       mission: updatedMission
     });
+
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2025') {
@@ -176,9 +181,9 @@ const softDeleteMission = async (req, res) => {
   }
 
   try {
-    const deletedMission = await prisma.missoes.update({
+    const deletedMission = await prisma.missao.update({
       where: { id: missionId },
-      data: { ativo: false }
+      data: { ativa: false }
     });
 
     res.json({
