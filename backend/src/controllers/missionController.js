@@ -9,15 +9,14 @@ const { Prisma } = require('@prisma/client'); // Para capturar erros
  */
 const getAllActiveMissions = async (req, res) => {
   try {
-    // Busca missões onde 'ativo' = true, ordenadas pela data de início
-    const missoes = await prisma.missoes.findMany({
-      where: { ativo: true },
+    // Busca missões onde 'ativa' = true, ordenadas pela data de início
+    const missoes = await prisma.missao.findMany({
+      where: { ativa: true },
       // Seleciona os mesmos campos da query SQL original
       select: {
         id: true,
         titulo: true, // [cite: 57, 254]
         descricao: true, // [cite: 60, 257]
-        foto_url: true, // [cite: 55]
         destino: true, // [cite: 65, 260]
         data_inicio: true, // [cite: 66, 271]
         data_fim: true, // [cite: 66, 271]
@@ -47,7 +46,7 @@ const getMissionById = async (req, res) => {
       return res.status(400).json({ error: 'ID da missão inválido.' });
     }
 
-    const missao = await prisma.missoes.findFirst({
+    const missao = await prisma.missao.findFirst({
       where: { id: missionId }
     });
 
@@ -76,7 +75,7 @@ const getMissionFullById = async (req, res) => {
       return res.status(400).json({ error: 'ID da missão inválido.' });
     }
 
-    const missao = await prisma.missoes.findFirst({
+    const missao = await prisma.missao.findFirst({
       where: { id: missionId },
       include: {
         // Incluir tarefas da missão com categoria e quiz
@@ -136,20 +135,20 @@ const joinMission = async (req, res) => {
     const newSubscription = await prisma.$transaction(async (tx) => {
       
       // 1. Verificar a missão
-      const mission = await tx.missoes.findUnique({
+      const mission = await tx.missao.findUnique({
         where: { id: missionId },
-        select: { preco: true, ativo: true }
+        select: { preco: true, ativa: true }
       });
 
       if (!mission) {
         throw new Error('Missão não encontrada.');
       }
-      if (!mission.ativo) {
+      if (!mission.ativa) {
         throw new Error('Esta missão não está ativa.');
       }
 
       // 2. Verificar se o usuário já está inscrito
-      const existingSub = await tx.usuariosMissoes.findUnique({
+      const existingSub = await tx.usuarioMissao.findUnique({
         where: {
           usuario_id_missao_id: {
             usuario_id: userId,
@@ -165,11 +164,13 @@ const joinMission = async (req, res) => {
 
       // 3. Preparar dados
       const missionPrice = mission.preco || 0.00;
-      const paymentStatus = (missionPrice > 0) ? 'pendente' : 'nao_aplicavel';
+      // O enum StatusPagamento no schema Prisma não tem 'nao_aplicavel'.
+      // Para missões gratuitas, marcar como 'pago' (valor válido do enum).
+      const paymentStatus = (Number(missionPrice) > 0) ? 'pendente' : 'pago';
       const participationStatus = 'inscrito';
 
       // 4. Inserir inscrição
-      const subscription = await tx.usuariosMissoes.create({
+      const subscription = await tx.usuarioMissao.create({
         data: {
           usuario_id: userId,
           missao_id: missionId,

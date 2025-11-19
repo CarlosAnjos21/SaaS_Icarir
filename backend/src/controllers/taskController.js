@@ -18,7 +18,7 @@ const getTasksByMissionId = async (req, res) => {
     const tarefas = await prisma.tarefa.findMany({
       where: {
         missao_id: missionId,
-        ativo: true,
+        ativa: true,
       },
       orderBy: {
         ordem: 'asc',
@@ -53,15 +53,15 @@ const submitTask = async (req, res) => {
   try {
     const submissionResult = await prisma.$transaction(async (tx) => {
       // 1️⃣ Validar tarefa
-      const task = await tx.tarefas.findFirst({
-        where: { id: taskId, missao_id: missionId, ativo: true },
+      const task = await tx.tarefa.findFirst({
+        where: { id: taskId, missao_id: missionId, ativa: true },
       });
       if (!task) {
         throw new Error('Tarefa não encontrada, inativa ou não pertence a esta missão.');
       }
 
       // 2️⃣ Validar inscrição do usuário
-      const enrollment = await tx.usuariosMissoes.findFirst({
+      const enrollment = await tx.usuarioMissao.findFirst({
         where: {
           usuario_id: userId,
           missao_id: missionId,
@@ -73,7 +73,7 @@ const submitTask = async (req, res) => {
       }
 
       // 3️⃣ Verificar se já existe submissão
-      const existingSubmission = await tx.usuariosTarefas.findUnique({
+      const existingSubmission = await tx.usuarioTarefa.findUnique({
         where: {
           usuario_id_tarefa_id: { usuario_id: userId, tarefa_id: taskId },
         },
@@ -96,7 +96,7 @@ const submitTask = async (req, res) => {
       };
 
       // 5️⃣ Upsert (cria ou atualiza)
-      const result = await tx.usuariosTarefas.upsert({
+      const result = await tx.usuarioTarefa.upsert({
         where: { usuario_id_tarefa_id: { usuario_id: userId, tarefa_id: taskId } },
         update: submissionData,
         create: submissionData,
@@ -167,6 +167,12 @@ const createTaskForMission = async (req, res) => {
       return res.status(400).json({ error: 'ID da missão inválido.' });
     }
 
+    // Verifica se a missão existe
+    const missaoExistente = await prisma.missao.findUnique({ where: { id: missionId } });
+    if (!missaoExistente) {
+      return res.status(404).json({ error: 'Missão não encontrada.' });
+    }
+
     const {
       categoria_id,
       titulo,
@@ -184,6 +190,14 @@ const createTaskForMission = async (req, res) => {
       return res.status(400).json({ error: 'Campos obrigatórios (titulo, pontos, tipo, dificuldade) estão faltando.' });
     }
 
+    // Se foi enviada uma categoria, garantir que ela exista
+    if (categoria_id) {
+      const categoriaBusca = await prisma.categoriaTarefa.findUnique({ where: { id: parseInt(categoria_id, 10) } });
+      if (!categoriaBusca) {
+        return res.status(404).json({ error: 'Categoria de tarefa não encontrada.' });
+      }
+    }
+
     const newTask = await prisma.tarefa.create({
       data: {
         missao_id: missionId,
@@ -194,7 +208,7 @@ const createTaskForMission = async (req, res) => {
         pontos: parseInt(pontos, 10),
         tipo,
         dificuldade,
-        ativo: true,
+        ativa: true,
         ordem: ordem ? parseInt(ordem, 10) : 0,
         requisitos: requisitos || Prisma.JsonNull,
         tarefa_anterior_id: tarefa_anterior_id ? parseInt(tarefa_anterior_id, 10) : null,
@@ -246,7 +260,7 @@ const uploadEvidence = async (req, res) => {
     });
 
     // Vamos buscar se já há uma submissão para incrementar tentativas:
-    const existingSubmission = await prisma.usuariosTarefas.findUnique({
+    const existingSubmission = await prisma.usuarioTarefa.findUnique({
       where: { usuario_id_tarefa_id: { usuario_id: userId, tarefa_id: taskId } }
     });
 
@@ -262,7 +276,7 @@ const uploadEvidence = async (req, res) => {
       data_criacao: existingSubmission ? existingSubmission.data_criacao : undefined
     };
 
-    const result = await prisma.usuariosTarefas.upsert({
+    const result = await prisma.usuarioTarefa.upsert({
       where: { usuario_id_tarefa_id: { usuario_id: userId, tarefa_id: taskId } },
       update: submissionPayload,
       create: submissionPayload

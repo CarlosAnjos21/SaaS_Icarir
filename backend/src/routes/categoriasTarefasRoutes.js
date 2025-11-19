@@ -1,6 +1,7 @@
 const express = require('express');
 const categoriasController = require('../controllers/categoriasTarefasController');
 const checkAdmin = require('../middlewares/adminMiddleware');
+const authMiddleware = require('../middlewares/authMiddleware');
 
 const router = express.Router();
 
@@ -20,18 +21,18 @@ router.get('/:id', categoriasController.getCategoriaById);
  * POST /api/categorias-tarefas
  * (Admin) Cria uma nova categoria
  */
-router.post('/', checkAdmin, categoriasController.createCategoria);
+router.post('/', authMiddleware, checkAdmin, categoriasController.createCategoria);
 
 /**
  * PUT /api/categorias-tarefas/:id
  * (Admin) Atualiza uma categoria
  */
-router.put('/:id', checkAdmin, categoriasController.updateCategoria);
+router.put('/:id', authMiddleware, checkAdmin, categoriasController.updateCategoria);
 
 /**
  * DELETE /api/categorias-tarefas/:id
  * (Admin) Remove uma categoria
  */
-router.delete('/:id', checkAdmin, categoriasController.deleteCategoria);
+router.delete('/:id', authMiddleware, checkAdmin, categoriasController.deleteCategoria);
 
 module.exports = router;

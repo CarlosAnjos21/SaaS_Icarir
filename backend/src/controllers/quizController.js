@@ -14,13 +14,12 @@ const getQuizForUser = async (req, res) => {
     }
 
     // 1. Buscar o Quiz e suas perguntas (substitui as 2 queries)
-    const quiz = await prisma.quizzes.findUnique({
+    const quiz = await prisma.quiz.findFirst({
       where: { id: quizId, ativo: true },
       select: {
         id: true,
         titulo: true,
         descricao: true,
-        imagem_url: true,
         perguntas: {
           select: {
             id: true,
@@ -68,13 +67,12 @@ const getQuizzesByTask = async (req, res) => {
       return res.status(400).json({ error: 'ID da tarefa inválido.' });
     }
 
-    const quizzes = await prisma.quizzes.findMany({
+    const quizzes = await prisma.quiz.findMany({
       where: { tarefa_id: taskId, ativo: true },
       select: {
         id: true,
         titulo: true,
         descricao: true,
-        imagem_url: true,
         perguntas: {
           select: {
             id: true,
@@ -128,13 +126,13 @@ const submitQuiz = async (req, res) => {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const quiz = await tx.quizzes.findFirstOrThrow({
+      const quiz = await tx.quiz.findFirstOrThrow({
         where: { id: quizId, ativo: true },
         select: { id: true, tarefa_id: true }
       });
       const { tarefa_id } = quiz;
 
-      const questions = await tx.perguntasQuiz.findMany({
+      const questions = await tx.perguntaQuiz.findMany({
         where: { quiz_id: quizId },
         select: { id: true, opcoes: true }
       });
@@ -147,13 +145,13 @@ const submitQuiz = async (req, res) => {
 
       let taskPoints = 0;
       if (tarefa_id) {
-        const tarefa = await tx.tarefas.findUnique({
+        const tarefa = await tx.tarefa.findUnique({
           where: { id: tarefa_id },
           select: { pontos: true }
         });
         taskPoints = tarefa ? tarefa.pontos : 0;
 
-        const existingSub = await tx.usuariosTarefas.findUnique({
+        const existingSub = await tx.usuarioTarefa.findUnique({
           where: {
             usuario_id_tarefa_id: { usuario_id: userId, tarefa_id }
           },
@@ -173,7 +171,7 @@ const submitQuiz = async (req, res) => {
         const isCorrect = correctAnswersMap.get(pergunta_id) === resposta;
         if (isCorrect) totalCorrect++;
 
-        const newAnswer = await tx.respostasQuizzes.create({
+        const newAnswer = await tx.respostaQuiz.create({
           data: {
             usuario_id: userId,
             pergunta_id,
@@ -190,7 +188,7 @@ const submitQuiz = async (req, res) => {
       if (tarefa_id && totalCorrect === correctAnswersMap.size) {
         finalMessage = `Parabéns! Você acertou todas e ganhou ${taskPoints} pontos!`;
 
-        await tx.usuariosTarefas.upsert({
+        await tx.usuarioTarefa.upsert({
           where: {
             usuario_id_tarefa_id: { usuario_id: userId, tarefa_id }
           },
