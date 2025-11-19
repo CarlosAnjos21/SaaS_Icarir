@@ -6,7 +6,7 @@ const authMiddleware = require("../middlewares/authMiddleware");
 // 1. Importar as rotas de tarefas
 const taskRoutes = require("./taskRoutes");
 
-const missoesPorDestino = {
+const missaoPorDestino = {
   Paris: [{ id: 101, title: "Tour Eiffel Challenge", pontos: 200 }],
   Tokyo: [{ id: 102, title: "Shibuya Sprint", pontos: 150 }],
   "New York": [{ id: 103, title: "Central Park Quest", pontos: 180 }],
@@ -56,8 +56,8 @@ router.post("/:missionId/join", missionController.joinMission); // <<< ADICIONAD
 
 router.get("/by-destination/:city", (req, res) => {
   const { city } = req.params;
-  const missoes = missoesPorDestino[city] || [];
-  res.json(missoes);
+  const missao = missaoPorDestino[city] || [];
+  res.json(missao);
 });
 
 module.exports = router;

@@ -21,7 +21,7 @@ const getPendingValidations = async (req, res) => {
     const take = Math.min(parseInt(limit, 10) || 50, 200);
     const skip = (Math.max(parseInt(page, 10) || 1, 1) - 1) * take;
 
-    const pending = await prisma.usuariosTarefas.findMany({
+    const pending = await prisma.usuarioTarefa.findMany({
       where,
       include: {
         usuario: { select: { id: true, nome: true, email: true } },
@@ -33,7 +33,7 @@ const getPendingValidations = async (req, res) => {
     });
 
     // Total count for pagination
-    const total = await prisma.usuariosTarefas.count({ where });
+    const total = await prisma.usuarioTarefa.count({ where });
 
     res.json({ data: pending, meta: { total, page: parseInt(page, 10), limit: take } });
   } catch (error) {

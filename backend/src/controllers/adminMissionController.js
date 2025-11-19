@@ -11,13 +11,12 @@ const createMission = async (req, res) => {
   const {
     titulo,
     descricao,
-    foto_url,
     destino,
     data_inicio,
     data_fim,
     preco,
     vagas_disponiveis,
-    ativo,
+    ativa,
     missao_anterior_id
   } = req.body;
 
@@ -26,17 +25,16 @@ const createMission = async (req, res) => {
   }
 
   try {
-    const newMission = await prisma.missoes.create({
+    const newMission = await prisma.missao.create({
       data: {
         titulo,
         descricao: descricao || null,
-        foto_url: foto_url || null,
         destino: destino || null,
         data_inicio: new Date(data_inicio),
         data_fim: new Date(data_fim),
         preco: preco ? parseFloat(preco) : 0.00,
         vagas_disponiveis: vagas_disponiveis ? parseInt(vagas_disponiveis, 10) : null,
-        ativo: ativo ?? true,
+          ativa: ativa ?? true,
         missao_anterior_id: missao_anterior_id ? parseInt(missao_anterior_id, 10) : null
       }
     });
@@ -62,7 +60,7 @@ const createMission = async (req, res) => {
  */
 const getAllMissions = async (req, res) => {
   try {
-    const missions = await prisma.missoes.findMany({
+    const missions = await prisma.missao.findMany({
       orderBy: { data_inicio: 'desc' }
     });
 
@@ -85,7 +83,7 @@ const getMissionById = async (req, res) => {
   }
 
   try {
-    const mission = await prisma.missoes.findUnique({
+    const mission = await prisma.missao.findUnique({
       where: { id: missionId }
     });
 
@@ -114,13 +112,12 @@ const updateMission = async (req, res) => {
   const {
     titulo,
     descricao,
-    foto_url,
     destino,
     data_inicio,
     data_fim,
     preco,
     vagas_disponiveis,
-    ativo,
+    ativa,
     missao_anterior_id
   } = req.body;
 
@@ -129,18 +126,17 @@ const updateMission = async (req, res) => {
   }
 
   try {
-    const updatedMission = await prisma.missoes.update({
+    const updatedMission = await prisma.missao.update({
       where: { id: missionId },
       data: {
         titulo,
         descricao: descricao || null,
-        foto_url: foto_url || null,
         destino: destino || null,
         data_inicio: new Date(data_inicio),
         data_fim: new Date(data_fim),
         preco: preco ? parseFloat(preco) : 0.00,
         vagas_disponiveis: vagas_disponiveis ? parseInt(vagas_disponiveis, 10) : null,
-        ativo,
+          ativa,
         missao_anterior_id: missao_anterior_id ? parseInt(missao_anterior_id, 10) : null
       }
     });
@@ -176,9 +172,9 @@ const softDeleteMission = async (req, res) => {
   }
 
   try {
-    const deletedMission = await prisma.missoes.update({
+    const deletedMission = await prisma.missao.update({
       where: { id: missionId },
-      data: { ativo: false }
+        data: { ativa: false }
     });
 
     res.json({

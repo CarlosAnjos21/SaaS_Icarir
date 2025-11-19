@@ -20,7 +20,7 @@ const getAllEnrollments = async (req, res) => {
   }
 
   try {
-    const enrollments = await prisma.usuariosMissoes.findMany({
+    const enrollments = await prisma.usuarioMissao.findMany({
       where: where,
       include: { // Inclui dados do usuário e da missão para contexto
         usuario: {
@@ -53,7 +53,7 @@ const getEnrollmentById = async (req, res) => {
       return res.status(400).json({ error: 'ID da inscrição inválido.' });
     }
 
-    const enrollment = await prisma.usuariosMissoes.findUnique({
+    const enrollment = await prisma.usuarioMissao.findUnique({
       where: { id: id },
       include: {
         usuario: { select: { id: true, nome: true, email: true } },
@@ -90,7 +90,7 @@ const updateEnrollment = async (req, res) => {
       status_participacao 
     } = req.body;
 
-    const updatedEnrollment = await prisma.usuariosMissoes.update({
+    const updatedEnrollment = await prisma.usuarioMissao.update({
       where: { id: id },
       data: {
         valor_pago: valor_pago ? parseFloat(valor_pago) : undefined,
@@ -124,8 +124,8 @@ const deleteEnrollment = async (req, res) => {
       return res.status(400).json({ error: 'ID da inscrição inválido.' });
     }
 
-    // Deleta o registro da tabela 'usuarios_missoes'
-    await prisma.usuariosMissoes.delete({
+    // Deleta o registro da tabela 'usuarios_missao'
+    await prisma.usuarioMissao.delete({
       where: { id: id }
     });
     

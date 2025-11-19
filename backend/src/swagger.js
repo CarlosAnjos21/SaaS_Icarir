@@ -16,6 +16,22 @@ const options = {
         description: 'Servidor local',
       },
     ],
+    // Definir o esquema de segurança Bearer para permitir o botão "Authorize" no Swagger UI
+    components: {
+      securitySchemes: {
+        bearerAuth: {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+      },
+    }, //
+    // Aplicar segurança globalmente (faz o Authorize valer para todas as rotas)
+    security: [
+      {
+        bearerAuth: [],
+      },
+    ], //
   },
 apis: [path.join(__dirname, '/routes/**/*.js')],
 };

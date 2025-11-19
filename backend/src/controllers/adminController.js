@@ -24,7 +24,7 @@ const validateTaskSubmission = async (req, res) => {
   }
 
   try {
-    const submission = await prisma.usuariosTarefas.findUnique({
+    const submission = await prisma.usuarioTarefa.findUnique({
       where: { id: submissionId }
     });
 
@@ -38,7 +38,7 @@ const validateTaskSubmission = async (req, res) => {
 
     if (approve) {
       const [updatedSubmission] = await prisma.$transaction([
-        prisma.usuariosTarefas.update({
+        prisma.usuarioTarefa.update({
           where: { id: submissionId },
           data: {
             concluida: true,
@@ -70,7 +70,7 @@ const validateTaskSubmission = async (req, res) => {
         submission: updatedSubmission
       });
     } else {
-      const updatedSubmission = await prisma.usuariosTarefas.update({
+      const updatedSubmission = await prisma.usuarioTarefa.update({
         where: { id: submissionId },
         data: {
           concluida: false,
@@ -104,8 +104,8 @@ const getDashboardStats = async (req, res) => {
   try {
     const [totalUsers, activeMissions, pendingSubmissions, totalPointsAgg] = await Promise.all([
       prisma.usuarios.count({ where: { role: 'user', ativo: true } }),
-      prisma.missoes.count({ where: { ativo: true } }),
-      prisma.usuariosTarefas.count({
+      prisma.missao.count({ where: { ativo: true } }),
+      prisma.usuarioTarefa.count({
         where: {
           concluida: false,
           validado_por: null,
