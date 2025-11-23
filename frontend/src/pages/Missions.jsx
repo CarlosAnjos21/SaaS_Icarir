@@ -1,211 +1,200 @@
 import { useState, useEffect } from "react";
-import FeedbackBar from "../components/Feedbacks/FeedbackBar";
-import api from "../api/api";
+import MissionCard from "../components/missions/MissionCard";
+import MissionDetailsModal from "../components/missions/MissionDetailsModal";
 
 export default function Missions() {
-  const [missoes, setMissoes] = useState([]);
+  const [missions, setMissions] = useState([]);
   const [selectedMission, setSelectedMission] = useState(null);
-  const [activeTab, setActiveTab] = useState("ativas");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  // Estado para controlar a aba selecionada: 'active' ou 'completed'
+  const [activeTab, setActiveTab] = useState('active');
 
   useEffect(() => {
-    async function fetchMissions() {
-      try {
-        const res = await api.get("/admin/missions");
+    // MOCK ATUALIZADO para se parecer com o design.
+    // Adicionado: category, deadline, totalTasks, completedTasks, status e progress.
+    const mockMissions = [
+      {
+        id: 1,
+        title: "Análise de Mercado",
+        category: "Estratégia",
+        status: "Em Andamento", // Usado para determinar se é 'Ativa'
+        progress: 60, // Progresso em porcentagem
+        deadline: "25/11/2025",
+        totalTasks: 5,
+        completedTasks: 3,
+        description: "Realizar uma análise aprofundada do mercado.",
+        steps: [
+          { id: 1, text: "Pesquisa de concorrentes", completed: true },
+          { id: 2, text: "Identificação de público-alvo", completed: true },
+          { id: 3, text: "Análise SWOT", completed: true },
+          { id: 4, text: "Definir estratégia de preços", completed: false },
+          { id: 5, text: "Relatório final", completed: false }
+        ]
+      },
+      {
+        id: 2,
+        title: "Treinamento de Equipe",
+        category: "Desenvolvimento",
+        status: "Em Andamento",
+        progress: 20,
+        deadline: "05/12/2025",
+        totalTasks: 5,
+        completedTasks: 1,
+        description: "Capacitação em novas tecnologias.",
+        steps: [
+          { id: 1, text: "Módulo 1: Fundamentos", completed: true },
+          { id: 2, text: "Módulo 2: Avançado", completed: false },
+          { id: 3, text: "Projeto prático", completed: false },
+          { id: 4, text: "Avaliação final", completed: false },
+          { id: 5, text: "Certificação", completed: false }
+        ]
+      },
+      {
+        id: 3,
+        title: "Otimização de SEO",
+        category: "Marketing",
+        status: "Em Andamento",
+        progress: 85,
+        deadline: "30/11/2025",
+        totalTasks: 20,
+        completedTasks: 17,
+        description: "Melhorar o ranking de busca do site.",
+        steps: [
+          // Exemplo de passos para SEO
+          { id: 1, text: "Auditoria de conteúdo", completed: true },
+          { id: 2, text: "Otimização de meta tags", completed: true },
+          // ... mais passos
+        ]
+      },
+      {
+        id: 4,
+        title: "Missão Concluída (Exemplo)",
+        category: "Administrativo",
+        status: "Concluída", // Marcada como Concluída
+        progress: 100,
+        deadline: "10/10/2025",
+        totalTasks: 4,
+        completedTasks: 4,
+        description: "Missão de exemplo que já foi finalizada.",
+        steps: [
+          { id: 1, text: "Passo A", completed: true },
+          { id: 2, text: "Passo B", completed: true },
+        ]
+      },
+    ];
 
-        const missions = res.data;
-
-        const missionsWithProgress = missions.map((mission) => ({
-          ...mission,
-          steps: mission.steps.map((step) => ({
-            ...step,
-            completedBy: [], // Inicialmente vazio
-          })),
-        }));
-
-        setMissoes(missionsWithProgress);
-        setSelectedMission(missionsWithProgress[0] || null);
-      } catch (err) {
-        if (err.response?.status === 401) {
-          setError("Não autorizado. Verifique suas credenciais.");
-        } else {
-          setError("Erro ao carregar missões.");
-        }
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchMissions();
+    setMissions(mockMissions);
   }, []);
 
-  const handleCompleteStep = async (stepId) => {
-    try {
-      const updatedMissions = missoes.map((mission) => {
-        if (mission.id === selectedMission.id) {
-          const updatedSteps = mission.steps.map((step) => {
-            if (step.id === stepId && !step.completedBy.includes("admin")) {
-              return {
-                ...step,
-                completedBy: [...step.completedBy, "admin"],
-              };
-            }
-            return step;
-          });
-          return { ...mission, steps: updatedSteps };
-        }
-        return mission;
-      });
-
-      setMissoes(updatedMissions);
-      const updatedSelected = updatedMissions.find(
-        (m) => m.id === selectedMission.id
-      );
-      setSelectedMission(updatedSelected);
-    } catch (err) {
-      console.error("Erro ao concluir etapa:", err);
+  // Filtra as missões com base na aba selecionada
+  const filteredMissions = missions.filter(mission => {
+    if (activeTab === 'active') {
+      // Uma missão é considerada 'ativa' se o progresso for < 100
+      return mission.progress < 100;
+    } else if (activeTab === 'completed') {
+      // Uma missão é considerada 'concluída' se o progresso for 100
+      return mission.progress === 100;
     }
+    return true; // Retorna todas se houver um erro no activeTab
+  });
+
+  const handleOpenMission = (mission) => {
+    setSelectedMission(mission);
   };
 
-  const isMissionComplete = (mission) =>
-    Array.isArray(mission.steps) &&
-    mission.steps.length > 0 &&
-    mission.steps.every(
-      (step) =>
-        Array.isArray(step.completedBy) && step.completedBy.includes("admin")
+  const handleCloseModal = () => {
+    setSelectedMission(null);
+  };
+
+  const handleCompleteStep = (stepId) => {
+    setMissions((prev) =>
+      prev.map((mission) =>
+        mission.id === selectedMission.id
+          ? {
+              ...mission,
+              steps: mission.steps.map((s) =>
+                s.id === stepId ? { ...s, completed: true } : s
+              ),
+              // Lógica de atualização de progresso/tarefas concluídas
+              completedTasks: mission.completedTasks + 1,
+              progress: Math.round(((mission.completedTasks + 1) / mission.totalTasks) * 100)
+            }
+          : mission
+      )
     );
 
-  const activeMissions = missoes.filter((m) => !isMissionComplete(m));
-  const completedMissions = missoes.filter((m) => isMissionComplete(m));
-  const missionsToShow =
-    activeTab === "ativas" ? activeMissions : completedMissions;
+    // Atualiza também a missão selecionada para que o modal reflita a mudança imediatamente
+    setSelectedMission((prev) => {
+      const newCompletedTasks = prev.completedTasks + 1;
+      const newProgress = Math.round((newCompletedTasks / prev.totalTasks) * 100);
+      
+      return {
+        ...prev,
+        completedTasks: newCompletedTasks,
+        progress: newProgress,
+        steps: prev.steps.map((s) =>
+          s.id === stepId ? { ...s, completed: true } : s
+        )
+      }
+    });
+  };
 
-  if (loading)
-    return (
-      <p className="text-center mt-20 text-[#394C97]">Carregando dados...</p>
-    );
-  if (error)
-    return <p className="text-center mt-20 text-red-600">Erro: {error}</p>;
+  // Funções auxiliares para classes de abas
+  const getTabClasses = (tabName) => {
+    return activeTab === tabName
+      ? 'border-b-2 border-blue-600 text-blue-600 font-semibold pb-1 cursor-pointer' // Aba ativa
+      : 'text-gray-500 hover:text-gray-700 pb-1 cursor-pointer'; // Aba inativa
+  };
 
   return (
-    <div className="min-h-screen bg-[#FEF7EC] pt-[200px] px-6 pb-12 relative">
-      {/* Tabs */}
-      <div className="max-w-7xl mx-auto mb-8 flex gap-6 justify-center">
-        <button
-          onClick={() => setActiveTab("ativas")}
-          className={`px-4 py-2 rounded-full font-semibold transition ${
-            activeTab === "ativas"
-              ? "bg-[#FE5900] text-white"
-              : "bg-white text-[#394C97] border"
-          }`}
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-3xl font-bold mb-8 text-gray-800">Minhas Missões</h1>
+      
+      {/* Container das Abas (abas 'Missões Ativas' e 'Missões Concluídas') */}
+      <div className="flex space-x-4 border-b border-gray-200 mb-6">
+        <div
+          className={getTabClasses('active')}
+          onClick={() => setActiveTab('active')}
         >
           Missões Ativas
-        </button>
-        <button
-          onClick={() => setActiveTab("concluidas")}
-          className={`px-4 py-2 rounded-full font-semibold transition ${
-            activeTab === "concluidas"
-              ? "bg-[#FE5900] text-white"
-              : "bg-white text-[#394C97] border"
-          }`}
+        </div>
+        <div
+          className={getTabClasses('completed')}
+          onClick={() => setActiveTab('completed')}
         >
           Missões Concluídas
-        </button>
+        </div>
       </div>
 
-      <div className="max-w-7xl mx-auto flex flex-col md:flex-row gap-8">
-        {/* Lista de Missões */}
-        <div className="w-full md:w-1/3 bg-white rounded-xl shadow-md p-6 space-y-6">
-          <h2 className="text-2xl font-bold text-[#394C97] mb-2">Missões</h2>
-          {missionsToShow.length === 0 ? (
-            <p className="text-gray-500 text-sm">Nenhuma missão nesta aba.</p>
-          ) : (
-            missionsToShow.map((mission) => (
-              <button
-                key={mission.id}
-                onClick={() => setSelectedMission(mission)}
-                className={`w-full text-left px-4 py-3 rounded-lg border transition relative overflow-hidden ${
-                  selectedMission?.id === mission.id
-                    ? "bg-blue-100 border-[#394C97] shadow-md ring-2 ring-[#394C97]/30 animate-pulse"
-                    : "bg-gray-50 hover:bg-[#FEF7EC]"
-                }`}
-              >
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-[#394C97]">
-                    {mission.title}
-                  </span>
-                  <span className="text-sm text-[#FE5900] font-bold">
-                    ⭐ {mission.points}
-                  </span>
-                </div>
-              </button>
-            ))
-          )}
-        </div>
-
-        {/* Detalhes da Missão */}
-        {selectedMission && (
-          <div className="w-full md:w-2/3 bg-white rounded-xl shadow-md p-8">
-            <h3 className="text-3xl font-bold text-[#394C97] mb-6 flex items-center gap-2">
-              <span className="animate-bounce">🚀</span> {selectedMission.title}
-            </h3>
-            <p className="text-lg text-gray-700 mb-6">
-              {selectedMission.description}
-            </p>
-
-            <div className="mb-4">
-              <h4 className="font-semibold text-[#394C97] mb-2">Recompensas</h4>
-              <div className="flex gap-4 text-2xl">
-                {selectedMission.rewards.map((reward, index) => (
-                  <span key={index}>{reward}</span>
-                ))}
-              </div>
-            </div>
-
-            <div className="mb-6">
-              <h4 className="font-semibold text-[#394C97] mb-2">
-                Etapas da Missão
-              </h4>
-              <ul className="space-y-2">
-                {selectedMission.steps.map((step) => {
-                  const isDone = step.completedBy.includes("admin");
-                  return (
-                    <li
-                      key={step.id}
-                      className="flex justify-between items-center bg-gray-50 px-4 py-2 rounded border"
-                    >
-                      <span>{step.title}</span>
-                      {isDone ? (
-                        <span className="text-green-600 font-semibold">
-                          ✅ Concluído
-                        </span>
-                      ) : (
-                        <button
-                          onClick={() => handleCompleteStep(step.id)}
-                          className="px-3 py-1 bg-[#FE5900] text-white rounded hover:bg-orange-600"
-                        >
-                          Realizar
-                        </button>
-                      )}
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
-
-            {isMissionComplete(selectedMission) && (
-              <p className="mt-4 text-green-600 font-semibold text-lg">
-                🎉 Missão concluída!
-              </p>
-            )}
-          </div>
+      {/* Exibição dos Cards de Missão */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        {filteredMissions.length > 0 ? (
+          filteredMissions.map((mission) => (
+            <MissionCard
+              key={mission.id}
+              mission={mission}
+              onClick={() => handleOpenMission(mission)}
+              // O MissionCard precisará ser atualizado para exibir todos os dados do mock
+            />
+          ))
+        ) : (
+          <p className="col-span-3 text-gray-500 italic">
+            {activeTab === 'active' 
+              ? 'Nenhuma missão ativa no momento.' 
+              : 'Nenhuma missão concluída.'
+            }
+          </p>
         )}
       </div>
 
-      {/* Barra de Feedback flutuante */}
-      <FeedbackBar />
+      {/* Modal de Detalhes da Missão */}
+      {selectedMission && (
+        <MissionDetailsModal
+          mission={selectedMission}
+          onClose={handleCloseModal}
+          onCompleteStep={handleCompleteStep}
+          // O MissionDetailsModal precisará exibir o progresso e o botão de completar
+        />
+      )}
     </div>
   );
 }
