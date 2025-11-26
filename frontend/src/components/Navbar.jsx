@@ -43,7 +43,8 @@ export default function Navbar() {
     { name: "Missions", path: "/missions" },
     { name: "Ranking", path: "/ranking" },
     { name: "Admin", path: "/admin" },
-    { name: "Feedbacks", path: "/feedbacks" },
+    { name: "Sorteio", path: "/Sorteio" },
+    /* { name: "Feedbacks", path: "/feedbacks" }, */
   ].filter(Boolean); // 👈 Remove valores falsos
 
   return (
