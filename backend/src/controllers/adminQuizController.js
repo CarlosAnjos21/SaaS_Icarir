@@ -8,10 +8,14 @@ const { Prisma } = require('@prisma/client');
  * @access  Admin
  */
 const createQuiz = async (req, res) => {
-  const { titulo, descricao, ativo } = req.body;
+  const { titulo, descricao, ativo, tarefa_id } = req.body;
 
   if (!titulo) {
     return res.status(400).json({ error: 'O título do quiz é obrigatório.' });
+  }
+
+  if (!tarefa_id) {
+    return res.status(400).json({ error: 'O ID da tarefa é obrigatório para vincular o quiz.' });
   }
 
   try {
@@ -19,15 +23,22 @@ const createQuiz = async (req, res) => {
       data: {
         titulo,
         descricao: descricao || '',
-        ativo: ativo ?? true,
+        ativa: ativo ?? true,
+        tarefa: {
+          connect: { id: Number(tarefa_id) }
+        }
       },
     });
 
     res.status(201).json({
-      message: 'Quiz criado com sucesso!',
+      message: 'Quiz criado e vinculado à tarefa com sucesso!',
       quiz: novoQuiz,
     });
   } catch (error) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+      return res.status(404).json({ error: 'A tarefa informada não existe.' });
+    }
+
     console.error('Erro ao criar quiz:', error);
     res.status(500).json({ error: 'Erro interno ao criar quiz.' });
   }
@@ -90,16 +101,26 @@ const getQuizById = async (req, res) => {
  */
 const updateQuiz = async (req, res) => {
   const quizId = parseInt(req.params.quizId, 10);
-  const { titulo, descricao, ativo } = req.body;
+  const { titulo, descricao, ativo, tarefa_id } = req.body;
 
   if (isNaN(quizId)) {
     return res.status(400).json({ error: 'ID de quiz inválido.' });
   }
 
   try {
+    const data = {
+      titulo,
+      descricao,
+      ativa: ativo,
+    };
+
+    if (tarefa_id) {
+      data.tarefa = { connect: { id: Number(tarefa_id) } };
+    }
+
     const quizAtualizado = await prisma.quiz.update({
       where: { id: quizId },
-      data: { titulo, descricao, ativo },
+      data,
     });
 
     res.json({

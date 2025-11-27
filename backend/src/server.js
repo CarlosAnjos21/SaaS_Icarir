@@ -5,10 +5,20 @@ const cors = require("cors");
 const path = require("path");
 const fs = require('fs');
 const setupSwagger = require("./swagger");
+const setupSwagger = require("./swagger");
 
 const app = express();
 app.use(express.json());
 app.use(cookieParser());
+setupSwagger(app);
+
+// ✅ CORS ajustado para Vite (porta 5173)
+app.use(
+  cors({
+    origin: "http://localhost:5173", // porta correta do front-end com Vite
+    credentials: true,
+  })
+);
 setupSwagger(app);
 
 // ✅ CORS ajustado para Vite (porta 5173)
@@ -47,4 +57,5 @@ app.listen(PORT, () => {
 // ✅ Servir arquivos estáticos (imagens enviadas)
 // Servir uploads estáticos (permitir acesso via /uploads/...)
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
 
