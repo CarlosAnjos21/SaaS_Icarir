@@ -5,7 +5,6 @@ const cors = require("cors");
 const path = require("path");
 const fs = require('fs');
 const setupSwagger = require("./swagger");
-const setupSwagger = require("./swagger");
 
 const app = express();
 app.use(express.json());

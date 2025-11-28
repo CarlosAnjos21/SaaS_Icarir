@@ -11,7 +11,8 @@ export default function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolledEnough, setScrolledEnough] = useState(false);
-  const [isAuthenticated, setIsAuthenticated] = useState(false); // 👈 Novo estado
+  // Usaremos 'token' no localStorage, como fizemos no Profile, para ser mais consistente.
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const location = useLocation();
   const isHome = location.pathname === "/";
 
@@ -24,28 +25,29 @@ export default function Navbar() {
   }, []);
 
   useEffect(() => {
-    // Simulação de verificação de login (pode ser substituído por token real)
-    const token = localStorage.getItem("authToken");
+    // Verifica a presença do token real que você está usando (assumindo 'token')
+    const token = localStorage.getItem("token");
     setIsAuthenticated(!!token);
-  }, []);
+  }, [location.pathname]); // Re-checa ao mudar de rota
 
   const isTransparent = isHome && !scrolledEnough;
 
-  const navbarClasses = `w-full px-8 py-3 flex justify-between items-center fixed top-0 left-0 z-50 backdrop-blur-md transition-all duration-500 ${
-    isTransparent
+  const navbarClasses = `w-full px-8 py-3 flex justify-between items-center fixed top-0 left-0 z-50 backdrop-blur-md transition-all duration-500 ${isTransparent
       ? "bg-transparent text-white"
       : "bg-white text-[#394C97] shadow-md"
-  }`;
+    }`;
 
   const navLinks = [
-    { name: "Home", path: "/" },
-    !isAuthenticated && { name: "Register", path: "/register" }, // 👈 Condicional
-    { name: "Missions", path: "/missions" },
-    { name: "Ranking", path: "/ranking" },
-    { name: "Admin", path: "/admin" },
+    { name: "Início", path: "/" },
+    // 1. Corrigido: 'Register' para 'Cadastro'
+    !isAuthenticated && { name: "Cadastro", path: "/register" },
+    { name: "Missão", path: "/missions" },
+    { name: "Classificação", path: "/ranking" },
+    { name: "Administrador", path: "/admin" },
+    // 2. Corrigido: 'Sorteio' para 'Sorteio' (para consistência de capitalização, mantendo a original)
     { name: "Sorteio", path: "/Sorteio" },
     /* { name: "Feedbacks", path: "/feedbacks" }, */
-  ].filter(Boolean); // 👈 Remove valores falsos
+  ].filter(Boolean); // Remove valores falsos
 
   return (
     <nav className={navbarClasses}>
@@ -64,9 +66,8 @@ export default function Navbar() {
           <li key={index} className="relative group">
             <Link
               to={item.path}
-              className={`transition duration-300 ${
-                isTransparent ? "text-white" : "text-[#394C97]"
-              } hover:text-orange`}
+              className={`transition duration-300 ${isTransparent ? "text-white" : "text-[#394C97]"
+                } hover:text-orange`}
             >
               {item.name}
               <span className="absolute left-0 -bottom-1 w-full h-[2px] bg-orange scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300"></span>
@@ -91,6 +92,7 @@ export default function Navbar() {
           >
             <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2zm0 1.5A4.25 4.25 0 0 0 3.5 7.75v8.5A4.25 4.25 0 0 0 7.75 20.5h8.5A4.25 4.25 0 0 0 20.5 16.25v-8.5A4.25 4.25 0 0 0 16.25 3.5h-8.5zm8.75 2.25a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5a.75.75 0 0 1 .75-.75zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 1.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" />
           </svg>
+          {/* 3. Corrigido: 'Instagram' para 'Instagram' (para consistência de capitalização, mantendo a original) */}
           <span>Instagram</span>
         </a>
 
@@ -138,24 +140,24 @@ export default function Navbar() {
           {menuOpen && (
             <div className="absolute right-0 mt-3 w-52 bg-white text-[#394C97] rounded-lg shadow-xl overflow-hidden border border-[#394C97] z-50 transition duration-300">
               <ul className="flex flex-col">
-                {[
-                  { name: "Perfil", path: "/profile" },
+                {
+                  // Os itens do menu suspenso JÁ estavam em português.
+                  [{ name: "Perfil", path: "/profile" },
                   { name: "Painel", path: "/carreira" },
                   { name: "Viagens", path: "/trips" },
                   { name: "Sair da Conta", path: "/logout", danger: true },
-                ].map((item, index) => (
-                  <li key={index}>
-                    <Link
-                      to={item.path}
-                      className={`block px-5 py-3 text-sm hover:bg-gray-100 transition ${
-                        item.danger ? "text-red-500" : ""
-                      }`}
-                      onClick={() => setMenuOpen(false)}
-                    >
-                      {item.name}
-                    </Link>
-                  </li>
-                ))}
+                  ].map((item, index) => (
+                    <li key={index}>
+                      <Link
+                        to={item.path}
+                        className={`block px-5 py-3 text-sm hover:bg-gray-100 transition ${item.danger ? "text-red-500" : ""
+                          }`}
+                        onClick={() => setMenuOpen(false)}
+                      >
+                        {item.name}
+                      </Link>
+                    </li>
+                  ))}
               </ul>
             </div>
           )}
