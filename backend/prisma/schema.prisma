@@ -259,7 +259,7 @@ model Quiz {
   data_criacao DateTime  @default(now())
 
   // Relations
-  tarefa     Tarefa         @relation(fields: [tarefa_id], references: [id], onDelete: Cascade)
+  tarefa     Tarefa[]
   perguntas  PerguntaQuiz[]
 
   @@map("quizzes")

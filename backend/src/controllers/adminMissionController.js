@@ -29,12 +29,13 @@ const createMission = async (req, res) => {
       data: {
         titulo,
         descricao: descricao || null,
+        // foto_url: foto_url || null,
         destino: destino || null,
         data_inicio: new Date(data_inicio),
         data_fim: new Date(data_fim),
         preco: preco ? parseFloat(preco) : 0.00,
         vagas_disponiveis: vagas_disponiveis ? parseInt(vagas_disponiveis, 10) : null,
-          ativa: ativa ?? true,
+        ativa: ativo ?? true,
         missao_anterior_id: missao_anterior_id ? parseInt(missao_anterior_id, 10) : null
       }
     });
@@ -121,30 +122,36 @@ const updateMission = async (req, res) => {
     missao_anterior_id
   } = req.body;
 
-  if (!titulo || !data_inicio || !data_fim) {
-    return res.status(400).json({ error: 'Título, data de início e data de fim são obrigatórios.' });
+  // Objeto para armazenar dados enviados para atualização de missão.
+  const dataToUpdate = {};
+
+  if (titulo !== undefined) dataToUpdate.titulo = titulo;
+  if (descricao !== undefined) dataToUpdate.descricao = descricao;
+  if (foto_url !== undefined) dataToUpdate.foto_url = foto_url;
+  if (destino !== undefined) dataToUpdate.destino = destino;
+
+  if (data_inicio !== undefined) dataToUpdate.data_inicio = new Date(data_inicio);
+  if (data_fim !== undefined) dataToUpdate.data_fim = new Date(data_fim);
+
+  if (preco !== undefined) dataToUpdate.preco = parseFloat(preco);
+  if (vagas_disponiveis !== undefined) dataToUpdate.vagas_disponiveis = parseInt(vagas_disponiveis, 10);
+
+  if (ativo !== undefined) dataToUpdate.ativo = ativo;
+  if (missao_anterior_id !== undefined) {
+    dataToUpdate.missao_anterior_id = missao_anterior_id ? parseInt(missao_anterior_id, 10) : null;
   }
 
   try {
     const updatedMission = await prisma.missao.update({
       where: { id: missionId },
-      data: {
-        titulo,
-        descricao: descricao || null,
-        destino: destino || null,
-        data_inicio: new Date(data_inicio),
-        data_fim: new Date(data_fim),
-        preco: preco ? parseFloat(preco) : 0.00,
-        vagas_disponiveis: vagas_disponiveis ? parseInt(vagas_disponiveis, 10) : null,
-          ativa,
-        missao_anterior_id: missao_anterior_id ? parseInt(missao_anterior_id, 10) : null
-      }
+      data: dataToUpdate
     });
 
     res.json({
       message: 'Missão atualizada com sucesso!',
       mission: updatedMission
     });
+
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === 'P2025') {
@@ -174,7 +181,7 @@ const softDeleteMission = async (req, res) => {
   try {
     const deletedMission = await prisma.missao.update({
       where: { id: missionId },
-        data: { ativa: false }
+      data: { ativa: false }
     });
 
     res.json({
