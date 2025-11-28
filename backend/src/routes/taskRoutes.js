@@ -50,6 +50,7 @@ router.get('/:taskId', taskController.getTaskById);
  */
 router.post('/:taskId/submit', taskController.submitTask);
 
+<<<<<<< HEAD
 
 /**
  * @route   POST /api/missions/:missionId/tasks/:taskId/evidences
@@ -59,3 +60,180 @@ router.post('/:taskId/submit', taskController.submitTask);
 router.post('/:taskId/evidences', authMiddleware, upload.array('files', 5), taskController.uploadEvidence);
 
 module.exports = router;
+=======
+module.exports = router;
+
+/**
+ * @swagger
+ * tags:
+ *   name: Tarefas
+ *   description: Endpoints relacionados às tarefas das missões
+ */
+
+/**
+ * @swagger
+ * /missions/{missionId}/tasks:
+ *   get:
+ *     summary: Listar todas as tarefas ativas de uma missão
+ *     tags: [Tarefas]
+ *     parameters:
+ *       - in: path
+ *         name: missionId
+ *         schema:
+ *           type: integer
+ *         required: true
+ *         description: ID da missão
+ *     responses:
+ *       200:
+ *         description: Lista de tarefas retornada com sucesso
+ *       400:
+ *         description: ID inválido
+ *       500:
+ *         description: Erro interno
+ */
+
+/**
+ * @swagger
+ * /missions/{missionId}/tasks/{taskId}:
+ *   get:
+ *     summary: Buscar uma tarefa específica pelo ID
+ *     tags: [Tarefas]
+ *     parameters:
+ *       - in: path
+ *         name: missionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Tarefa encontrada com sucesso
+ *       400:
+ *         description: IDs inválidos
+ *       404:
+ *         description: Tarefa não encontrada
+ *       500:
+ *         description: Erro interno
+ */
+
+/**
+ * @swagger
+ * /missions/{missionId}/tasks/{taskId}/submit:
+ *   post:
+ *     summary: Submeter uma tarefa para validação
+ *     tags: [Tarefas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: missionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - evidencias
+ *             properties:
+ *               evidencias:
+ *                 type: string
+ *                 example: "URL da foto, vídeo ou texto enviado pelo usuário"
+ *     responses:
+ *       201:
+ *         description: Tarefa submetida com sucesso
+ *       400:
+ *         description: Dados inválidos ou campos obrigatórios ausentes
+ *       403:
+ *         description: Usuário não inscrito na missão ou tarefa não pertence à missão
+ *       409:
+ *         description: Tarefa já concluída anteriormente
+ *       500:
+ *         description: Erro interno
+ */
+
+/**
+ * @swagger
+ * /missions/{missionId}/tasks:
+ *   post:
+ *     summary: (Admin) Criar uma nova tarefa para uma missão
+ *     tags: [Admin - Tarefas]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: missionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: ID da missão à qual a tarefa pertence
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required:
+ *               - titulo
+ *               - pontos
+ *               - tipo
+ *               - dificuldade
+ *             properties:
+ *               categoria_id:
+ *                 type: integer
+ *                 nullable: true
+ *               titulo:
+ *                 type: string
+ *                 example: "Tarefa Nubank"
+ *               descricao:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "Descrição da tarefa Nubank"
+ *               instrucoes:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "Instruções para  a tarefa Nubank"
+ *               pontos:
+ *                 type: integer
+ *                 example: 10
+ *               tipo:
+ *                 type: string
+ *                 example: "conhecimento"
+ *               dificuldade:
+ *                 type: string
+ *                 example: "medio"
+ *               ordem:
+ *                 type: integer
+ *                 nullable: true
+ *               requisitos:
+ *                 type: object
+ *                 nullable: true
+ *               tarefa_anterior_id:
+ *                 type: integer
+ *                 nullable: true
+ *     responses:
+ *       201:
+ *         description: Tarefa criada com sucesso
+ *       400:
+ *         description: Campos obrigatórios faltando
+ *       404:
+ *         description: Missão ou categoria não encontrada
+ *       401:
+ *         description: Token inválido ou sem permissão
+ *       500:
+ *         description: Erro interno
+ */
+
+>>>>>>> davi-dev
