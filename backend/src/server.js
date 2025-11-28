@@ -18,6 +18,15 @@ app.use(
     credentials: true,
   })
 );
+setupSwagger(app);
+
+// ✅ CORS ajustado para Vite (porta 5173)
+app.use(
+  cors({
+    origin: "http://localhost:5173", // porta correta do front-end com Vite
+    credentials: true,
+  })
+);
 
 // ✅ Rotas da API
 const mainRouter = require("./routes/index");
@@ -47,4 +56,5 @@ app.listen(PORT, () => {
 // ✅ Servir arquivos estáticos (imagens enviadas)
 // Servir uploads estáticos (permitir acesso via /uploads/...)
 app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+
 
