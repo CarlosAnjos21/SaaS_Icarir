@@ -1,3 +1,4 @@
+import React from "react";
 import { Bar, Line, Pie } from "react-chartjs-2";
 import {
   Chart as ChartJS,
@@ -10,9 +11,10 @@ import {
   Tooltip,
   Legend,
 } from "chart.js";
+import { motion } from "framer-motion";
+import { Trophy, Zap, Plane, Calendar, CheckCircle } from 'lucide-react';
 
-import { Trophy, Zap, Plane, Calendar, MapPin, CheckCircle } from 'lucide-react';
-
+// Registro dos componentes do ChartJS
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -25,7 +27,7 @@ ChartJS.register(
 );
 
 const PRIMARY_COLOR = '#394C97';
-const ACCENT_COLOR = '#FF8C00';
+const ACCENT_COLOR = '#FE5900';
 
 // ===================================================================
 // DADOS MOCKADOS
@@ -33,7 +35,7 @@ const ACCENT_COLOR = '#FF8C00';
 
 const careerStats = {
   missionsCompleted: 18,
-  totalPoints: 540,
+  totalPoints: 1200,
   tripsMade: 5,
   badgesEarned: ["Explorador", "Veterano", "Conquistador"],
   timeline: [
@@ -44,7 +46,7 @@ const careerStats = {
 };
 
 // ===================================================================
-// DADOS DOS GRÁFICOS (COM OPÇÕES PADRÃO MELHORADAS)
+// DADOS DOS GRÁFICOS
 // ===================================================================
 
 const missionsByDay = {
@@ -54,8 +56,8 @@ const missionsByDay = {
       label: "Missões Concluídas",
       data: [3, 4, 2, 5, 3, 1, 0],
       backgroundColor: PRIMARY_COLOR,
-      borderRadius: 5,
-      hoverBackgroundColor: ACCENT_COLOR, // Feedback visual ao passar o mouse
+      borderRadius: 6,
+      hoverBackgroundColor: ACCENT_COLOR,
     },
   ],
 };
@@ -65,17 +67,18 @@ const pointsByMonth = {
   datasets: [
     {
       label: "Pontos Acumulados",
-      data: [120, 160, 180, 80],
+      data: [120, 160, 480, 1200],
       borderColor: PRIMARY_COLOR,
-      backgroundColor: 'rgba(57, 76, 151, 0.2)',
-      tension: 0.4,
+      backgroundColor: 'rgba(57, 76, 151, 0.1)',
+      tension: 0.3,
       fill: true,
       pointBackgroundColor: PRIMARY_COLOR,
       pointBorderColor: '#fff',
+      pointBorderWidth: 2,
       pointHoverBackgroundColor: ACCENT_COLOR,
       pointHoverBorderColor: PRIMARY_COLOR,
-      pointRadius: 5,
-      pointHoverRadius: 7,
+      pointRadius: 6,
+      pointHoverRadius: 8,
     },
   ],
 };
@@ -86,134 +89,61 @@ const tripsByDestination = {
     {
       label: "Viagens",
       data: [2, 1, 1, 1],
-      backgroundColor: [PRIMARY_COLOR, ACCENT_COLOR, "#4CAF50", "#E91E63"],
-      hoverOffset: 8, // Aumenta o destaque ao passar o mouse
-      borderWidth: 2, // Adiciona uma pequena borda para separar as fatias
-      borderColor: '#ffffff', // Borda branca para fatias
+      backgroundColor: [PRIMARY_COLOR, ACCENT_COLOR, "#10B981", "#8B5CF6"],
+      hoverOffset: 10,
+      borderWidth: 0,
     },
   ],
 };
 
 // ===================================================================
-// OPÇÕES DOS GRÁFICOS (Para profissionalismo e transparência)
+// OPÇÕES DOS GRÁFICOS
 // ===================================================================
 
 const commonChartOptions = {
-  responsive: true,
-  maintainAspectRatio: false, // Permite que o gráfico se ajuste melhor ao container
-  plugins: {
-    legend: {
-      display: true,
-      position: 'top',
-      labels: {
-        font: {
-          size: 14,
-          family: 'Inter, sans-serif' // Usando uma fonte mais comum e moderna
-        },
-        color: '#4A5568', // Cor mais escura para a legenda
-      },
-    },
-    tooltip: {
-      enabled: true,
-      backgroundColor: 'rgba(0,0,0,0.7)',
-      titleColor: '#fff',
-      bodyColor: '#fff',
-      titleFont: { size: 14, weight: 'bold' },
-      bodyFont: { size: 12 },
-      padding: 10,
-      caretSize: 8,
-      borderRadius: 4,
-    },
-  },
-  scales: {
-    x: {
-      grid: {
-        display: false, // Remove as linhas de grade do eixo X
-        drawBorder: false, // Remove a borda do eixo X
-      },
-      ticks: {
-        color: '#6B7280', // Cor dos rótulos do eixo X
-        font: { family: 'Inter, sans-serif' }
-      }
-    },
-    y: {
-      grid: {
-        color: 'rgba(0, 0, 0, 0.05)', // Linhas de grade mais claras e transparentes no eixo Y
-        drawBorder: false, // Remove a borda do eixo Y
-      },
-      ticks: {
-        beginAtZero: true,
-        color: '#6B7280', // Cor dos rótulos do eixo Y
-        font: { family: 'Inter, sans-serif' }
-      }
-    }
-  }
-};
-
-// Opções específicas para cada tipo de gráfico
-const barChartOptions = {
-  ...commonChartOptions,
-  scales: {
-    x: {
-      ...commonChartOptions.scales.x,
-      grid: {
-        display: false // Barras geralmente não precisam de grid X
-      }
-    },
-    y: {
-      ...commonChartOptions.scales.y,
-      beginAtZero: true,
-      max: 6, // Exemplo: define um máximo para o eixo Y
-      ticks: {
-        stepSize: 1 // Força steps de 1 em 1
-      }
-    }
-  }
-};
-
-const lineChartOptions = {
-  ...commonChartOptions,
-  scales: {
-    x: {
-      ...commonChartOptions.scales.x,
-    },
-    y: {
-      ...commonChartOptions.scales.y,
-      beginAtZero: true,
-    }
-  }
-};
-
-const pieChartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
     legend: {
       display: true,
-      position: 'right', // Legenda à direita para gráficos de pizza
+      position: 'top',
       labels: {
-        font: {
-          size: 14,
-          family: 'Inter, sans-serif'
-        },
-        color: '#4A5568',
+        font: { size: 12, family: 'Inter, sans-serif' },
+        color: '#64748B',
+        usePointStyle: true,
+        boxWidth: 8,
       },
     },
     tooltip: {
-      ...commonChartOptions.plugins.tooltip // Usa as mesmas configurações de tooltip
+      backgroundColor: '#1E293B',
+      titleColor: '#fff',
+      bodyColor: '#CBD5E1',
+      titleFont: { size: 13, weight: 'bold' },
+      padding: 12,
+      cornerRadius: 8,
+      displayColors: false,
     },
   },
-  layout: {
-    padding: 20 // Adiciona um pouco de padding ao gráfico
-  },
-  elements: {
-    arc: {
-      borderWidth: 2,
-      borderColor: '#ffffff', // Borda branca para separar as fatias
+  scales: {
+    x: {
+      grid: { display: false, drawBorder: false },
+      ticks: { color: '#94A3B8', font: { size: 11 } }
+    },
+    y: {
+      grid: { color: '#F1F5F9', drawBorder: false },
+      ticks: { color: '#94A3B8', font: { size: 11 }, padding: 10 }
     }
   }
 };
 
+const pieChartOptions = {
+  ...commonChartOptions,
+  scales: { x: { display: false }, y: { display: false } },
+  plugins: {
+    ...commonChartOptions.plugins,
+    legend: { ...commonChartOptions.plugins.legend, position: 'right' }
+  }
+};
 
 // ===================================================================
 // COMPONENTE PRINCIPAL
@@ -221,123 +151,182 @@ const pieChartOptions = {
 
 export default function CareerPanel() {
   return (
-    <div className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8 bg-gray-50 min-h-screen pt-[90px]">
-      <h1 className="text-4xl font-extrabold text-gray-900 mb-10 border-b pb-2">
-        🏆 Painel de Carreira
-      </h1>
-
-      {/* ------------------ ESTATÍSTICAS PRINCIPAIS ------------------ */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-        <StatCard
-          title="Missões Concluídas"
-          value={careerStats.missionsCompleted}
-          icon={CheckCircle}
-          color="text-green-600"
-        />
-        <StatCard
-          title="Pontos Totais"
-          value={careerStats.totalPoints}
-          icon={Zap}
-          color="text-yellow-600"
-        />
-        <StatCard
-          title="Viagens Registradas"
-          value={careerStats.tripsMade}
-          icon={Plane}
-          color="text-blue-600"
-        />
-      </div>
-
-      <hr className="my-10" />
-
-      {/* ------------------ CONQUISTAS E LINHA DO TEMPO (2 COLUNAS) ------------------ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
-        <div className="lg:col-span-1 bg-white shadow-xl rounded-xl p-6">
-          <h2 className="text-2xl font-bold flex items-center text-gray-800 mb-4">
-            <Trophy className="w-6 h-6 mr-2 text-orange-500" />
-            Suas Conquistas
-          </h2>
-          <div className="flex gap-3 flex-wrap">
-            {careerStats.badgesEarned.map((badge, index) => (
-              <span
-                key={index}
-                className="bg-orange-500 text-white px-4 py-1.5 rounded-full text-sm font-semibold shadow-md hover:bg-orange-600 transition"
-              >
-                {badge}
-              </span>
-            ))}
-          </div>
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
+      
+      {/* --- BANNER SUPERIOR --- */}
+      <div className="h-64 w-full bg-[#394C97] relative">
+        <div className="absolute top-4 right-4 text-white/80 text-sm font-medium">
+          Diário de Bordo
         </div>
-
-        <div className="lg:col-span-2 bg-white shadow-xl rounded-xl p-6">
-          <h2 className="text-2xl font-bold flex items-center text-gray-800 mb-4">
-            <Calendar className="w-6 h-6 mr-2 text-indigo-500" />
-            Últimas Atividades
-          </h2>
-          <ul className="border-l-4 border-indigo-200 pl-6 space-y-6">
-            {careerStats.timeline.map((item, index) => (
-              <li key={index} className="relative">
-                <span className="absolute -left-8 top-0 w-4 h-4 bg-indigo-500 rounded-full border-4 border-white"></span>
-                <p className="text-gray-900 font-semibold">
-                  {item.event}
-                </p>
-                <p className="text-sm text-gray-500">{item.date}</p>
-              </li>
-            ))}
-          </ul>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center pb-12 md:translate-y-2">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-4 text-white"
+          >
+            <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
+              <Trophy className="w-10 h-10 text-[#FE5900]" />
+            </div>
+            <div>
+              <h1 className="text-4xl font-bold tracking-tight">Diário de Bordo</h1>
+              <p className="text-blue-100 text-lg mt-1">Acompanhe sua evolução e conquistas</p>
+            </div>
+          </motion.div>
         </div>
       </div>
 
-      <hr className="my-10" />
+      {/* --- CONTEÚDO PRINCIPAL --- */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 pb-20 relative z-10">
+        
+        {/* 1. ESTATÍSTICAS PRINCIPAIS */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <StatCard
+            title="Missões Concluídas"
+            value={careerStats.missionsCompleted}
+            icon={CheckCircle}
+            color="text-emerald-500"
+            bgColor="bg-emerald-50"
+            delay={0.1}
+          />
+          <StatCard
+            title="Pontos Totais"
+            value={careerStats.totalPoints}
+            icon={Zap}
+            color="text-[#FE5900]"
+            bgColor="bg-orange-50"
+            delay={0.2}
+          />
+          <StatCard
+            title="Viagens Registradas"
+            value={careerStats.tripsMade}
+            icon={Plane}
+            color="text-blue-500"
+            bgColor="bg-blue-50"
+            delay={0.3}
+          />
+        </div>
 
-      {/* ------------------ GRÁFICOS ------------------ */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* 2. CONQUISTAS E TIMELINE (AGORA LADO A LADO EM TELAS MÉDIAS) */}
+        {/* Alterado de lg:grid-cols-3 para md:grid-cols-3 para economizar espaço vertical */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+          
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="md:col-span-1 bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col"
+          >
+            <h2 className="text-xl font-bold text-[#394C97] mb-6 flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-[#FE5900]" />
+              Conquistas
+            </h2>
+            <div className="flex flex-wrap gap-2 content-start">
+              {careerStats.badgesEarned.map((badge, index) => (
+                <span
+                  key={index}
+                  className="bg-gray-100 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-semibold border border-gray-200 flex items-center gap-2"
+                >
+                  <span className="w-2 h-2 rounded-full bg-[#FE5900]"></span>
+                  {badge}
+                </span>
+              ))}
+              <div className="w-full mt-4 p-4 bg-gray-50 rounded-xl text-center border border-dashed border-gray-300">
+                <p className="text-sm text-gray-400">Próxima: <span className="text-[#394C97] font-bold">Mestre das Serras</span></p>
+                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-2">
+                   <div className="bg-[#394C97] h-1.5 rounded-full w-[80%]"></div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
 
-        {/* Missões por Dia da Semana (Barra) */}
-        <ChartCard title="Frequência de Missões">
-          <Bar data={missionsByDay} options={barChartOptions} /> {/* Passando as opções */}
-        </ChartCard>
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.5 }}
+            className="md:col-span-2 bg-white rounded-2xl p-6 shadow-sm border border-gray-100"
+          >
+            <h2 className="text-xl font-bold text-[#394C97] mb-6 flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-[#FE5900]" />
+              Últimas Atividades
+            </h2>
+            <div className="relative pl-4">
+              <div className="absolute left-[21px] top-2 bottom-4 w-[2px] bg-gray-100"></div>
+              <ul className="space-y-6">
+                {careerStats.timeline.map((item, index) => (
+                  <li key={index} className="relative flex items-start gap-4">
+                    <div className="relative z-10 mt-1">
+                      <div className="w-3 h-3 rounded-full bg-[#394C97] ring-4 ring-white shadow-sm"></div>
+                    </div>
+                    <div>
+                      <p className="text-gray-800 font-semibold text-base leading-none mb-1">
+                        {item.event}
+                      </p>
+                      <p className="text-sm text-gray-500">{item.date}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </motion.div>
+        </div>
 
-        {/* Pontos Acumulados por Mês (Linha) */}
-        <ChartCard title="Evolução de Pontuação">
-          <Line data={pointsByMonth} options={lineChartOptions} /> {/* Passando as opções */}
-        </ChartCard>
+        {/* 3. GRÁFICOS (AGORA 2 POR LINHA EM TELAS MÉDIAS) */}
+        {/* Alterado para md:grid-cols-2. Isso garante pelo menos 2 gráficos por linha em laptops/tablets */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          <ChartCard title="Frequência de Missões" delay={0.6}>
+            <Bar data={missionsByDay} options={commonChartOptions} />
+          </ChartCard>
 
-        {/* Viagens por Destino (Pizza/Doughnut) */}
-        <ChartCard title="Distribuição de Viagens" className="lg:col-span-1">
-          <Pie data={tripsByDestination} options={pieChartOptions} /> {/* Passando as opções */}
-        </ChartCard>
+          <ChartCard title="Evolução de Pontos" delay={0.7}>
+            <Line data={pointsByMonth} options={commonChartOptions} />
+          </ChartCard>
+
+          {/* Em telas médias, este gráfico ficará na segunda linha, ocupando metade ou tudo (opcional) */}
+          <ChartCard title="Destinos Visitados" delay={0.8} className="md:col-span-2 lg:col-span-1 xl:col-span-1">
+             {/* Usei md:col-span-2 para ele centralizar/encher a linha de baixo se sobrar, fica mais bonito */}
+            <Pie data={tripsByDestination} options={pieChartOptions} />
+          </ChartCard>
+        </div>
+
       </div>
     </div>
   );
 }
 
 // ===================================================================
-// COMPONENTES AUXILIARES (Mantidos)
+// COMPONENTES AUXILIARES
 // ===================================================================
 
-const StatCard = ({ title, value, icon: Icon, color }) => (
-  <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-100 hover:shadow-2xl transition duration-300">
-    <div className="flex justify-between items-center">
-      <div className="text-left">
-        <h2 className="text-lg font-medium text-gray-500">{title}</h2>
-        <p className={`text-4xl font-extrabold ${color} mt-1`}>{value}</p>
-      </div>
-      <div className={`p-3 rounded-full ${color.replace('text-', 'bg-')} bg-opacity-10`}>
-        <Icon className={`w-8 h-8 ${color}`} />
-      </div>
-
+const StatCard = ({ title, value, icon: Icon, color, bgColor, delay }) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay, duration: 0.5 }}
+    className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center justify-between hover:shadow-md transition-shadow"
+  >
+    <div>
+      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide">{title}</h2>
+      <p className={`text-3xl font-bold ${color} mt-1`}>{value}</p>
     </div>
-  </div>
+    <div className={`p-4 rounded-xl ${bgColor}`}>
+      <Icon className={`w-6 h-6 ${color}`} />
+    </div>
+  </motion.div>
 );
 
-const ChartCard = ({ title, children, className = '' }) => (
-  <div className={`bg-white shadow-xl rounded-xl p-6 h-80 flex flex-col ${className}`}> {/* Adicionado h-80 e flex-col */}
-    <h2 className="text-xl font-bold flex items-center text-gray-800 mb-6 border-b pb-2">
+const ChartCard = ({ title, children, className = '', delay }) => (
+  <motion.div 
+    initial={{ opacity: 0, y: 20 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ delay, duration: 0.5 }}
+    className={`bg-white rounded-2xl p-6 shadow-sm border border-gray-100 h-80 flex flex-col ${className}`}
+  >
+    <h2 className="text-lg font-bold text-[#394C97] mb-6 flex items-center justify-between">
       {title}
     </h2>
-    <div className="flex-grow flex items-center justify-center"> {/* Centraliza e permite crescimento */}
+    <div className="flex-grow w-full h-full min-h-0 relative">
       {children}
     </div>
-  </div>
+  </motion.div>
 );

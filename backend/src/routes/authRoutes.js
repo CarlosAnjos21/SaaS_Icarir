@@ -3,6 +3,8 @@ const router = express.Router();
 const authController = require('../controllers/authController');
 const authMiddleware = require('../middlewares/authMiddleware');
 
+const upload = require('../middlewares/uploadMiddleware');
+
 // Rotas Públicas (não precisam de authMiddleware)
 router.post('/register', authController.register);
 router.post('/login', authController.login);

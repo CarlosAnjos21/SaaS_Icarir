@@ -81,28 +81,28 @@ enum TipoPergunta {
 // ==========================
 
 model Usuario {
-  id               Int              @id @default(autoincrement())
+  id               Int      @id @default(autoincrement())
   nome             String
-  email            String           @unique
+  email            String   @unique
   senha            String
   empresa          String?
-  role             Role             @default(participante)
-  pontos           Int              @default(0)
+  role             Role     @default(participante)
+  pontos           Int      @default(0)
   foto_url         String?
-  ativo            Boolean          @default(true)
-  data_criacao     DateTime         @default(now())
-  data_atualizacao DateTime         @default(now())
+  ativo            Boolean  @default(true)
+  data_criacao     DateTime @default(now())
+  data_atualizacao DateTime @default(now())
 
   // Relations
-  perfil           Perfil?
-  missoes          UsuarioMissao[]
-  tarefas          UsuarioTarefa[]
-  validacoes       UsuarioTarefa[]  @relation("Validacoes")
-  respostas        RespostaQuiz[]
-  cards            UsuarioCard[]
-  premiacoes       UsuarioPremiacao[]
-  logs             LogsPontos[]     @relation("LogUsuario")
-  validacoesLogs   LogsPontos[]     @relation("LogValidador")
+  perfil         Perfil?
+  missoes        UsuarioMissao[]
+  tarefas        UsuarioTarefa[]
+  validacoes     UsuarioTarefa[]    @relation("Validacoes")
+  respostas      RespostaQuiz[]
+  cards          UsuarioCard[]
+  premiacoes     UsuarioPremiacao[]
+  logs           LogsPontos[]       @relation("LogUsuario")
+  validacoesLogs LogsPontos[]       @relation("LogValidador")
 
   @@map("usuarios")
 }
@@ -126,22 +126,22 @@ model Perfil {
 }
 
 model Missao {
-  id                 Int        @id @default(autoincrement())
+  id                 Int       @id @default(autoincrement())
   titulo             String
   descricao          String?
   destino            String?
-  data_inicio        DateTime?  @db.Date
-  data_fim           DateTime?  @db.Date
-  preco              Decimal?   @db.Decimal(10, 2)
+  data_inicio        DateTime? @db.Date
+  data_fim           DateTime? @db.Date
+  preco              Decimal?  @db.Decimal(10, 2)
   vagas_disponiveis  Int?
-  ativa              Boolean    @default(true)
+  ativa              Boolean   @default(true)
   missao_anterior_id Int?
-  data_criacao       DateTime   @default(now())
-  data_atualizacao   DateTime   @default(now())
+  data_criacao       DateTime  @default(now())
+  data_atualizacao   DateTime  @default(now())
 
   // Relations
-  missaoAnterior  Missao?   @relation("MissaoAnterior", fields: [missao_anterior_id], references: [id], onDelete: SetNull)
-  proximasMissoes Missao[]  @relation("MissaoAnterior")
+  missaoAnterior  Missao?         @relation("MissaoAnterior", fields: [missao_anterior_id], references: [id], onDelete: SetNull)
+  proximasMissoes Missao[]        @relation("MissaoAnterior")
   tarefas         Tarefa[]
   usuarios        UsuarioMissao[]
   logs            LogsPontos[]
@@ -150,12 +150,12 @@ model Missao {
 }
 
 model CategoriaTarefa {
-  id        Int      @id @default(autoincrement())
+  id        Int     @id @default(autoincrement())
   nome      String
   descricao String?
   icone     String?
   cor       String?
-  ordem     Int      @default(0)
+  ordem     Int     @default(0)
 
   // Relations
   tarefas Tarefa[]
@@ -164,31 +164,32 @@ model CategoriaTarefa {
 }
 
 model Tarefa {
-  id                 Int          @id @default(autoincrement())
+  id                 Int         @id @default(autoincrement())
   missao_id          Int
   categoria_id       Int?
   titulo             String
   descricao          String?
   instrucoes         String?
-  pontos             Int          @default(0)
+  pontos             Int         @default(0)
   tipo               TipoTarefa?
-  dificuldade        Dificuldade  @default(facil)
-  ativa              Boolean      @default(true)
-  ordem              Int          @default(0)
-  requisitos         Json?        @db.JsonB
+  dificuldade        Dificuldade @default(facil)
+  ativa              Boolean     @default(true)
+  ordem              Int         @default(0)
+  requisitos         Json?       @db.JsonB
   tarefa_anterior_id Int?
-  data_criacao       DateTime     @default(now())
-  data_atualizacao   DateTime     @default(now())
+  data_criacao       DateTime    @default(now())
+  data_atualizacao   DateTime    @default(now())
 
   // Relations
-  missao           Missao           @relation(fields: [missao_id], references: [id], onDelete: Cascade)
-  categoria        CategoriaTarefa? @relation(fields: [categoria_id], references: [id])
-  tarefaAnterior   Tarefa?          @relation("TarefaAnterior", fields: [tarefa_anterior_id], references: [id], onDelete: SetNull)
-  proximasTarefas  Tarefa[]        @relation("TarefaAnterior")
-  usuarios         UsuarioTarefa[]
-  quiz             Quiz?
-  cards            Card[]
-  logs             LogsPontos[]
+  missao          Missao           @relation(fields: [missao_id], references: [id], onDelete: Cascade)
+  categoria       CategoriaTarefa? @relation(fields: [categoria_id], references: [id])
+  tarefaAnterior  Tarefa?          @relation("TarefaAnterior", fields: [tarefa_anterior_id], references: [id], onDelete: SetNull)
+  proximasTarefas Tarefa[]         @relation("TarefaAnterior")
+  usuarios        UsuarioTarefa[]
+  quiz            Quiz?            @relation(fields: [quizId], references: [id])
+  cards           Card[]
+  logs            LogsPontos[]
+  quizId          Int?
 
   @@map("tarefas")
 }
@@ -213,7 +214,7 @@ model UsuarioMissao {
   id                  Int                @id @default(autoincrement())
   usuario_id          Int
   missao_id           Int
-  valor_pago          Decimal?           @db.Decimal(10, 2) @default(0.00)
+  valor_pago          Decimal?           @default(0.00) @db.Decimal(10, 2)
   forma_pagamento     String?
   status_pagamento    StatusPagamento    @default(pendente)
   codigo_transacao    String?
@@ -242,8 +243,8 @@ model UsuarioTarefa {
   data_criacao   DateTime  @default(now())
 
   // Relations
-  usuario   Usuario @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
-  tarefa    Tarefa  @relation(fields: [tarefa_id], references: [id], onDelete: Cascade)
+  usuario   Usuario  @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
+  tarefa    Tarefa   @relation(fields: [tarefa_id], references: [id], onDelete: Cascade)
   validador Usuario? @relation("Validacoes", fields: [validado_por], references: [id], onDelete: SetNull)
 
   @@unique([usuario_id, tarefa_id])
@@ -251,16 +252,16 @@ model UsuarioTarefa {
 }
 
 model Quiz {
-  id           Int       @id @default(autoincrement())
-  tarefa_id    Int       @unique
+  id           Int      @id @default(autoincrement())
+  tarefa_id    Int      @unique
   titulo       String
   descricao    String?
-  ativo        Boolean   @default(true)
-  data_criacao DateTime  @default(now())
+  ativo        Boolean  @default(true)
+  data_criacao DateTime @default(now())
 
   // Relations
-  tarefa     Tarefa[]
-  perguntas  PerguntaQuiz[]
+  tarefa    Tarefa[]
+  perguntas PerguntaQuiz[]
 
   @@map("quizzes")
 }
@@ -277,20 +278,20 @@ model PerguntaQuiz {
   data_criacao     DateTime     @default(now())
 
   // Relations
-  quiz      Quiz            @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
+  quiz      Quiz           @relation(fields: [quiz_id], references: [id], onDelete: Cascade)
   respostas RespostaQuiz[]
 
   @@map("perguntas_quiz")
 }
 
 model RespostaQuiz {
-  id             Int       @id @default(autoincrement())
+  id             Int      @id @default(autoincrement())
   usuario_id     Int
   pergunta_id    Int
   resposta       String
-  correta        Boolean   @default(false)
-  pontos_obtidos Int       @default(0)
-  data_resposta  DateTime  @default(now())
+  correta        Boolean  @default(false)
+  pontos_obtidos Int      @default(0)
+  data_resposta  DateTime @default(now())
 
   // Relations
   usuario  Usuario      @relation(fields: [usuario_id], references: [id], onDelete: Cascade)
@@ -300,7 +301,7 @@ model RespostaQuiz {
 }
 
 model Card {
-  id               Int        @id @default(autoincrement())
+  id               Int      @id @default(autoincrement())
   titulo           String
   descricao        String?
   tipo             TipoCard
@@ -311,13 +312,13 @@ model Card {
   cidade           String?
   curiosidades     String[]
   tarefa_requerida Int?
-  raridade         Raridade   @default(comum)
-  ativo            Boolean    @default(true)
-  ordem            Int        @default(0)
-  data_criacao     DateTime   @default(now())
+  raridade         Raridade @default(comum)
+  ativo            Boolean  @default(true)
+  ordem            Int      @default(0)
+  data_criacao     DateTime @default(now())
 
   // Relations
-  tarefa   Tarefa?        @relation(fields: [tarefa_requerida], references: [id])
+  tarefa   Tarefa?       @relation(fields: [tarefa_requerida], references: [id])
   usuarios UsuarioCard[]
 
   @@map("cards")
@@ -338,16 +339,16 @@ model UsuarioCard {
 }
 
 model Premiacao {
-  id                     Int               @id @default(autoincrement())
-  titulo                 String
-  descricao              String?
-  tipo                   TipoPremiacao
-  posicao_ranking        Int?
-  pontos_necessarios     Int?
-  quantidade_disponivel  Int               @default(1)
-  imagem_url             String?
-  ativo                  Boolean           @default(true)
-  data_criacao           DateTime          @default(now())
+  id                    Int           @id @default(autoincrement())
+  titulo                String
+  descricao             String?
+  tipo                  TipoPremiacao
+  posicao_ranking       Int?
+  pontos_necessarios    Int?
+  quantidade_disponivel Int           @default(1)
+  imagem_url            String?
+  ativo                 Boolean       @default(true)
+  data_criacao          DateTime      @default(now())
 
   // Relations
   usuarios UsuarioPremiacao[]
@@ -383,7 +384,7 @@ model LogsPontos {
   data_criacao DateTime @default(now())
 
   // Relations
-  usuario   Usuario @relation("LogUsuario", fields: [usuario_id], references: [id], onDelete: Cascade)
+  usuario   Usuario  @relation("LogUsuario", fields: [usuario_id], references: [id], onDelete: Cascade)
   tarefa    Tarefa?  @relation(fields: [tarefa_id], references: [id], onDelete: SetNull)
   missao    Missao?  @relation(fields: [missao_id], references: [id], onDelete: SetNull)
   validador Usuario? @relation("LogValidador", fields: [validador_id], references: [id], onDelete: SetNull)

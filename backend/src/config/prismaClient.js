@@ -1,7 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 
-// Instancia o Prisma Client
+// Instancia o cliente do Prisma
 const prisma = new PrismaClient();
 
-// Exporta a instância
 module.exports = prisma;
