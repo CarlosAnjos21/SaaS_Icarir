@@ -51,6 +51,11 @@ module.exports = router;
  *   post:
  *     summary: Cria uma nova missão
  *     tags: [Admin - Missões]
+<<<<<<< HEAD
+=======
+ *     security:
+ *       - bearerAuth: []
+>>>>>>> davi-dev
  *     requestBody:
  *       required: true
  *       content:
@@ -60,6 +65,7 @@ module.exports = router;
  *             properties:
  *               titulo:
  *                 type: string
+<<<<<<< HEAD
  *                 example: "Missão: Concluir primeiro quiz"
  *               descricao:
  *                 type: string
@@ -70,6 +76,39 @@ module.exports = router;
  *               ativa:
  *                 type: boolean
  *                 example: true
+=======
+ *                 example: "Missão Nubank"
+ *               descricao:
+ *                 type: string
+ *                 example: "Nesta missão vamos a sede da Nubank em São Paulo."
+ *               foto_url:
+ *                 type: string
+ *                 example: "imagem.com"
+ *               destino:
+ *                 type: string
+ *                 example: "São Paulo"
+ *               data_inicio:
+ *                 type: string
+ *                 format: date
+ *                 example: "2025-01-20"
+ *               data_fim:
+ *                 type: string
+ *                 format: date
+ *                 example: "2025-01-30"
+ *               preco:
+ *                 type: number
+ *                 example: 1500.50
+ *               vagas_disponiveis:
+ *                 type: integer
+ *                 example: 20
+ *               ativo:
+ *                 type: boolean
+ *                 example: true
+ *               missao_anterior_id:
+ *                 type: integer
+ *                 nullable: true
+ *                 example: 1
+>>>>>>> davi-dev
  *     responses:
  *       201:
  *         description: Missão criada com sucesso
@@ -79,7 +118,12 @@ module.exports = router;
  *         description: Não autorizado
  *       500:
  *         description: Erro interno do servidor
+<<<<<<< HEAD
  *
+=======
+ * 
+ * 
+>>>>>>> davi-dev
  *   get:
  *     summary: Lista todas as missões
  *     tags: [Admin - Missões]
@@ -141,7 +185,11 @@ module.exports = router;
  *           type: integer
  *         description: ID da missão
  *     requestBody:
+<<<<<<< HEAD
  *       required: true
+=======
+ *       required: false
+>>>>>>> davi-dev
  *       content:
  *         application/json:
  *           schema:
@@ -153,9 +201,15 @@ module.exports = router;
  *               descricao:
  *                 type: string
  *                 example: "Nova descrição da missão"
+<<<<<<< HEAD
  *               pontuacao:
  *                 type: integer
  *                 example: 150
+=======
+ *               preco:
+ *                 type: integer
+ *                 example: 1500
+>>>>>>> davi-dev
  *               ativa:
  *                 type: boolean
  *                 example: true
@@ -187,6 +241,7 @@ module.exports = router;
  *       401:
  *         description: Não autorizado
  */
+<<<<<<< HEAD
 
 /**
  * @swagger
@@ -229,3 +284,5 @@ module.exports = router;
  */
 
 module.exports = router;
+=======
+>>>>>>> davi-dev

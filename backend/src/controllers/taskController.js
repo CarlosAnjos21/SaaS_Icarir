@@ -53,7 +53,7 @@ const submitTask = async (req, res) => {
   try {
     const submissionResult = await prisma.$transaction(async (tx) => {
       // 1️⃣ Validar tarefa
-      const task = await tx.tarefa.findFirst({
+      const task = await tx.tarefas.findFirst({
         where: { id: taskId, missao_id: missionId, ativa: true },
       });
       if (!task) {
@@ -188,14 +188,6 @@ const createTaskForMission = async (req, res) => {
 
     if (!titulo || !pontos || !tipo || !dificuldade) {
       return res.status(400).json({ error: 'Campos obrigatórios (titulo, pontos, tipo, dificuldade) estão faltando.' });
-    }
-
-    // Se foi enviada uma categoria, garantir que ela exista
-    if (categoria_id) {
-      const categoriaBusca = await prisma.categoriaTarefa.findUnique({ where: { id: parseInt(categoria_id, 10) } });
-      if (!categoriaBusca) {
-        return res.status(404).json({ error: 'Categoria de tarefa não encontrada.' });
-      }
     }
 
     const newTask = await prisma.tarefa.create({
