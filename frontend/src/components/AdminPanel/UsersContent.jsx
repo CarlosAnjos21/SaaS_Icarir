@@ -1,4 +1,4 @@
-// src/components/AdminPanel/UsersContent.jsx (Atualizado)
+// src/components/AdminPanel/UsersContent.jsx (Código Completo Corrigido)
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { Users, AlertTriangle, Loader, Edit, Trash2, Plus } from 'lucide-react';
@@ -6,24 +6,39 @@ import { Users, AlertTriangle, Loader, Edit, Trash2, Plus } from 'lucide-react';
 import { fetchUsers, createUser, updateUser, deleteUserApi } from '../../api/apiFunctions'; 
 import UserModal from './UserModal'; // Importa o Modal
 
-// Estado inicial para o formulário de usuário
-const INITIAL_USER_STATE = {
-    name: "",
-    email: "",
-    password: "", // Senha só é necessária na criação
-    points: 0,
-    level: "Bronze",
-    status: "Ativo",
+// Função auxiliar para determinar a cor do Role/Função
+const getRoleStyle = (role) => {
+    switch (role) {
+        case 'admin':
+            return 'bg-red-200 text-red-900';
+        case 'validador':
+            return 'bg-yellow-100 text-yellow-800';
+        case 'participante':
+        default:
+            return 'bg-indigo-100 text-indigo-800';
+    }
 };
 
 
-// Componente auxiliar para a Tabela de Usuários (Melhorado com botões de ação)
+// Estado inicial para o formulário de usuário (Ajustado para o DB Schema)
+const INITIAL_USER_STATE = {
+    nome: "",           // <-- Mapeia para a coluna 'nome'
+    email: "",
+    senha: "",          // <-- Mapeia para a coluna 'senha'
+    pontos: 0,          // <-- Mapeia para a coluna 'pontos'
+    role: "participante", // <-- Mapeia para a coluna 'role'
+    ativo: true,        // <-- Mapeia para a coluna 'ativo'
+};
+
+
+// Componente auxiliar para a Tabela de Usuários (AJUSTADO)
 const UserTable = ({ users, onEdit, onDelete, isLoading }) => (
     <div className="overflow-x-auto bg-white rounded-xl shadow-lg border border-gray-100">
         <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
                 <tr>
-                    {["Nome", "Email", "Pontos", "Nível", "Status", "Ações"].map(header => (
+                    {/* NOVOS HEADERS */}
+                    {["Nome", "Email", "Função/Role", "Pontos", "Status", "Criado em", "Ações"].map(header => (
                         <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{header}</th>
                     ))}
                 </tr>
@@ -31,27 +46,38 @@ const UserTable = ({ users, onEdit, onDelete, isLoading }) => (
             <tbody className="bg-white divide-y divide-gray-200">
                 {users.map((user) => (
                     <tr key={user.id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                        
+                        {/* 1. NOME (usando user.nome) */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.nome}</td>
+                        
+                        {/* 2. EMAIL (usando user.email) */}
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-700">{user.points}</td>
+                        
+                        {/* 3. FUNÇÃO/ROLE (usando user.role) */}
                         <td className="px-6 py-4 whitespace-nowrap">
-                            {/* Lógica de cores baseada no nível do usuário */}
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                user.level === 'Platinum' ? 'bg-indigo-100 text-indigo-800' :
-                                user.level === 'Gold' ? 'bg-yellow-100 text-yellow-800' :
-                                'bg-gray-100 text-gray-800'
-                            }`}>
-                                {user.level}
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold capitalize rounded-full ${getRoleStyle(user.role)}`}>
+                                {user.role}
                             </span>
                         </td>
+                        
+                        {/* 4. PONTOS (usando user.pontos) */}
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-700">{user.pontos}</td>
+                        
+                        {/* 5. STATUS (usando user.ativo) */}
                         <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                user.status === 'Ativo' ? 'bg-green-100 text-green-800' :
-                                'bg-red-100 text-red-800'
+                                user.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                             }`}>
-                                {user.status}
+                                {user.ativo ? 'Ativo' : 'Inativo'}
                             </span>
                         </td>
+                        
+                        {/* 6. DATA CRIAÇÃO (usando user.data_criacao) */}
+                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
+                            {user.data_criacao ? new Date(user.data_criacao).toLocaleDateString() : 'N/A'}
+                        </td>
+
+                        {/* 7. AÇÕES */}
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-2">
                             <button onClick={() => onEdit(user)} disabled={isLoading} className="text-blue-600 hover:text-blue-900 p-1 disabled:opacity-50">
                                 <Edit size={18} />
@@ -90,7 +116,12 @@ const UsersContent = () => {
         setError(null);
         try {
             const data = await fetchUsers();
-            setUsers(data);
+            // Assegura que data_criacao é um campo válido para a tabela
+            const validUsers = data.map(user => ({
+                ...user,
+                data_criacao: user.data_criacao || user.dataCriacao, // Adiciona fallback para flexibilidade
+            }));
+            setUsers(validUsers);
         } catch (err) {
             setError(`Falha ao carregar a lista de usuários: ${err.message || 'Erro de conexão'}`);
             console.error("Erro ao carregar usuários:", err);
@@ -109,8 +140,13 @@ const UsersContent = () => {
     const handleModalOpen = (userToEdit = null) => {
         if (userToEdit) {
             setIsEditing(true);
-            // Copia o objeto para evitar mutação direta
-            setCurrentUser({ ...userToEdit, password: "" }); 
+            // Copia o objeto para evitar mutação direta. 
+            setCurrentUser({ 
+                ...userToEdit, 
+                senha: "", // Nunca pré-popule a senha ao editar
+                // Garante que 'pontos' é numérico
+                pontos: Number(userToEdit.pontos) 
+            }); 
         } else {
             setIsEditing(false);
             setCurrentUser(INITIAL_USER_STATE);
@@ -129,26 +165,39 @@ const UsersContent = () => {
     // --- FUNÇÕES DE API (CREATE/UPDATE/DELETE) ---
 
     const handleSaveUser = async () => {
-        // Validação básica
-        if (!currentUser.name || !currentUser.email || (!isEditing && !currentUser.password)) {
+        // Validação básica (usando 'nome' e 'senha')
+        if (!currentUser.nome || !currentUser.email || (!isEditing && !currentUser.senha)) {
             alert("Preencha Nome, Email e Senha (para novos usuários).");
             return;
         }
 
         setIsSaving(true);
         try {
+            let response;
             if (isEditing) {
                 // Atualizar usuário existente (PUT)
-                const updated = await updateUser(currentUser.id, currentUser);
-                setUsers(users.map(u => u.id === currentUser.id ? updated : u));
+                response = await updateUser(currentUser.id, currentUser);
+                // NOTA: O backend deve retornar { message: "...", user: {...} } ou apenas {...}
+                const userToUpdate = response.user || response;
+                setUsers(users.map(u => u.id === currentUser.id ? userToUpdate : u));
             } else {
                 // Criar novo usuário (POST)
-                const created = await createUser(currentUser);
-                setUsers([...users, created]);
+                response = await createUser(currentUser); 
+                
+                // 🛑 CORREÇÃO PRINCIPAL: Extrair o objeto 'user' da resposta do backend.
+                const newUser = response.user || response; // Tenta extrair 'user', ou usa a resposta completa
+
+                if (newUser && newUser.id) {
+                    setUsers([...users, newUser]);
+                } else {
+                    throw new Error("Resposta da API de criação inválida.");
+                }
             }
             handleModalClose();
         } catch (err) {
-            const errorMsg = err.response?.data?.message || err.message;
+            // Tratamento de erro aprimorado
+            const errorData = err.response?.data;
+            const errorMsg = errorData?.error || errorData?.message || err.message;
             setError(`Falha ao salvar usuário: ${errorMsg}`);
             console.error("Erro ao salvar usuário:", err);
         } finally {
@@ -166,7 +215,8 @@ const UsersContent = () => {
             await deleteUserApi(id);
             setUsers(users.filter(u => u.id !== id));
         } catch (err) {
-            const errorMsg = err.response?.data?.message || err.message;
+            const errorData = err.response?.data;
+            const errorMsg = errorData?.error || errorData?.message || err.message;
             setError(`Falha ao excluir usuário: ${errorMsg}`);
             console.error("Erro ao deletar usuário:", err);
         } finally {
