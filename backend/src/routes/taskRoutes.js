@@ -50,17 +50,6 @@ router.get('/:taskId', taskController.getTaskById);
  */
 router.post('/:taskId/submit', taskController.submitTask);
 
-<<<<<<< HEAD
-
-/**
- * @route   POST /api/missions/:missionId/tasks/:taskId/evidences
- * @desc    (Usuário) Upload de evidências (arquivos) para uma tarefa
- * @access  Private (bearer token)
- */
-router.post('/:taskId/evidences', authMiddleware, upload.array('files', 5), taskController.uploadEvidence);
-
-module.exports = router;
-=======
 module.exports = router;
 
 /**
@@ -236,4 +225,3 @@ module.exports = router;
  *         description: Erro interno
  */
 
->>>>>>> davi-dev

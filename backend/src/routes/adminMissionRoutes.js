@@ -51,11 +51,8 @@ module.exports = router;
  *   post:
  *     summary: Cria uma nova missão
  *     tags: [Admin - Missões]
-<<<<<<< HEAD
-=======
  *     security:
  *       - bearerAuth: []
->>>>>>> davi-dev
  *     requestBody:
  *       required: true
  *       content:
@@ -65,18 +62,6 @@ module.exports = router;
  *             properties:
  *               titulo:
  *                 type: string
-<<<<<<< HEAD
- *                 example: "Missão: Concluir primeiro quiz"
- *               descricao:
- *                 type: string
- *                 example: "Responda o primeiro quiz corretamente para completar esta missão."
- *               pontuacao:
- *                 type: integer
- *                 example: 100
- *               ativa:
- *                 type: boolean
- *                 example: true
-=======
  *                 example: "Missão Nubank"
  *               descricao:
  *                 type: string
@@ -108,7 +93,6 @@ module.exports = router;
  *                 type: integer
  *                 nullable: true
  *                 example: 1
->>>>>>> davi-dev
  *     responses:
  *       201:
  *         description: Missão criada com sucesso
@@ -118,12 +102,8 @@ module.exports = router;
  *         description: Não autorizado
  *       500:
  *         description: Erro interno do servidor
-<<<<<<< HEAD
- *
-=======
  * 
  * 
->>>>>>> davi-dev
  *   get:
  *     summary: Lista todas as missões
  *     tags: [Admin - Missões]
@@ -185,11 +165,7 @@ module.exports = router;
  *           type: integer
  *         description: ID da missão
  *     requestBody:
-<<<<<<< HEAD
- *       required: true
-=======
  *       required: false
->>>>>>> davi-dev
  *       content:
  *         application/json:
  *           schema:
@@ -201,15 +177,9 @@ module.exports = router;
  *               descricao:
  *                 type: string
  *                 example: "Nova descrição da missão"
-<<<<<<< HEAD
- *               pontuacao:
- *                 type: integer
- *                 example: 150
-=======
  *               preco:
  *                 type: integer
  *                 example: 1500
->>>>>>> davi-dev
  *               ativa:
  *                 type: boolean
  *                 example: true
@@ -241,48 +211,3 @@ module.exports = router;
  *       401:
  *         description: Não autorizado
  */
-<<<<<<< HEAD
-
-/**
- * @swagger
- * /missions/{missionId}/tasks/{taskId}/evidences:
- *   post:
- *     summary: Upload de evidências para uma tarefa
- *     tags: [Tasks]
- *     parameters:
- *       - in: path
- *         name: missionId
- *         required: true
- *         schema:
- *           type: integer
- *       - in: path
- *         name: taskId
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         multipart/form-data:
- *           schema:
- *             type: object
- *             properties:
- *               files:
- *                 type: array
- *                 items:
- *                   type: string
- *                   format: binary
- *     security:
- *       - bearerAuth: []
- *     responses:
- *       201:
- *         description: Evidências recebidas com sucesso
- *       400:
- *         description: Requisição inválida
- *       401:
- *         description: Não autorizado
- */
-
-module.exports = router;
-=======
->>>>>>> davi-dev
