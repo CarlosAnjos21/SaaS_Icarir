@@ -21,16 +21,19 @@ export const fetchMissions = async () => {
 
 export const createMission = async (missionData) => {
     const response = await api.post("/admin/missions", missionData);
-    return response.data;
+    // backend retorna { message, mission }
+    return response.data.mission || response.data;
 };
 
 export const updateMission = async (id, missionData) => {
     const response = await api.put(`/admin/missions/${id}`, missionData);
-    return response.data;
+    // backend retorna { message, mission }
+    return response.data.mission || response.data;
 };
 
 export const deleteMissionApi = async (id) => {
-    await api.delete(`/admin/missions/${id}`);
+    const response = await api.delete(`/admin/missions/${id}`);
+    return response.data;
 };
 
 // --- USUÁRIOS (CRUD) ---
@@ -56,23 +59,27 @@ export const deleteUserApi = async (id) => {
 
 // --- CATEGORIAS DE TAREFAS (CRUD) ---
 export const fetchCategories = async () => {
-    // Presumindo que o endpoint é: /admin/categorias-tarefas
-    const response = await api.get("/admin/categorias-tarefas");
+    // Endpoint: /categorias-tarefas (mountado em /api)
+    const response = await api.get("/categorias-tarefas");
+    // backend retorna array de categorias
     return response.data;
 };
 
 export const createCategory = async (categoryData) => {
-    const response = await api.post("/admin/categorias-tarefas", categoryData);
-    return response.data;
+    const response = await api.post("/categorias-tarefas", categoryData);
+    // backend retorna { message, categoria }
+    return response.data.categoria || response.data;
 };
 
 export const updateCategory = async (id, categoryData) => {
-    const response = await api.put(`/admin/categorias-tarefas/${id}`, categoryData);
-    return response.data;
+    const response = await api.put(`/categorias-tarefas/${id}`, categoryData);
+    // backend retorna { message, categoria }
+    return response.data.categoria || response.data;
 };
 
 export const deleteCategory = async (id) => {
-    await api.delete(`/admin/categorias-tarefas/${id}`);
+    const response = await api.delete(`/categorias-tarefas/${id}`);
+    return response.data;
 };
 
 
@@ -84,13 +91,42 @@ export const fetchTasks = async () => {
 };
 
 export const createTask = async (taskData) => {
-    const response = await api.post(TASKS_ADMIN_BASE_URL, taskData);
-    return response.data;
+    // Normalize requisitos: ensure JSON serializable
+    const payload = { ...taskData };
+    if (payload.requisitos !== undefined && payload.requisitos !== null) {
+        if (typeof payload.requisitos === 'string') {
+            try {
+                payload.requisitos = JSON.parse(payload.requisitos);
+            } catch (e) {
+                payload.requisitos = payload.requisitos.split(',').map(s => s.trim()).filter(Boolean);
+            }
+        }
+    } else {
+        payload.requisitos = null;
+    }
+
+    const response = await api.post(TASKS_ADMIN_BASE_URL, payload);
+    // adminTaskController retorna { message, task }
+    return response.data.task || response.data;
 };
 
 export const updateTask = async (id, taskData) => {
-    const response = await api.put(`${TASKS_ADMIN_BASE_URL}/${id}`, taskData);
-    return response.data;
+    const payload = { ...taskData };
+    if (payload.requisitos !== undefined && payload.requisitos !== null) {
+        if (typeof payload.requisitos === 'string') {
+            try {
+                payload.requisitos = JSON.parse(payload.requisitos);
+            } catch (e) {
+                payload.requisitos = payload.requisitos.split(',').map(s => s.trim()).filter(Boolean);
+            }
+        }
+    } else {
+        payload.requisitos = null;
+    }
+
+    const response = await api.put(`${TASKS_ADMIN_BASE_URL}/${id}`, payload);
+    // adminTaskController retorna { message, task }
+    return response.data.task || response.data;
 };
 
 export const deleteTask = async (id) => {

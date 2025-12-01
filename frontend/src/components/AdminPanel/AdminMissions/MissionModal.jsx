@@ -67,6 +67,37 @@ const MissionModal = ({ newMission, setNewMission, handleAddStep, handleRemoveSt
                             disabled={isLoading}
                         />
                     </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+                        <div className="flex flex-col">
+                            <label className="text-sm font-medium text-gray-700 mb-1">Preço da Missão (R$)</label>
+                            <div className="flex items-center">
+                                <span className="mr-2 text-gray-600">R$</span>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    placeholder="ex: 1500.50"
+                                    className="flex-1 border border-gray-300 p-3 rounded-lg"
+                                    value={newMission.preco ?? ''}
+                                    onChange={(e) => setNewMission({ ...newMission, preco: e.target.value === '' ? null : Number(e.target.value) })}
+                                    disabled={isLoading}
+                                />
+                            </div>
+                            <small className="text-xs text-gray-500 mt-1">Valor em reais. Use ponto para decimais.</small>
+                        </div>
+
+                        <div className="flex flex-col">
+                            <label className="text-sm font-medium text-gray-700 mb-1">Vagas Disponíveis</label>
+                            <input
+                                type="number"
+                                placeholder="ex: 20"
+                                className="border border-gray-300 p-3 rounded-lg"
+                                value={newMission.vagas_disponiveis ?? ''}
+                                onChange={(e) => setNewMission({ ...newMission, vagas_disponiveis: e.target.value === '' ? null : parseInt(e.target.value, 10) })}
+                                disabled={isLoading}
+                            />
+                            <small className="text-xs text-gray-500 mt-1">Número total de vagas para a missão.</small>
+                        </div>
+                    </div>
                     <div className="flex items-center gap-2">
                         <ImageIcon size={20} className="text-gray-500"/>
                         <input

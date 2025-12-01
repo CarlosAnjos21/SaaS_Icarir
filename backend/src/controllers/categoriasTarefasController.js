@@ -8,6 +8,12 @@ const getAllCategorias = async (req, res) => {
   try {
     const categorias = await prisma.categoriaTarefa.findMany({
       orderBy: { ordem: 'asc' },
+      include: {
+        tarefas: {
+          where: { ativa: true },
+          orderBy: { ordem: 'asc' }
+        }
+      }
     });
     res.json(categorias);
   } catch (error) {
@@ -24,7 +30,15 @@ const getCategoriaById = async (req, res) => {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
 
-    const categoria = await prisma.categoriaTarefa.findUnique({ where: { id } });
+    const categoria = await prisma.categoriaTarefa.findUnique({
+      where: { id },
+      include: {
+        tarefas: {
+          where: { ativa: true },
+          orderBy: { ordem: 'asc' }
+        }
+      }
+    });
     if (!categoria) return res.status(404).json({ error: 'Categoria não encontrada.' });
 
     res.json(categoria);

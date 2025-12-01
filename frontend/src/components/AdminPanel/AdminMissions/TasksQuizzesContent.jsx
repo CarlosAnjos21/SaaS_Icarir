@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { Briefcase, Plus, Loader, AlertTriangle, Edit, Trash2, Tag } from "lucide-react";
-import { fetchTasks, createTask, updateTask, deleteTask, fetchCategories } from '../../../api/apiFunctions'; 
+import { fetchTasks, createTask, updateTask, deleteTask, fetchCategories, fetchMissions } from '../../../api/apiFunctions'; 
 import TaskQuizModal from './TaskQuizModal'; 
 
 const INITIAL_TASK_STATE = {
@@ -12,7 +12,7 @@ const INITIAL_TASK_STATE = {
     descricao: "",
     instrucoes: "",
     pontos: 0,
-    tipo: 'Comum', // 'Comum' ou 'Quiz'
+    tipo: null, // corresponde ao enum TipoTarefa do backend (pode ser null)
     dificuldade: 'facil',
     ordem: 0,
     ativa: true,
@@ -25,6 +25,7 @@ const TasksQuizzesContent = () => {
     // ESTADOS DE DADOS
     const [tasks, setTasks] = useState([]);
     const [categories, setCategories] = useState([]); // Para o dropdown de categorias
+    const [missionsList, setMissionsList] = useState([]);
     
     // ESTADOS DE FLUXO
     const [loading, setLoading] = useState(true);
@@ -47,7 +48,8 @@ const TasksQuizzesContent = () => {
                 fetchTasks(),
                 fetchCategories() 
             ]);
-            setTasks(tasksData);
+            // O backend utiliza soft-delete (ativa = false). Filtrar tarefas inativas para que exclusões persistam após atualização.
+            setTasks(Array.isArray(tasksData) ? tasksData.filter(t => t.ativa !== false) : []);
             setCategories(categoriesData);
         } catch (err) {
             setError(`Falha ao carregar dados: ${err.message || 'Erro de conexão'}`);
@@ -60,6 +62,17 @@ const TasksQuizzesContent = () => {
     useEffect(() => {
         loadData();
     }, [loadData]);
+
+    useEffect(() => {
+        (async () => {
+            try {
+                const ms = await fetchMissions();
+                setMissionsList(ms);
+            } catch (err) {
+                console.warn('Não foi possível carregar missões para o modal de Tarefa:', err?.message || err);
+            }
+        })();
+    }, []);
 
 
     // --- FUNÇÕES DE CONTROLE DO MODAL ---
@@ -92,12 +105,18 @@ const TasksQuizzesContent = () => {
             alert("Preencha Título e Categoria da Tarefa.");
             return;
         }
-        
-        // Se for quiz, verifica se a pergunta e a resposta estão preenchidas
-        if (currentTask.tipo === 'Quiz' && (!currentTask.quiz?.perguntas?.[0]?.enunciado || !currentTask.quiz.perguntas[0].resposta_correta)) {
-             alert("Preencha o Enunciado do Quiz e marque a Resposta Correta.");
-             return;
+
+        // missao_id é obrigatório no backend
+        if (!currentTask.missao_id) {
+            alert('Selecione a Missão associada à Tarefa (campo obrigatório).');
+            return;
         }
+        
+           // Se for quiz (presença do objeto quiz), verifica se a pergunta e a resposta estão preenchidas
+           if (currentTask.quiz && (!currentTask.quiz?.perguntas?.[0]?.enunciado || !currentTask.quiz.perguntas[0].resposta_correta)) {
+               alert("Preencha o Enunciado do Quiz e marque a Resposta Correta.");
+               return;
+           }
 
         setIsSaving(true);
         try {
@@ -113,9 +132,9 @@ const TasksQuizzesContent = () => {
             }
             handleModalClose();
         } catch (err) {
-            const errorMsg = err.response?.data?.message || err.message;
+            const errorMsg = err.response?.data?.error || err.response?.data?.message || err.message;
             alert(`Falha ao salvar a Tarefa: ${errorMsg}`);
-            console.error("Erro ao salvar Tarefa:", err);
+            console.error("Erro ao salvar Tarefa:", err, err.response?.data);
         } finally {
             setIsSaving(false);
         }
@@ -137,8 +156,11 @@ const TasksQuizzesContent = () => {
     };
     
     // Função auxiliar para buscar o nome da categoria para exibição
-    const getCategoryName = (id) => {
-        // Usa o estado 'categories' carregado na inicialização
+    // Prioriza a categoria aninhada em cada tarefa (task.categoria.nome) quando disponível
+    const getCategoryName = (task) => {
+        if (!task) return 'Sem Categoria';
+        if (task.categoria && task.categoria.nome) return task.categoria.nome;
+        const id = task.categoria_id;
         return categories.find(c => c.id === id)?.nome || 'Sem Categoria';
     };
 
@@ -182,8 +204,8 @@ const TasksQuizzesContent = () => {
                             <div className="flex-1">
                                 <p className="text-lg font-bold text-gray-900">{task.titulo}</p>
                                 <div className="flex items-center text-sm text-gray-600 gap-4 mt-1">
-                                    <p className="flex items-center gap-1"><Tag size={16} /> {getCategoryName(task.categoria_id)}</p>
-                                    <p className={`font-semibold ${task.tipo === 'Quiz' ? 'text-green-600' : 'text-yellow-600'}`}>{task.tipo} ({task.pontos} pts)</p>
+                                    <p className="flex items-center gap-1"><Tag size={16} /> {getCategoryName(task)}</p>
+                                    <p className={`font-semibold ${task.quiz ? 'text-green-600' : 'text-yellow-600'}`}>{task.quiz ? 'Quiz' : (task.tipo || 'Comum')} ({task.pontos} pts)</p>
                                     <p className="text-xs text-gray-400">Ordem: {task.ordem}</p>
                                 </div>
                             </div>
@@ -211,6 +233,7 @@ const TasksQuizzesContent = () => {
                     isEditing={isEditing}
                     isLoading={isSaving}
                     categories={categories} // Passa as categorias para o dropdown
+                    missions={missionsList}
                 />
             )}
         </div>

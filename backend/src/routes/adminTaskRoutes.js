@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const adminTaskController = require('../controllers/adminTaskController');
 
-// Note: auth/admin middlewares are applied at parent (adminRoutes.js)
+// Observação: os middlewares de `auth`/`admin` são aplicados no roteador pai (adminRoutes.js)
 
 /**
  * GET /api/admin/tasks
