@@ -15,6 +15,8 @@ const MissionCard = ({ mission, onEdit, onDelete }) => (
                 <p className="flex items-center gap-1"><MapPin size={16} /> {mission.city || 'Global'}</p>
                 <p className="flex items-center gap-1"><Calendar size={16} /> Expira: {mission.expirationDate || 'N/A'}</p>
                 <p className="font-semibold text-green-600">{mission.points} Pontos</p>
+                <p className="flex items-center gap-1">{(mission.preco !== undefined && mission.preco !== null) ? `R$ ${Number(mission.preco).toFixed(2)}` : 'R$ —'}</p>
+                <p className="flex items-center gap-1">{(mission.vagas_disponiveis !== undefined && mission.vagas_disponiveis !== null) ? `${mission.vagas_disponiveis} vagas` : '— vagas'}</p>
             </div>
             
             <ul className="mt-4 space-y-1 text-sm text-gray-700 p-3 bg-gray-50 rounded">

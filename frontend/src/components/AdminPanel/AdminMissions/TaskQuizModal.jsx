@@ -10,7 +10,7 @@ const INITIAL_QUIZ_QUESTION_STATE = {
 };
 
 // Componente recebe 'task' (os dados da Tarefa), 'setTask' (o setter), categorias, e handlers
-const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLoading, categories = [] }) => {
+const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLoading, categories = [], missions = [] }) => {
     
     // Simplificando: o quiz é um objeto que contém o array de perguntas (apenas 1 por enquanto)
     const [quizData, setQuizData] = useState(task.quiz?.perguntas?.[0] || INITIAL_QUIZ_QUESTION_STATE);
@@ -52,7 +52,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
             // Monta o objeto que o backend espera (Tarefa com Quiz aninhado)
             setTask(prev => ({
                 ...prev,
-                tipo: 'Quiz', // Define o tipo da Tarefa para Quiz
+                // não altera `tipo` (deve seguir enum do backend); apenas anexa o quiz
                 quiz: { 
                     titulo: `Quiz da Tarefa: ${prev.titulo || 'Novo'}`,
                     perguntas: [quizData]
@@ -61,7 +61,6 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
         } else {
             setTask(prev => ({
                 ...prev,
-                tipo: 'Comum', // Tipo de tarefa normal (Ajuste o valor conforme seu enum)
                 quiz: null
             }));
         }
@@ -118,6 +117,20 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                     />
 
                     <div className="grid grid-cols-3 gap-4">
+                                        <select
+                                            name="tipo"
+                                            className="w-full border p-3 rounded-lg appearance-none"
+                                            value={task.tipo || ''}
+                                            onChange={handleChange}
+                                            disabled={isLoading}
+                                        >
+                                            <option value="">Tipo da Tarefa (opcional)</option>
+                                            <option value="administrativa">Administrativa</option>
+                                            <option value="conhecimento">Conhecimento</option>
+                                            <option value="engajamento">Engajamento</option>
+                                            <option value="social">Social</option>
+                                            <option value="feedback">Feedback</option>
+                                        </select>
                         <input
                             type="number"
                             name="pontos"
@@ -148,6 +161,48 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                             <option value="dificil">Difícil</option>
                         </select>
                     </div>
+                    {/* Instruções adicionais */}
+                    <textarea
+                        name="instrucoes"
+                        placeholder="Instruções (ex.: passos, links, comentários)"
+                        rows="2"
+                        className="w-full border p-3 rounded-lg mt-3"
+                        value={task.instrucoes || ''}
+                        onChange={handleChange}
+                        disabled={isLoading}
+                    />
+
+                    {/* Requisitos: aceita JSON ou lista separada por vírgula */}
+                    <div className="mt-2">
+                        <label className="text-sm text-gray-600">Requisitos (JSON ou lista separada por vírgula)</label>
+                        <textarea
+                            name="requisitos"
+                            placeholder='Ex: ["email_verificado", "perfil_completo"] ou email,perfil'
+                            rows="2"
+                            className="w-full border p-3 rounded-lg mt-1"
+                            value={typeof task.requisitos === 'string' ? task.requisitos : (task.requisitos ? JSON.stringify(task.requisitos) : '')}
+                            onChange={handleChange}
+                            disabled={isLoading}
+                        />
+                    </div>
+                    {/* Se fornecido, permite escolher missão associada (opcional) */}
+                    {missions && missions.length > 0 && (
+                        <div className="mt-2">
+                            <label className="text-sm text-gray-600">Missão (opcional)</label>
+                            <select
+                                name="missao_id"
+                                className="w-full border p-3 rounded-lg appearance-none mt-1"
+                                value={task.missao_id ?? ''}
+                                onChange={handleChange}
+                                disabled={isLoading}
+                            >
+                                <option value="">Nenhuma</option>
+                                {missions.map(m => (
+                                    <option key={m.id} value={m.id}>{m.titulo}</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                     
                     {/* INCLUSÃO DE QUIZ */}
                     <div className="border p-4 rounded-lg bg-blue-50">
@@ -209,7 +264,36 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                         Cancelar
                     </button>
                     <button 
-                        onClick={handleSave} 
+                        onClick={() => {
+                            // preparar tarefa antes de salvar: normalizar `requisitos` (tentar JSON; se falhar, csv -> array)
+                            const prepareTaskForSave = (t) => {
+                                const copy = { ...t };
+                                // Normalize tipo to match backend enum values (lowercase, trimmed)
+                                if (copy.tipo !== undefined && copy.tipo !== null && copy.tipo !== '') {
+                                    try {
+                                        copy.tipo = String(copy.tipo).toLowerCase().trim();
+                                    } catch (e) {
+                                        copy.tipo = copy.tipo;
+                                    }
+                                } else {
+                                    copy.tipo = null;
+                                }
+                                // Normalize requisitos
+                                if (copy.requisitos === undefined || copy.requisitos === null || copy.requisitos === '') {
+                                    copy.requisitos = null;
+                                } else if (typeof copy.requisitos === 'string') {
+                                    const text = copy.requisitos.trim();
+                                    try {
+                                        copy.requisitos = JSON.parse(text);
+                                    } catch (e) {
+                                        // não é JSON -> separar por vírgula em um array de strings já trimado
+                                        copy.requisitos = text.split(',').map(s => s.trim()).filter(Boolean);
+                                    }
+                                }
+                                return copy;
+                            };
+                            handleSave(prepareTaskForSave(task));
+                        }} 
                         disabled={isLoading}
                         className="bg-[#394C97] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#2f3f7a] shadow-md transition disabled:opacity-50 flex items-center gap-2"
                     >

@@ -35,7 +35,7 @@ const createMission = async (req, res) => {
         data_fim: new Date(data_fim),
         preco: preco ? parseFloat(preco) : 0.00,
         vagas_disponiveis: vagas_disponiveis ? parseInt(vagas_disponiveis, 10) : null,
-        ativa: ativo ?? true,
+        ativa: ativa ?? true,
         missao_anterior_id: missao_anterior_id ? parseInt(missao_anterior_id, 10) : null
       }
     });
@@ -50,7 +50,8 @@ const createMission = async (req, res) => {
     }
 
     console.error('Erro ao criar missão:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
+    if (error && error.stack) console.error(error.stack);
+    res.status(500).json({ error: 'Erro interno do servidor.', details: error.message });
   }
 };
 
@@ -62,7 +63,14 @@ const createMission = async (req, res) => {
 const getAllMissions = async (req, res) => {
   try {
     const missions = await prisma.missao.findMany({
-      orderBy: { data_inicio: 'desc' }
+      orderBy: { data_inicio: 'desc' },
+      include: {
+        tarefas: {
+          where: { ativa: true },
+          orderBy: { ordem: 'asc' },
+          include: { categoria: true }
+        }
+      }
     });
 
     res.json(missions);
@@ -85,7 +93,14 @@ const getMissionById = async (req, res) => {
 
   try {
     const mission = await prisma.missao.findUnique({
-      where: { id: missionId }
+      where: { id: missionId },
+      include: {
+        tarefas: {
+          where: { ativa: true },
+          orderBy: { ordem: 'asc' },
+          include: { categoria: true }
+        }
+      }
     });
 
     if (!mission) {
@@ -122,26 +137,46 @@ const updateMission = async (req, res) => {
     missao_anterior_id
   } = req.body;
 
+  console.log('updateMission - payload recebido:', req.body);
+
   // Objeto para armazenar dados enviados para atualização de missão.
   const dataToUpdate = {};
 
   if (titulo !== undefined) dataToUpdate.titulo = titulo;
   if (descricao !== undefined) dataToUpdate.descricao = descricao;
-  if (foto_url !== undefined) dataToUpdate.foto_url = foto_url;
   if (destino !== undefined) dataToUpdate.destino = destino;
 
-  if (data_inicio !== undefined) dataToUpdate.data_inicio = new Date(data_inicio);
-  if (data_fim !== undefined) dataToUpdate.data_fim = new Date(data_fim);
+  if (data_inicio !== undefined) {
+    const di = new Date(data_inicio);
+    if (!isNaN(di)) dataToUpdate.data_inicio = di;
+  }
+  if (data_fim !== undefined) {
+    const df = new Date(data_fim);
+    if (!isNaN(df)) dataToUpdate.data_fim = df;
+  }
 
-  if (preco !== undefined) dataToUpdate.preco = parseFloat(preco);
-  if (vagas_disponiveis !== undefined) dataToUpdate.vagas_disponiveis = parseInt(vagas_disponiveis, 10);
+  if (preco !== undefined) {
+    const p = parseFloat(preco);
+    if (!isNaN(p)) dataToUpdate.preco = p;
+  }
+  if (vagas_disponiveis !== undefined) {
+    const v = parseInt(vagas_disponiveis, 10);
+    if (!isNaN(v)) dataToUpdate.vagas_disponiveis = v;
+  }
 
-  if (ativo !== undefined) dataToUpdate.ativo = ativo;
+  if (ativa !== undefined) dataToUpdate.ativa = ativa;
   if (missao_anterior_id !== undefined) {
     dataToUpdate.missao_anterior_id = missao_anterior_id ? parseInt(missao_anterior_id, 10) : null;
   }
 
   try {
+    if (Object.keys(dataToUpdate).length === 0) {
+      console.warn('updateMission chamado sem campos válidos para atualizar. Payload:', req.body);
+      return res.status(400).json({ error: 'Nenhum campo válido para atualizar.' });
+    }
+
+    console.log('updateMission - dados para atualizar:', dataToUpdate);
+
     const updatedMission = await prisma.missao.update({
       where: { id: missionId },
       data: dataToUpdate
