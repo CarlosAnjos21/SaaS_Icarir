@@ -1,40 +1,48 @@
+// authMiddleware.js
+
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
 
-const authMiddleware = (req, res, next) => {
-  // 1. Obter o token do cabeçalho de autorização
-  const authHeader = req.header('Authorization');
+// 1. Middleware de AUTENTICAÇÃO (Verifica Token e anexa req.user)
+const authenticate = (req, res, next) => {
+    const authHeader = req.header('Authorization');
 
-  // 2. Verificar se o cabeçalho existe
-  if (!authHeader) {
-    return res.status(401).json({ error: 'Acesso negado. Nenhum token fornecido.' });
-  }
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return res.status(401).json({ error: 'Acesso negado. Token ausente ou mal formatado ("Bearer <token>").' });
+    }
 
-  // 3. Verificar o formato do token (deve ser "Bearer <token>")
-  const parts = authHeader.split(' ');
-  if (parts.length !== 2 || parts[0] !== 'Bearer') {
-    return res.status(401).json({ error: 'Token mal formatado. O formato é "Bearer <token>".' });
-  }
+    const token = authHeader.split(' ')[1];
 
-  const token = parts[1];
-
-  // 4. Validar o token
-  try {
-
-    const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-    
-    // 5. Anexar o payload do usuário ao objeto 'req'
-    // Lembre-se que salvamos o payload como { user: { id, email, role, ... } }
-    req.user = decoded.user;
-    
-    // 6. Chamar 'next()' para passar para o próximo middleware ou controller
-    next();
-
-  } catch (error) {
-    // Se o token for inválido (assinatura errada) ou expirado, jwt.verify() falha
-    // Isso será comum, pois o Access Token expira rápido (ex: 15min)
-    res.status(401).json({ error: 'Token inválido ou expirado.' });
-  }
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+        req.user = decoded.user;
+        next();
+    } catch (error) {
+        res.status(401).json({ error: 'Token inválido ou expirado.' });
+    }
 };
 
-module.exports = authMiddleware;
+// 2. Middleware de AUTORIZAÇÃO (Verifica Role)
+// Recebe um array de roles permitidos e retorna um middleware.
+const checkRole = (allowedRoles) => (req, res, next) => {
+    // A autenticação já anexou o user, precisamos apenas checar o role
+    if (!req.user || !req.user.role) {
+        // Isso não deve acontecer se authenticate for executado antes, mas é uma boa proteção
+        return res.status(401).json({ error: 'Não autorizado. Informações de usuário ausentes.' });
+    }
+
+    const userRole = req.user.role;
+
+    // Verifica se o role do usuário está na lista de roles permitidos
+    if (allowedRoles.includes(userRole)) {
+        next(); // Autorizado: Prossiga
+    } else {
+        // 🛑 Retorna 403 Forbidden
+        return res.status(403).json({ error: 'Acesso negado. Você não possui as permissões necessárias.' });
+    }
+};
+
+module.exports = {
+    authenticate,
+    checkRole,
+};

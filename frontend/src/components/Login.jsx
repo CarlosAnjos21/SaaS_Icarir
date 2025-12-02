@@ -29,7 +29,7 @@ export default function Login() {
       localStorage.setItem("user", JSON.stringify(user));
 
       // Redireciona com base no papel do usuário
-      navigate(user.role === "admin" ? "/admin" : "/profile");
+      navigate(user.role === "admin" ? "/admin" : "/missions");
     } catch (err) {
       console.error("Erro no login:", err);
       setError(

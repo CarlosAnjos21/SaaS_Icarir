@@ -49,7 +49,7 @@ export default function Navbar() {
   const token = localStorage.getItem("token");
   const navLinks = [
     { name: "Home", path: "/" },
-    !token && { name: "Registro", path: "/register" },
+    /*!token && */{ name: "Registro", path: "/register" },
     { name: "Missões", path: "/missions" },
     { name: "Ranking", path: "/ranking" },
     { name: "Administrador", path: "/admin" },

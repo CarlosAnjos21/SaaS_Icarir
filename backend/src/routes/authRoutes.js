@@ -1,18 +1,25 @@
+// authRoutes.js CORRIGIDO
+
 const express = require('express');
 const router = express.Router();
+// Importa o objeto de funções do controller
 const authController = require('../controllers/authController');
-const authMiddleware = require('../middlewares/authMiddleware');
+
+// 🛑 MUDANÇA AQUI: Desestruture a função 'authenticate'
+const { authenticate } = require('../middlewares/authMiddleware'); // Apenas a função 'authenticate' é necessária aqui
 
 const upload = require('../middlewares/uploadMiddleware');
 
-// Rotas Públicas (não precisam de authMiddleware)
+// Rotas Públicas (não precisam de autenticação)
+// Sua sintaxe está correta: authController.register é uma função
 router.post('/register', authController.register);
 router.post('/login', authController.login);
-router.post('/refresh', authController.refreshToken); // Endpoint de renovação
+router.post('/refresh', authController.refreshToken); 
 
-// Rotas Protegidas (precisam de authMiddleware)
-router.post('/logout', authMiddleware, authController.logout);
-router.get('/me', authMiddleware, authController.getMe); // Endpoint do perfil logado
+// Rotas Protegidas (precisam de autenticação)
+// 🛑 MUDANÇA AQUI: Substitua 'authMiddleware' por 'authenticate'
+router.post('/logout', authenticate, authController.logout); 
+router.get('/me', authenticate, authController.getMe); 
 
 module.exports = router;
 

@@ -2,21 +2,27 @@
 
 import api from './api'; // Importa a instância configurada
 
-const CARDS_BASE_URL = '/admin/cards'; 
+const CARDS_BASE_URL = '/admin/cards';
 const TASKS_ADMIN_BASE_URL = '/admin/tasks'; // Usado para operações CRUD e select simplificado
 
 // --- ESTATÍSTICAS (Dashboard) ---
 export const fetchStats = async () => {
     // Corrigido para o endpoint administrativo
-    const response = await api.get("/admin/dashboard/stats"); 
+    const response = await api.get("/admin/dashboard/stats");
     return response.data;
 };
 
 // --- MISSÕES (CRUD) ---
 export const fetchMissions = async () => {
-    // Presumindo que o endpoint é: /admin/missions
-    const response = await api.get("/admin/missions");
-    return response.data;
+    try {
+        // 🛑 CORREÇÃO: Mudar o endpoint de '/admin/missions' para '/missions'
+        const response = await api.get("/missions"); // Endpoint agora é /api/missions
+        return response.data;
+    } catch (error) {
+        // É importante tratar o erro aqui para que o frontend não quebre
+        console.error("Erro ao carregar missões:", error);
+        throw error;
+    }
 };
 
 export const createMission = async (missionData) => {
@@ -161,6 +167,6 @@ export const deleteCard = async (id) => {
 // --- FUNÇÕES AUXILIARES ---
 export const fetchTasksForSelect = async () => {
     // Endpoint para buscar lista simplificada de tarefas para SELECTs em modais
-    const response = await api.get(`${TASKS_ADMIN_BASE_URL}/select`); 
+    const response = await api.get(`${TASKS_ADMIN_BASE_URL}/select`);
     return response.data;
 };

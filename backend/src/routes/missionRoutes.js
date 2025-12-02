@@ -1,63 +1,62 @@
 const express = require("express");
 const router = express.Router();
 const missionController = require("../controllers/missionController");
-const authMiddleware = require("../middlewares/authMiddleware");
+
+// Importa as funções de autenticação e autorização
+const { authenticate, checkRole } = require("../middlewares/authMiddleware");
 
 // 1. Importar as rotas de tarefas
-const taskRoutes = require("./taskRoutes");
+const taskRoutes = require("./taskRoutes"); 
 
-const missaoPorDestino = {
-  Paris: [{ id: 101, title: "Tour Eiffel Challenge", pontos: 200 }],
-  Tokyo: [{ id: 102, title: "Shibuya Sprint", pontos: 150 }],
-  "New York": [{ id: 103, title: "Central Park Quest", pontos: 180 }],
-  London: [{ id: 104, title: "Big Ben Blitz", pontos: 170 }],
-  Rome: [{ id: 105, title: "Colosseum Conqueror", pontos: 160 }],
-  Dubai: [{ id: 106, title: "Burj Khalifa Climb", pontos: 190 }],
-  Sydney: [{ id: 107, title: "Opera House Odyssey", pontos: 175 }],
-  "Rio de Janeiro": [{ id: 108, title: "Cristo Redentor Run", pontos: 165 }],
-  "Cape Town": [{ id: 109, title: "Table Mountain Trek", pontos: 155 }],
-  Bangkok: [{ id: 110, title: "Temple Trail", pontos: 145 }],
-  Barcelona: [{ id: 111, title: "Gaudí Gallery Hunt", pontos: 185 }],
-  Toronto: [{ id: 112, title: "CN Tower Challenge", pontos: 160 }],
-};
+// Definição dos Roles permitidos para visualização
+const PARTICIPANT_ROLES = ['admin', 'participante']; 
 
-// Aplica o middleware de autenticação a TODAS as rotas de missão e sub-rotas
-router.use(authMiddleware);
 
-// 2. Aninhar as rotas de tarefas
+// --- ROTAS DE SUB-MÓDULO (Aninhamento) ---
+
+// 2. Aninhar as rotas de tarefas, aplicando autenticação e permissão de acesso
 // Qualquer requisição para /api/missions/:missionId/tasks
-// será redirecionada para o 'taskRoutes'
-router.use("/:missionId/tasks", taskRoutes);
+router.use(
+    "/:missionId/tasks", 
+    authenticate, 
+    checkRole(PARTICIPANT_ROLES), // Permite participante e admin
+    taskRoutes
+);
+
+
+// --- ROTAS DE VISUALIZAÇÃO DE MISSÕES (Acesso: Participante e Admin) ---
 
 /**
  * @route   GET /api/missions
  * @desc    Listar todas as missões ativas
+ * @access  Privado (Participante e Admin)
  */
-router.get("/", missionController.getAllActiveMissions);
+router.get("/", authenticate, checkRole(PARTICIPANT_ROLES), missionController.getAllActiveMissions);
 
 /**
  * @route   GET /api/missions/:missionId
  * @desc    Buscar detalhes de uma missão específica
+ * @access  Privado (Participante e Admin)
  */
-router.get("/:missionId", missionController.getMissionById);
+router.get("/:missionId", authenticate, checkRole(PARTICIPANT_ROLES), missionController.getMissionById);
 
 /**
  * @route   GET /api/missions/:missionId/full
- * @desc    Retorna os dados completos de uma missão para o front (tarefas, inscritos, logs, contagens)
+ * @desc    Retorna os dados completos de uma missão (tarefas, inscritos, logs, contagens)
+ * @access  Privado (Participante e Admin)
  */
-router.get("/:missionId/full", missionController.getMissionFullById);
+router.get("/:missionId/full", authenticate, checkRole(PARTICIPANT_ROLES), missionController.getMissionFullById);
+
+
+// --- ROTAS DE AÇÃO ---
 
 /**
  * @route   POST /api/missions/:missionId/join
  * @desc    Inscrever o usuário logado em uma missão
- * @access  Privado
+ * @access  Privado (Apenas Participante deve se inscrever)
  */
-router.post("/:missionId/join", missionController.joinMission); // <<< ADICIONADO
+router.post("/:missionId/join", authenticate, checkRole(['participante']), missionController.joinMission); 
 
-router.get("/by-destination/:city", (req, res) => {
-  const { city } = req.params;
-  const missao = missaoPorDestino[city] || [];
-  res.json(missao);
-});
+// 🛑 Rota /by-destination/:city REMOVIDA
 
 module.exports = router;
