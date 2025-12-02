@@ -1,4 +1,4 @@
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom"; // 🛑 Adicionado useNavigate
 import {
     MagnifyingGlassIcon,
     BellIcon,
@@ -8,11 +8,13 @@ import { useState, useEffect } from "react";
 import logoIcarir from "../assets/símbolo-icarir.png";
 
 export default function Navbar() {
+    const navigate = useNavigate(); // 🛑 Inicialização do hook de navegação
+    
     const [menuOpen, setMenuOpen] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [scrolledEnough, setScrolledEnough] = useState(false);
 
-    // 🔑 Escolha 1: Inicialização direta e clara do estado de autenticação.
+    // Inicialização direta e clara do estado de autenticação.
     const [isAuthenticated, setIsAuthenticated] = useState(
         !!localStorage.getItem("token")
     );
@@ -27,45 +29,45 @@ export default function Navbar() {
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
 
-    // 🔑 Escolha 2: Monitoramento robusto de login/logout (Versão HEAD - usando 'storage').
-    // O evento 'storage' garante a sincronização entre múltiplas abas/janelas.
+    // Monitoramento robusto de login/logout (usando 'storage' para sincronizar abas).
     useEffect(() => {
         const checkAuth = () => {
             setIsAuthenticated(!!localStorage.getItem("token"));
         };
+        // Inicializa a verificação na montagem e monitora mudanças de storage
         window.addEventListener("storage", checkAuth);
-        checkAuth();
+        checkAuth(); // Verifica na montagem para pegar o estado atual
         return () => window.removeEventListener("storage", checkAuth);
     }, []);
 
-    const isTransparent = isHome && !scrolledEnough;
-
-    const navbarClasses = `w-full px-8 py-3 flex justify-between items-center fixed top-0 left-0 z-50 backdrop-blur-md transition-all duration-500 ${isTransparent
-            ? "bg-transparent text-white"
-            : "bg-white text-[#394C97] shadow-md"
-        }`;
-
-    // 🚨 Função dedicada para Log Out (unificando a lógica da HEAD).
+    // 🚨 CORREÇÃO: Função dedicada para Log Out usando useNavigate.
     const handleLogout = () => {
         localStorage.removeItem("token");
         setIsAuthenticated(false);
         setMenuOpen(false);
-        // Usa redirecionamento direto para garantir que o React Router limpe o estado.
-        window.location.href = "/login";
+        // 🚀 CORREÇÃO: Usa useNavigate para evitar REFRESH total da página
+        navigate("/login"); 
     };
+
+    const isTransparent = isHome && !scrolledEnough;
+
+    const navbarClasses = `w-full px-8 py-3 flex justify-between items-center fixed top-0 left-0 z-50 backdrop-blur-md transition-all duration-500 ${isTransparent
+                ? "bg-transparent text-white"
+                : "bg-white text-[#394C97] shadow-md"
+            }`;
 
     // Links principais da navegação (Desktop e Mobile)
     const navLinks = [
         { name: "Início", path: "/" },
-        // 'Cadastro' aparece apenas se NÃO estiver logado
-        /*!isAuthenticated &&*/ { name: "Cadastro", path: "/register" },
+        // Use um ternário ou 'null' para o Cadastro/Registro
+        /*isAuthenticated ? null :*/ { name: "Cadastro", path: "/register" },
         { name: "Missão", path: "/missions" },
         { name: "Classificação", path: "/ranking" },
         { name: "Administrador", path: "/admin" },
-        { name: "Sorteio", path: "/Sorteio" },
-    ].filter(Boolean); // Remove o item 'Cadastro' se isAuthenticated for true
+        /*{ name: "Sorteio", path: "/Sorteio" },*/
+    ].filter(Boolean); // Remove o item nulo (Cadastro) se o usuário estiver logado.
 
-    // 🚨 Escolha 3: Array para mapear os itens do menu de usuário (Versão 84131e35f019eba33a477e769ec20c41439fcaa7).
+    // Array para mapear os itens do menu de usuário
     const userMenuItems = [
         { name: "Perfil", path: "/profile", isLogout: false },
         { name: "Painel", path: "/carreira", isLogout: false },
