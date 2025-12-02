@@ -54,3 +54,10 @@ Thumbs.db
 
 
 /src/generated/prisma
+
+# adicionei
+
+package-lock.json
+yarn.lock
+frontend/package-lock.json
+frontend/yarn.lock
