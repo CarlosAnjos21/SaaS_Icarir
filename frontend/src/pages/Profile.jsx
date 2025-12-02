@@ -20,7 +20,7 @@ export default function Profile() {
   const [user, setUser] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Estado do formulário
   const [form, setForm] = useState({
     name: "",
@@ -29,7 +29,7 @@ export default function Profile() {
     image: "", // URL ou Preview
     imageFile: null, // Arquivo real para upload
   });
-  
+
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
@@ -43,15 +43,32 @@ export default function Profile() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
+    /* (Lógica de Proteção)
     if (!token) {
       navigate("/login");
       return;
     }
+    */
 
     const fetchUser = async () => {
       try {
         const res = await api.get("/auth/me");
         const data = res.data;
+
+        /*
+        // **NOVA LÓGICA DE REDIRECIONAMENTO AQUI** 👈
+        if (data.role === "admin") {
+          navigate("/admin");
+          return;
+        }
+        // Se o usuário não for 'admin', mas for um participante...
+        // ... ele deve ser redirecionado para /missions.
+        // Já que ele já está em /profile (por engano), podemos forçar o redirecionamento.
+        if (data.role !== "admin") {
+          navigate("/missions");
+          return;
+        }
+        */
 
         // Lógica de Prioridade: Se tiver 'curiosidades' no banco, usa. Senão, usa o padrão.
         const descricaoFinal = data.curiosidades || getDescricaoPadrao(data.nome);
@@ -59,7 +76,7 @@ export default function Profile() {
         const enrichedUser = {
           ...data,
           name: data.nome,
-          pontos: data.pontos || 0, 
+          pontos: data.pontos || 0,
           description: descricaoFinal,
           image: data.foto_url || "",
         };
@@ -74,10 +91,12 @@ export default function Profile() {
         });
       } catch (err) {
         console.error("Erro ao buscar perfil:", err);
+        /*
         // Se der erro 401, redireciona
         if (err.response && err.response.status === 401) {
           navigate("/login");
         }
+        */
       } finally {
         setLoading(false);
       }
@@ -96,11 +115,11 @@ export default function Profile() {
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
-      
+
       // Mapeando para os campos que o backend espera (nome, curiosidades)
       formData.append("nome", form.name);
-      formData.append("curiosidades", form.description); 
-      
+      formData.append("curiosidades", form.description);
+
       if (form.imageFile) {
         formData.append("file", form.imageFile);
       }
@@ -114,28 +133,28 @@ export default function Profile() {
         },
         body: formData
       });
-  
+
       if (!response.ok) {
         const errText = await response.text();
         throw new Error(`Erro ${response.status}: ${errText}`);
       }
-  
+
       const updatedData = await response.json();
-  
+
       // Atualiza o estado local com os dados confirmados pelo backend
       setUser((prev) => ({
         ...prev,
         name: updatedData.nome,
         // Se o backend devolveu nova URL de foto, usa ela. Senão mantém a atual.
-        image: updatedData.foto_url || prev.image, 
+        image: updatedData.foto_url || prev.image,
         description: form.description
       }));
-  
+
       setIsEditing(false);
       setForm(prev => ({ ...prev, imageFile: null })); // Limpa o arquivo da memória
-      
+
       alert("Perfil atualizado com sucesso!");
-  
+
     } catch (error) {
       console.error("Erro ao salvar:", error);
       if (error.message.includes("401")) {
@@ -167,12 +186,12 @@ export default function Profile() {
   const getInitials = (name) =>
     name
       ? name
-          .split(" ")
-          .filter(Boolean)
-          .map((n) => n[0])
-          .join("")
-          .toUpperCase()
-          .slice(0, 2)
+        .split(" ")
+        .filter(Boolean)
+        .map((n) => n[0])
+        .join("")
+        .toUpperCase()
+        .slice(0, 2)
       : "US";
 
   // Configuração do Dropzone (Upload de imagem)
@@ -180,12 +199,12 @@ export default function Profile() {
     const file = acceptedFiles[0];
     if (file) {
       const previewUrl = URL.createObjectURL(file);
-      
+
       // Salva tanto o preview (para mostrar agora) quanto o arquivo (para enviar depois)
-      setForm((prev) => ({ 
-        ...prev, 
-        image: previewUrl, 
-        imageFile: file 
+      setForm((prev) => ({
+        ...prev,
+        image: previewUrl,
+        imageFile: file
       }));
     }
   };
@@ -218,7 +237,7 @@ export default function Profile() {
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="relative -mt-20 mb-6 flex flex-col md:flex-row items-end md:items-end gap-6">
-          
+
           {/* Avatar Section */}
           <div className="relative group">
             <div
@@ -228,7 +247,7 @@ export default function Profile() {
                 ${isDragActive ? "border-[#FE5900]" : ""}`}
             >
               <input {...getInputProps()} />
-              
+
               {form.image ? (
                 <img
                   src={form.image}
@@ -269,7 +288,7 @@ export default function Profile() {
                   <PencilSquareIcon className="h-5 w-5" />
                   Editar Perfil
                 </button>
-                <button 
+                <button
                   className="flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition font-medium"
                 >
                   <Cog6ToothIcon className="h-5 w-5" />
@@ -306,10 +325,10 @@ export default function Profile() {
 
         {/* Grid de Conteúdo */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-8 pb-20">
-          
+
           {/* Coluna Esquerda: Informações / Formulário */}
           <div className="md:col-span-2 space-y-6">
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm"
@@ -359,7 +378,7 @@ export default function Profile() {
                       <p className="text-gray-800 font-medium mt-1 font-mono text-sm">{user.id}</p>
                     </div>
                   </div>
-                  
+
                   <div className="p-4 bg-gray-50 rounded-lg">
                     <p className="text-xs text-gray-500 uppercase font-bold tracking-wider">Bio</p>
                     <p className="text-gray-800 mt-1">{user.description}</p>
@@ -373,7 +392,7 @@ export default function Profile() {
           <div className="space-y-6">
             <div className="bg-white border border-gray-100 rounded-xl p-6 shadow-sm">
               <h2 className="text-xl font-bold text-[#394C97] mb-6">Estatísticas</h2>
-              
+
               <div className="space-y-6">
                 <div>
                   <div className="flex justify-between items-end mb-2">
@@ -381,8 +400,8 @@ export default function Profile() {
                     <span className="text-3xl font-bold text-[#394C97]">{getLevel(user.pontos)}</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2.5">
-                    <div 
-                      className="bg-[#394C97] h-2.5 rounded-full transition-all duration-1000" 
+                    <div
+                      className="bg-[#394C97] h-2.5 rounded-full transition-all duration-1000"
                       style={{ width: `${getProgress(user.pontos)}%` }}
                     ></div>
                   </div>

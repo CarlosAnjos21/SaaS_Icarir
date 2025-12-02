@@ -1,46 +1,40 @@
+// src/components/missions/MissionDetails.jsx (Corrigido para usar dados da prop)
+
 import React, { useState } from 'react';
 import {
     ArrowLeft,
     Calendar,
     Award,
-} from 'lucide-react'; // Importamos APENAS os ícones usados DIRETAMENTE AQUI
+} from 'lucide-react';
 
 // IMPORTAÇÕES DOS COMPONENTES FILHOS
-// Estes arquivos devem existir na mesma pasta ou no caminho relativo correto:
 import TaskItem from './TaskItem';
 import TaskDetailsModal from './TaskDetailsModal';
 
 // ===================================================================
-// DADOS MOCKADOS (Mantidos)
+// DADOS MOCKADOS FORAM REMOVIDOS DESTE ARQUIVO!
+// O componente agora depende EXCLUSIVAMENTE da prop 'mission'.
 // ===================================================================
-const missionData = {
-    id: 'Q4_MARKET_ANALYSIS',
-    title: 'Análise de Mercado Q4',
-    deadline: '25/11/2025',
-    category: 'Estratégia',
-    accumulatedPoints: 275, // Corrigido para 275 pts, como na imagem
-    totalTasks: 8,
-    completedTasks: 3,
-    description: 'Esta missão é focada na consolidação dos resultados e planejamento estratégico do último trimestre do ano fiscal (Q4). Inclui tarefas de conhecimento, administrativas e de engajamento da equipe.',
-    tasks: [
-        { id: 1, name: 'Quiz: Fundamentos de Q4', description: 'Acerte 80% do quiz sobre os pilares estratégicos da análise de mercado.', points: 250, status: 'PENDENTE', category: 'Conhecimento' },
-        { id: 2, name: 'Flashcards: Termos Técnicos', description: 'Revisar e marcar 100% dos flashcards de vocabulário do setor.', points: 150, status: 'PENDENTE', category: 'Conhecimento' },
-        { id: 3, name: 'Envio: Documento de Escopo', description: 'Fazer upload do rascunho final do documento de escopo da missão.', points: 100, status: 'CONCLUÍDA', category: 'Administrativas' },
-        { id: 4, name: 'Preencher Formulário de Feedback', description: 'Submeter o formulário obrigatório de autoavaliação de riscos.', points: 50, status: 'PENDENTE', category: 'Administrativas' },
-        { id: 5, name: 'Postagem no LinkedIn', description: 'Publicar um resumo dos objetivos da missão na rede social da empresa.', points: 100, status: 'CONCLUÍDA', category: 'Engajamento' },
-        { id: 6, name: 'Comentar 3 Posts da Equipe', description: 'Interagir de forma construtiva em pelo menos 3 publicações de colegas.', points: 75, status: 'CONCLUÍDA', category: 'Engajamento' },
-        { id: 7, name: 'Revisão de Metas Q4', description: 'Enviar relatório consolidado da revisão de metas.', points: 20, status: 'PENDENTE', category: 'Administrativas' },
-        { id: 8, name: 'Brainstorm com Time', description: 'Participar da sessão de Brainstorm sobre a nova estratégia.', points: 40, status: 'PENDENTE', category: 'Conhecimento' },
-    ],
-};
 
 // ===================================================================
 // COMPONENTE PRINCIPAL: MissionDetails
 // ===================================================================
 export default function MissionDetails({ mission = {}, onBack, onCompleteStep }) {
 
-    const [selectedTask, setSelectedTask] = useState(null); // Estado para a tarefa selecionada
+    const [selectedTask, setSelectedTask] = useState(null);
+    // Usamos 'mission.tasks' para determinar as categorias, por isso inicializamos as tabs
     const [activeTab, setActiveTab] = useState('Todas as Tarefas');
+
+    // Desestruturando APENAS da prop 'mission' (que vem com dados da API e normalizada)
+    const {
+        title,
+        deadline,
+        category,
+        accumulatedPoints,
+        totalTasks,
+        completedTasks,
+        tasks = [] // Garante que 'tasks' seja sempre um array, mesmo que vazio
+    } = mission;
 
     // Lógica de Estado
     const handleTaskClick = (task) => {
@@ -51,35 +45,32 @@ export default function MissionDetails({ mission = {}, onBack, onCompleteStep })
         setSelectedTask(null);
     };
 
-    const {
-        title,
-        deadline,
-        category,
-        accumulatedPoints,
-        totalTasks,
-        completedTasks,
-        tasks = []
-    } = { ...missionData, ...mission };
-
-    // Lógica para agrupar tarefas por categoria para as tabs
+    // Lógica para agrupar tarefas por categoria para as tabs (usando as tarefas REAIS)
     const tasksByCategory = tasks.reduce((acc, task) => {
-        if (!acc[task.category]) {
-            acc[task.category] = [];
+        // A categoria deve vir do objeto task (definida na normalização em Missions.jsx)
+        const cat = task.category || 'Outras';
+        if (!acc[cat]) {
+            acc[cat] = [];
         }
-        acc[task.category].push(task);
+        acc[cat].push(task);
         return acc;
     }, {});
 
+    // Gera as guias dinamicamente com base nas categorias presentes
+    const dynamicTabs = Object.keys(tasksByCategory).map(cat => ({
+        name: cat,
+        key: cat,
+        count: tasksByCategory[cat].length
+    }));
+
     const tabs = [
         { name: 'Todas as Tarefas', key: 'Todas as Tarefas', count: tasks.length },
-        { name: 'Conhecimento', key: 'Conhecimento', count: tasksByCategory.Conhecimento?.length || 0 },
-        { name: 'Administrativas', key: 'Administrativas', count: tasksByCategory.Administrativas?.length || 0 },
-        { name: 'Engajamento', key: 'Engajamento', count: tasksByCategory.Engajamento?.length || 0 },
+        ...dynamicTabs
     ];
 
     const filteredTasks = activeTab === 'Todas as Tarefas'
         ? tasks
-        : tasks.filter(task => task.category === activeTab);
+        : tasks.filter(task => (task.category || 'Outras') === activeTab);
 
     const progressPercentage = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
@@ -104,7 +95,7 @@ export default function MissionDetails({ mission = {}, onBack, onCompleteStep })
                     </h1>
                     <p className="text-sm text-gray-500 mb-4">
                         <Calendar className="w-4 h-4 inline mr-1 text-gray-400" />
-                        **Prazo:** {deadline} • **Categoria:** {category}
+                        **Prazo:** {deadline || 'Não definido'} • **Categoria:** {category || 'Geral'}
                     </p>
 
                     <hr className="my-4 border-gray-100" />
@@ -145,8 +136,8 @@ export default function MissionDetails({ mission = {}, onBack, onCompleteStep })
                         <button
                             key={tab.key}
                             className={`py-3 px-4 text-sm font-medium transition-colors border-b-2 whitespace-nowrap ${activeTab === tab.key
-                                    ? 'border-orange-500 text-orange-600 font-semibold'
-                                    : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
+                                ? 'border-orange-500 text-orange-600 font-semibold'
+                                : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'
                                 }`}
                             onClick={() => setActiveTab(tab.key)}
                         >
@@ -163,10 +154,11 @@ export default function MissionDetails({ mission = {}, onBack, onCompleteStep })
                                 key={task.id}
                                 task={task}
                                 onTaskClick={handleTaskClick}
+                                onComplete={() => onCompleteStep(task.id)} // Passa a função de conclusão para a tarefa
                             />
                         ))
                     ) : (
-                        <p className="text-gray-500 italic text-center p-4">
+                        <p className="text-gray-500 italic text-center p-4 bg-white rounded-lg shadow">
                             Nenhuma tarefa nesta categoria.
                         </p>
                     )}
@@ -174,7 +166,7 @@ export default function MissionDetails({ mission = {}, onBack, onCompleteStep })
             </div>
 
             {/* RENDERIZAÇÃO DO MODAL DE DETALHES DA TAREFA */}
-            <TaskDetailsModal task={selectedTask} onClose={handleCloseModal} />
+            <TaskDetailsModal task={selectedTask} onClose={handleCloseModal} onComplete={() => onCompleteStep(selectedTask.id)} />
 
         </div>
     );
