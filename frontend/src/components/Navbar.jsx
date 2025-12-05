@@ -7,11 +7,11 @@ import {
     UserIcon,
     Bars3Icon,
     XMarkIcon,
-    LockClosedIcon // 1. Importei o ícone de cadeado
+    LockClosedIcon
 } from "@heroicons/react/24/outline";
 import { useState, useEffect, useRef } from "react";
-import logoIcarir from "../assets/símbolo-icarir.png"; // Import real
-import api from "../api/api"; // Import real
+import logoIcarir from "../assets/símbolo-icarir.png"; // ✅ Import real
+import api from "../api/api"; // ✅ Import real
 
 export default function Navbar() {
     const navigate = useNavigate();
@@ -95,20 +95,29 @@ export default function Navbar() {
                 : "bg-white text-[#394C97] shadow-md"
             }`;
 
+    // --- LÓGICA DE VISIBILIDADE DOS LINKS ---
     const navLinks = [
+        // Início agora aparece SEMPRE (Padrão)
         { name: "Início", path: "/" },
+        
+        // Cadastro só aparece se NÃO estiver logado
         !isAuthenticated && { name: "Cadastro", path: "/register" },
-        { name: "Missão", path: "/missions" },
-        { name: "Classificação", path: "/ranking" },
+        
+        // 🔒 Missões e Ranking: Só aparecem se estiver LOGADO e NÃO for ADMIN
+        (isAuthenticated && user?.role !== "admin") && { name: "Missão", path: "/missions" },
+        (isAuthenticated && user?.role !== "admin") && { name: "Classificação", path: "/ranking" },
+        
+        // Admin só vê o botão Administrador
         (user?.role === "admin") && { name: "Administrador", path: "/admin" },
     ].filter(Boolean);
 
     const userMenuItems = [
         { name: "Perfil", path: "/profile", isLogout: false, icon: UserIcon },
-        { name: "Painel", path: "/carreira", isLogout: false, icon: ArrowRightOnRectangleIcon, rotateIcon: true },
-        { name: "Viagens", path: "/trips", isLogout: false, icon: ArrowRightOnRectangleIcon, rotateIcon: true },
+        // Painel de Carreira e Viagens também só fazem sentido para o Usuário Comum
+        (user?.role !== "admin") && { name: "Painel", path: "/carreira", isLogout: false, icon: ArrowRightOnRectangleIcon, rotateIcon: true },
+        (user?.role !== "admin") && { name: "Viagens", path: "/trips", isLogout: false, icon: ArrowRightOnRectangleIcon, rotateIcon: true },
         { name: "Sair da Conta", path: "/login", isLogout: true, danger: true, icon: ArrowRightOnRectangleIcon },
-    ];
+    ].filter(Boolean);
 
     return (
         <nav className={navbarClasses}>
@@ -148,7 +157,7 @@ export default function Navbar() {
                     className="flex items-center gap-2 text-sm hover:text-orange transition hidden md:flex"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                        <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 2 16.25v-8.5A5.75 5.75 0 0 1 7.75 2zm0 1.5A4.25 4.25 0 0 0 3.5 7.75v8.5A4.25 4.25 0 0 0 7.75 20.5h8.5A4.25 4.25 0 0 0 20.5 16.25v-8.5A4.25 4.25 0 0 0 16.25 3.5h-8.5zm8.75 2.25a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5a.75.75 0 0 1 .75-.75zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 1.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" />
+                        <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 7.75 2zm0 1.5A4.25 4.25 0 0 0 3.5 7.75v8.5A4.25 4.25 0 0 0 7.75 20.5h8.5A4.25 4.25 0 0 0 20.5 16.25v-8.5A4.25 4.25 0 0 0 16.25 3.5h-8.5zm8.75 2.25a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5a.75.75 0 0 1 .75-.75zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 1.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" />
                     </svg>
                     <span>Instagram</span>
                 </a>
@@ -166,7 +175,7 @@ export default function Navbar() {
                 <MagnifyingGlassIcon className="h-6 w-6 hover:text-orange cursor-pointer" />
                 <BellIcon className="h-6 w-6 hover:text-orange cursor-pointer" />
 
-                {/* **MENU USER (AVATAR / LOGIN)** */}
+                {/* **ÁREA DO USUÁRIO** */}
                 <div className="relative" ref={dropdownRef}>
                     {isAuthenticated ? (
                         /* Usuário Logado: Mostra Avatar */
@@ -191,16 +200,16 @@ export default function Navbar() {
                             )}
                         </button>
                     ) : (
-                        /* 2. Usuário Deslogado: Ícones de Login e Admin */
+                        /* Usuário Deslogado: Ícones de Admin e Login */
                         <div className="flex items-center gap-3">
-                            {/* Ícone de Admin (Cadeado) */}
+                            {/* 1. Ícone de Admin (Cadeado) */}
                             <Link to="/login" title="Acesso Administrativo">
                                 <button className={`hover:text-red-500 transition focus:outline-none flex items-center ${isTransparent ? "text-white/80" : "text-[#394C97]"}`}>
                                     <LockClosedIcon className="h-6 w-6" />
                                 </button>
                             </Link>
                             
-                            {/* Ícone de Login (Usuário) */}
+                            {/* 2. Ícone de Login Padrão */}
                             <Link to="/login" title="Login de Usuário">
                                 <button className="hover:text-orange transition focus:outline-none flex items-center">
                                     <UserCircleIcon className="h-6 w-6" />
@@ -276,7 +285,6 @@ export default function Navbar() {
                                         Login Cliente
                                     </Link>
                                 </li>
-                                {/* Opção extra para Admin no Mobile */}
                                 <li>
                                     <Link
                                         to="/login"
