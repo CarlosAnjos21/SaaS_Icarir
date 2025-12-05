@@ -5,16 +5,28 @@ const jwt = require('jsonwebtoken');
 const { Prisma } = require('@prisma/client');
 require('dotenv').config();
 
-// --- FUNÇÃO DE CADASTRO (Refatorada) ---
+// --- FUNÇÃO DE CADASTRO (Refatorada com Proteção de Admin) ---
 const register = async (req, res) => {
-  const { nome, email, senha,} = req.body;
+  // Extrai role e adminKey do corpo da requisição
+  const { nome, email, senha, role, adminKey } = req.body;
 
   if (!nome || !email || !senha) {
-    return res.status(400).json({ error: 'Todos os campos são obrigatórios.' });
+    return res.status(400).json({ error: 'Todos os campos obrigatórios devem ser preenchidos.' });
   }
 
   try {
-    // 1. Verificar se o e-mail já existe
+    // 1. Definição de Papel (Role) com Segurança
+    let userRole = 'participante'; // Padrão
+
+    if (role === 'admin') {
+      // Se tentar criar admin, exige a chave mestra do .env
+      if (adminKey !== process.env.ADMIN_REGISTRATION_KEY) {
+        return res.status(403).json({ error: 'Chave de administrador inválida ou ausente.' });
+      }
+      userRole = 'admin';
+    }
+
+    // 2. Verificar se o e-mail já existe
     const existingUser = await prisma.usuario.findUnique({
       where: { email: email }
     });
@@ -23,20 +35,20 @@ const register = async (req, res) => {
       return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
     }
 
-    // 2. Criptografar a senha
+    // 3. Criptografar a senha
     const salt = await bcrypt.genSalt(10);
     const senhaHash = await bcrypt.hash(senha, salt);
 
-    // 3. Criar o usuário usando o Prisma
+    // 4. Criar o usuário usando o Prisma
     const newUser = await prisma.usuario.create({
       data: {
         nome: nome,
         email: email,
         senha: senhaHash,
-        role: 'participante', // Valor padrão definido no schema, mas bom ser explícito
-        ativo: true,  // Valor padrão definido no schema
+        role: userRole, // Usa a role definida pela lógica de segurança
+        ativo: true,
       },
-      // 4. Selecionar os campos para retornar (igual ao 'RETURNING' antigo)
+      // 5. Selecionar os campos para retornar
       select: {
         id: true,
         nome: true,
@@ -52,7 +64,6 @@ const register = async (req, res) => {
     });
 
   } catch (error) {
-    // Captura erro se o e-mail se tornou duplicado entre o SELECT e o INSERT
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
     }
@@ -85,7 +96,7 @@ const login = async (req, res) => {
       return res.status(401).json({ error: 'Credenciais inválidas.' });
     }
 
-    // Payload (sem alteração)
+    // Payload
     const payload = {
       user: {
         id: user.id,
@@ -94,21 +105,21 @@ const login = async (req, res) => {
       },
     };
 
-    // 1. GERAR ACCESS TOKEN (sem alteração)
+    // 1. GERAR ACCESS TOKEN
     const accessToken = jwt.sign(
       payload,
       process.env.JWT_ACCESS_SECRET,
       { expiresIn: process.env.JWT_ACCESS_EXPIRATION }
     );
 
-    // 2. GERAR REFRESH TOKEN (sem alteração)
+    // 2. GERAR REFRESH TOKEN
     const refreshToken = jwt.sign(
       payload,
       process.env.JWT_REFRESH_SECRET,
       { expiresIn: process.env.JWT_REFRESH_EXPIRATION }
     );
 
-    // 3. ENVIAR REFRESH TOKEN COMO HttpOnly COOKIE (sem alteração)
+    // 3. ENVIAR REFRESH TOKEN COMO HttpOnly COOKIE
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
@@ -116,7 +127,7 @@ const login = async (req, res) => {
       maxAge: 30 * 24 * 60 * 60 * 1000
     });
 
-    // 4. ENVIAR ACCESS TOKEN E DADOS DO USUÁRIO NO JSON (sem alteração)
+    // 4. ENVIAR ACCESS TOKEN E DADOS DO USUÁRIO NO JSON
     res.json({
       message: 'Login bem-sucedido!',
       accessToken: accessToken,
@@ -129,7 +140,7 @@ const login = async (req, res) => {
   }
 };
 
-// --- REFRESH TOKEN (Sem alteração - não usa DB) ---
+// --- REFRESH TOKEN (Sem alteração) ---
 const refreshToken = (req, res) => {
   const token = req.cookies.refreshToken;
   if (!token) {
@@ -158,7 +169,7 @@ const refreshToken = (req, res) => {
   }
 };
 
-// --- LOGOUT (Sem alteração - não usa DB) ---
+// --- LOGOUT (Sem alteração) ---
 const logout = (req, res) => {
   res.clearCookie('refreshToken', {
     httpOnly: true,
@@ -174,11 +185,11 @@ const getMe = async (req, res) => {
     // O ID vem do 'authMiddleware' que já rodou
     const userId = req.user.id; 
 
-    // 1. Buscar usuário e incluir seu perfil (substitui o LEFT JOIN)
+    // 1. Buscar usuário e incluir seu perfil
     const userWithProfile = await prisma.usuario.findUnique({
       where: { id: userId },
       include: {
-        perfil: true, // Inclui o registro da tabela 'perfis'
+        perfil: true,
       },
     });
 
@@ -186,8 +197,7 @@ const getMe = async (req, res) => {
       return res.status(404).json({ error: 'Usuário não encontrado.' });
     }
 
-    // 2. Achatar o objeto para manter o formato de API anterior
-    // (O Prisma retorna { ...usuario, perfil: { ... } })
+    // 2. Achatar o objeto
     const { perfil, ...usuarioBase } = userWithProfile;
     const response = { ...usuarioBase, ...(perfil || {}) };
     
@@ -201,7 +211,6 @@ const getMe = async (req, res) => {
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
-
 
 module.exports = {
   register,
