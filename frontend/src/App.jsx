@@ -29,6 +29,7 @@ export default function App() {
         <Routes>
           
           {/* 1. 🌍 ROTAS PÚBLICAS (Acessíveis a todos) */}
+          <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/logout" element={<Logout />} />
@@ -40,7 +41,6 @@ export default function App() {
           {/* 2. 🔒 ROTAS PROTEGIDAS (Apenas para usuários Logados) */}
           <Route element={<ProtectedRoute />}>
             {/* 🗺️ Rotas de Conteúdo/Gamificação Protegidas */}
-            <Route path="/" element={<Home />} />
             <Route path="/missions" element={<Missions />} />
             <Route path="/missao/:id" element={<MissaoDetalhes />} />
             <Route path="/ranking" element={<Ranking />} />
