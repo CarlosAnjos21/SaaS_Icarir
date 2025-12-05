@@ -48,7 +48,8 @@ const validateTaskSubmission = async (req, res) => {
             data_conclusao: new Date()
           }
         }),
-        prisma.usuarios.update({
+        // CORREÇÃO: Singular 'usuario'
+        prisma.usuario.update({
           where: { id: submission.usuario_id },
           data: {
             pontos: { increment: pontos_concedidos }
@@ -103,17 +104,20 @@ const validateTaskSubmission = async (req, res) => {
 const getDashboardStats = async (req, res) => {
   try {
     const [totalUsers, activeMissions, pendingSubmissions, totalPointsAgg] = await Promise.all([
-      prisma.usuarios.count({ where: { role: 'user', ativo: true } }),
-      prisma.missao.count({ where: { ativo: true } }),
+      // CORREÇÃO: Singular 'usuario'
+      prisma.usuario.count({ where: { role: 'participante', ativo: true } }), 
+      prisma.missao.count({ where: { ativa: true } }),
       prisma.usuarioTarefa.count({
         where: {
           concluida: false,
           validado_por: null,
-          NOT: { evidencias: null }
+          // CORREÇÃO: Sintaxe correta para verificar não nulo
+          evidencias: { not: null }
         }
       }),
-      prisma.usuarios.aggregate({
-        where: { role: 'user' },
+      // CORREÇÃO: Singular 'usuario' e role 'participante'
+      prisma.usuario.aggregate({
+        where: { role: 'participante' },
         _sum: { pontos: true }
       })
     ]);
