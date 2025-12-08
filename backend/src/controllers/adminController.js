@@ -1,5 +1,7 @@
-const prisma = require('../config/prismaClient');
-const { Prisma } = require('@prisma/client');
+// Importa o Prisma Client de forma segura
+const prismaModule = require("../config/prismaClient");
+const prisma = prismaModule.prisma || prismaModule.default || prismaModule;
+const { Prisma } = require('@prisma/client'); // Import necessário para tratar erros específicos
 
 /**
  * @route   POST /api/admin/submissions/:submissionId/validate
@@ -48,13 +50,14 @@ const validateTaskSubmission = async (req, res) => {
             data_conclusao: new Date()
           }
         }),
-        // CORREÇÃO: Singular 'usuario'
+        // Atualiza pontos do usuário
         prisma.usuario.update({
           where: { id: submission.usuario_id },
           data: {
             pontos: { increment: pontos_concedidos }
           }
         }),
+        // Log de pontos
         prisma.logsPontos.create({
           data: {
             usuario_id: submission.usuario_id,
@@ -87,7 +90,8 @@ const validateTaskSubmission = async (req, res) => {
       });
     }
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+    // Tratamento seguro para verificar o tipo do erro
+    if (error.code === 'P2025') {
       return res.status(404).json({ error: 'Submissão não encontrada para atualização.' });
     }
 
@@ -98,43 +102,58 @@ const validateTaskSubmission = async (req, res) => {
 
 /**
  * @route   GET /api/admin/dashboard/stats
- * @desc    Obter estatísticas gerais do painel administrativo
- * @access  Admin
+ * @desc    Retorna estatísticas gerais para o dashboard administrativo
+ * @access  Privado (Admin)
  */
 const getDashboardStats = async (req, res) => {
   try {
-    const [totalUsers, activeMissions, pendingSubmissions, totalPointsAgg] = await Promise.all([
-      // CORREÇÃO: Singular 'usuario'
-      prisma.usuario.count({ where: { role: 'participante', ativo: true } }), 
-      prisma.missao.count({ where: { ativa: true } }),
-      prisma.usuarioTarefa.count({
+    if (!prisma) throw new Error("Prisma não inicializado.");
+
+    // --- EXECUÇÃO SEQUENCIAL (AWAIT LINHA POR LINHA) ---
+    // Mantida a lógica sequencial para evitar erro "MaxClientsInSessionMode" no Supabase
+
+    // 1. Total de Usuários
+    const totalUsers = await prisma.usuario.count({ 
+        where: { role: 'participante', ativo: true } 
+    });
+
+    // 2. Missões Ativas
+    const activeMissions = await prisma.missao.count({ 
+        where: { ativa: true } 
+    });
+
+    // 3. Submissões Pendentes (Aguardando Validação)
+    const pendingSubmissions = await prisma.usuarioTarefa.count({
         where: {
           concluida: false,
           validado_por: null,
-          // CORREÇÃO: Sintaxe correta para verificar não nulo
           evidencias: { not: null }
         }
-      }),
-      // CORREÇÃO: Singular 'usuario' e role 'participante'
-      prisma.usuario.aggregate({
+    });
+
+    // 4. Total de Pontos Distribuídos
+    const totalPointsAgg = await prisma.usuario.aggregate({
         where: { role: 'participante' },
         _sum: { pontos: true }
-      })
-    ]);
+    });
 
-    return res.json({
+    res.json({
       totalUsers,
       activeMissions,
       pendingSubmissions,
       totalPointsDistributed: totalPointsAgg._sum.pontos || 0
     });
+
   } catch (error) {
-    console.error('Erro ao buscar estatísticas do dashboard:', error);
-    return res.status(500).json({ error: 'Erro interno do servidor.' });
+    console.error("Erro CRÍTICO no Dashboard:", error);
+    res.status(500).json({ 
+        error: "Erro ao carregar estatísticas", 
+        details: error.message
+    });
   }
 };
 
 module.exports = {
   validateTaskSubmission,
-  getDashboardStats
+  getDashboardStats,
 };
