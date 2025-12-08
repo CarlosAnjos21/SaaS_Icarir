@@ -1,51 +1,64 @@
-// Importa o Prisma Client
-const prisma = require("../config/prismaClient");
+// Importa o Prisma Client de forma segura
+const prismaModule = require("../config/prismaClient");
+const prisma = prismaModule.prisma || prismaModule.default || prismaModule;
 
 /**
  * @route   GET /api/ranking
- * @desc    Busca o ranking global de usuários (privado por padrão)
+ * @desc    Busca o ranking global de usuários
  * @access  Privado (requer token)
  */
 const getGlobalRanking = async (req, res) => {
   try {
-    // Busca usuários ativos com role 'user'
-    const usuarios = await prisma.Usuarios.findMany({
-      where: {
-        ativo: true,
-        role: "user",
-      },
-      select: {
-        id: true,
-        nome: true,
-        foto_url: true,
-        pontos: true,
-      },
-      orderBy: [
-        { pontos: "desc" },
-        { nome: "asc" },
-      ],
+    if (!prisma) throw new Error("Prisma não inicializado.");
+
+    // Detecção automática do modelo (usuario/users/etc) para robustez
+    const keys = Object.keys(prisma).filter(k => !k.startsWith('$') && !k.startsWith('_'));
+    const userModelKey = keys.find(k => /^(user|users|usuario|usuarios)$/i.test(k)) || 
+                         keys.find(k => typeof prisma[key]?.findMany === 'function');
+
+    if (!userModelKey) throw new Error("Tabela de usuários não encontrada no Prisma.");
+
+    const usuarioModel = prisma[userModelKey];
+
+    // Busca dados
+    const usuariosRaw = await usuarioModel.findMany({
       take: 100,
+      orderBy: { pontos: 'desc' } // Tenta ordenação direta pelo banco se possível
     });
 
-    // Gera as iniciais dinamicamente (caso não estejam salvas no banco)
-    const ranking = usuarios.map((user) => {
-      const nomes = user.nome.trim().split(" ");
-      const initials = nomes.length >= 2
-        ? nomes[0][0] + nomes[nomes.length - 1][0]
-        : nomes[0].slice(0, 2);
-      return {
-        id: user.id,
-        name: user.nome,
-        initials: initials.toUpperCase(),
-        photo: user.foto_url,
-        points: user.pontos,
-      };
-    });
+    // Processamento e normalização
+    const ranking = usuariosRaw
+        .filter(u => u.ativo !== false) // Filtra inativos se a coluna existir
+        .map((user) => {
+            const nome = user.nome || user.name || "Sem Nome";
+            const pontos = Number(user.pontos || user.points || 0);
+            const foto = user.foto_url || user.photo_url || user.avatar || null;
+            const depto = user.departamento || user.department || user.role || "Geral";
+            
+            // Iniciais
+            const nomeLimpo = String(nome).trim();
+            const partes = nomeLimpo.split(" ");
+            const initials = partes.length >= 2
+                ? (partes[0][0] + partes[partes.length - 1][0]).toUpperCase()
+                : nomeLimpo.slice(0, 2).toUpperCase();
+
+            return {
+                id: user.id,
+                name: nomeLimpo,
+                initials: initials,
+                photo: foto,
+                points: pontos,
+                department: depto,
+                variation: 0, 
+            };
+        })
+        .sort((a, b) => b.points - a.points); // Garante a ordenação final
 
     res.json(ranking);
+
   } catch (error) {
-    console.error("Erro ao buscar ranking:", error);
-    res.status(500).json({ error: "Erro interno do servidor." });
+    console.error("Erro no Ranking:", error.message);
+    res.status(500).json({ error: "Erro ao buscar ranking." });
   }
 };
 

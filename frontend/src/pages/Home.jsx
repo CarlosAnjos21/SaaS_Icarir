@@ -1,21 +1,16 @@
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
-// Retornando ao componente externo conforme solicitado
 import Navbar from "../components/Navbar"; 
-
 import HomeCard from "../components/HomeCard";
 import FeedbackBar from "../components/Feedbacks/FeedbackBar";
 
 // --- IMPORTS DE IMAGENS ---
-import bannerImg from "../assets/airport.jpg";
 import logoIcarir from "../assets/símbolo-icarir.png";
-import aircraftImg from "../assets/aircraft.jpg";
-import christmasImg from "../assets/merry-christmas.jpg";
 
-// --- DADOS ---
+// --- DADOS (Mantidos) ---
 const GALERIA_PADRAO = [
   'https://images.unsplash.com/photo-1483729558449-99ef09a8c325?auto=format&fit=crop&w=300&q=80',
   'https://images.unsplash.com/photo-1518639192441-8fce0a366e2e?auto=format&fit=crop&w=300&q=80',
@@ -31,10 +26,10 @@ const DADOS_DAS_MISSOES = {
     data: "Evento: Tech Week SP",
     imagem: 'https://images.unsplash.com/photo-1543059080-f9b1272213d5?auto=format&fit=crop&w=800&q=80',
     galeria: [
-      'https://images.unsplash.com/photo-1578308148355-6e1b5300f16f', // Ponte Estaiada
-      'https://images.unsplash.com/photo-1565259160565-d6023d837682', // Paulista
-      'https://images.unsplash.com/photo-1629906646540-30b6515822b3', // Beco do Batman
-      'https://images.unsplash.com/photo-1598971861713-54ad1635092e'  // Ibirapuera
+      'https://images.unsplash.com/photo-1578308148355-6e1b5300f16f',
+      'https://images.unsplash.com/photo-1565259160565-d6023d837682',
+      'https://images.unsplash.com/photo-1629906646540-30b6515822b3',
+      'https://images.unsplash.com/photo-1598971861713-54ad1635092e'
     ]
   },
   "Florianópolis, SC": {
@@ -158,22 +153,24 @@ const destinations = [
 ];
 
 export default function Home() {
-  const [currentIndex, setCurrentIndex] = useState(0);
   const navigate = useNavigate();
 
-  // --- EFEITOS (AOS, Scroll) ---
   useEffect(() => {
+    // Inicializa animações AOS
     AOS.init({ duration: 800, once: false });
     AOS.refresh();
 
-    // Carrossel Automático
-    const interval = setInterval(() => {
-      setCurrentIndex((prevIndex) => (prevIndex + 1) % 3);
-    }, 5000);
-
-    return () => {
-      clearInterval(interval);
-    };
+    // Injeção do Script do Elfsight (Singleton Pattern)
+    const scriptId = "elfsight-platform-script";
+    
+    // Verifica se o script já existe para evitar duplicação
+    if (!document.getElementById(scriptId)) {
+        const script = document.createElement("script");
+        script.src = "https://elfsightcdn.com/platform.js";
+        script.id = scriptId;
+        script.defer = true; // Defer ajuda a garantir que o DOM esteja pronto
+        document.body.appendChild(script);
+    }
   }, []);
 
   const iniciarMissao = (city) => {
@@ -193,47 +190,31 @@ export default function Home() {
     navigate('/missao-detalhes', { state: { missionData: dadosParaEnviar } });
   };
 
-  const carouselImages = [bannerImg, aircraftImg, christmasImg];
-  const prevSlide = () => setCurrentIndex((prev) => prev === 0 ? carouselImages.length - 1 : prev - 1);
-  const nextSlide = () => setCurrentIndex((prev) => (prev + 1) % carouselImages.length);
-
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
       
-      {/* Componente Navbar Externo */}
       <Navbar />
 
-      {/* --- BANNER PRINCIPAL (Apenas Visual) --- */}
-      <div className="relative h-[600px] overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-full">
-          {carouselImages.map((img, index) => (
-            <img 
-              key={index} 
-              src={img} 
-              alt="Slide" 
-              className={`absolute w-full h-full object-cover scale-105 transition-opacity duration-1000 ease-in-out ${index === currentIndex ? "opacity-100" : "opacity-0"}`} 
-              style={{ zIndex: index === currentIndex ? 1 : 0 }} 
-            />
-          ))}
+      {/* --- SEÇÃO INSTAGRAM FEED (Widget Elfsight) --- */}
+      <section className="relative bg-gradient-to-b from-[#002B5B] to-gray-50 pt-20 pb-8 overflow-hidden min-h-[200px]">
+        
+        <div className="max-w-[1000px] mx-auto px-4 z-10 relative">
+            {/* Widget do Elfsight sem Lazy Load */}
+            <div className="elfsight-app-86adf4a7-150a-4b09-9aea-cb904cc41a4a">
+                <p className="text-center text-white/50 text-sm py-10">
+                    Carregando Instagram... (Se não aparecer, verifique o bloqueio de scripts externos)
+                </p>
+            </div>
         </div>
-        
-        {/* Gradiente sutil para acabamento */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#394C97]/30 via-transparent to-gray-50 z-10"></div>
-        
-        {/* Controles do Slider (Mantidos para navegação visual) */}
-        <button onClick={prevSlide} className="absolute left-6 top-1/2 transform -translate-y-1/2 bg-white/10 hover:bg-white/30 backdrop-blur-md text-white p-3 rounded-full transition z-30 border border-white/20">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-        </button>
-        <button onClick={nextSlide} className="absolute right-6 top-1/2 transform -translate-y-1/2 bg-white/10 hover:bg-white/30 backdrop-blur-md text-white p-3 rounded-full transition z-30 border border-white/20">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-        </button>
-      </div>
 
-      {/* --- SEÇÃO DE DESTINOS PARA EMPREENDEDORES (BRASIL) --- */}
-      <section className="relative max-w-[1800px] mx-auto py-16 px-6 z-20 -mt-24">
-        <img src={logoIcarir} alt="Bg" className="absolute inset-0 w-full h-full object-contain opacity-[0.03] pointer-events-none" />
+        {/* Fundo Decorativo */}
+        <div className="absolute inset-0 z-0 opacity-5 pointer-events-none" style={{ backgroundImage: `url(${logoIcarir})`, backgroundSize: '300px', backgroundRepeat: 'no-repeat', backgroundPosition: 'center right' }}></div>
+      </section>
+
+      {/* --- SEÇÃO DE DESTINOS --- */}
+      <section className="relative max-w-[1800px] mx-auto py-16 px-6 z-20">
         
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl p-8 shadow-xl mb-12 relative z-10 max-w-4xl mx-auto text-center border border-gray-100">
+        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-8 shadow-xl mb-12 relative z-10 max-w-4xl mx-auto text-center border border-gray-100">
           <span className="text-[#FE5900] font-bold uppercase tracking-widest text-sm">Expandir Horizontes</span>
           <h2 className="text-3xl md:text-5xl font-bold text-[#394C97] mt-2">Destinos para Empreendedores</h2>
           <p className="text-gray-600 mt-4 max-w-2xl mx-auto">
