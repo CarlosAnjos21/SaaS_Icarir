@@ -1,63 +1,151 @@
-// src/components/AdminPanel/AdminPanel.jsx (FINALMENTE COMPLETO)
-
 import { useState } from "react";
-import { BarChart2, Users, Settings, Zap, Briefcase, HelpCircle } from "lucide-react";
+import { useNavigate } from "react-router-dom"; // Import necessário para redirecionamento
+import { 
+    BarChart2, 
+    Users, 
+    Settings, 
+    Zap, 
+    Briefcase, 
+    HelpCircle, 
+    Menu, 
+    X,
+    LogOut,
+    ChevronRight
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-// Importa os componentes desmembrados
+// Importa os conteúdos das abas
 import DashboardContent from './DashboardContent'; 
 import UsersContent from './UsersContent'; 
-import MissionsContent from './AdminMissions/MissionsContent'; // ⬅️ NOVO IMPORT FINAL
+import MissionsContent from './AdminMissions/MissionsContent';
 
 export default function AdminPanel() {
     const [activeTab, setActiveTab] = useState("dashboard");
+    const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+    const navigate = useNavigate(); // Hook de navegação
 
     const tabs = [
         { id: "dashboard", label: "Dashboard", icon: BarChart2, content: <DashboardContent /> }, 
-        
-        // ⬅️ NOVO: Missões com conteúdo desmembrado!
         { id: "missions", label: "Missões Ativas", icon: Zap, content: <MissionsContent /> },
-        
         { id: "users", label: "Gestão de Usuários", icon: Users, content: <UsersContent /> },
-        
-        // Abas Adicionais
-        { id: "tasks", label: "Tarefas", icon: Briefcase, content: <p className="text-gray-600 p-6 bg-white rounded-xl shadow-lg">Gerencie tarefas vinculadas às missões.</p> },
-        { id: "quizzes", label: "Quizzes", icon: HelpCircle, content: <p className="text-gray-600 p-6 bg-white rounded-xl shadow-lg">Crie quizzes interativos.</p> },
-        { id: "settings", label: "Configurações", icon: Settings, content: <p className="text-gray-600 p-6 bg-white rounded-xl shadow-lg">Ajuste preferências do sistema.</p> },
+        { id: "tasks", label: "Tarefas", icon: Briefcase, content: <div className="p-8"><div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center"><h2 className="text-2xl font-bold text-gray-300">Em Desenvolvimento</h2></div></div> },
+        { id: "quizzes", label: "Quizzes", icon: HelpCircle, content: <div className="p-8"><div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center"><h2 className="text-2xl font-bold text-gray-300">Em Desenvolvimento</h2></div></div> },
+        { id: "settings", label: "Configurações", icon: Settings, content: <div className="p-8"><div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center"><h2 className="text-2xl font-bold text-gray-300">Em Desenvolvimento</h2></div></div> },
     ];
     
     const currentTab = tabs.find(tab => tab.id === activeTab);
 
-    // O restante do layout (que você me enviou no início)
+    // Função de Logout
+    const handleLogout = () => {
+        // Limpa o token e dados do usuário do localStorage
+        // Ajuste a chave 'token' se você usa outro nome (ex: 'authToken', 'supabase.auth.token', etc)
+        localStorage.removeItem('token'); 
+        localStorage.removeItem('user');
+        
+        // Redireciona para a página de login
+        navigate('/login');
+    };
+
     return (
-        <div className="min-h-screen bg-gray-100 flex">
-            {/* Sidebar */}
-            <aside className="w-64 bg-white shadow-xl p-6 border-r border-gray-200 sticky top-0 h-screen overflow-y-auto">
-                <h1 className="text-3xl font-extrabold text-[#394C97] mb-8">Icarir Admin</h1>
-                <nav className="space-y-2">
+        <div className="min-h-screen bg-gray-100 flex font-sans overflow-hidden">
+            
+            {/* SIDEBAR (Estilo Moderno) */}
+            <motion.aside 
+                initial={{ width: isSidebarOpen ? 280 : 80 }}
+                animate={{ width: isSidebarOpen ? 280 : 80 }}
+                transition={{ duration: 0.3, ease: "easeInOut" }}
+                className="bg-white shadow-2xl border-r border-gray-200 z-50 flex flex-col h-screen fixed md:relative"
+            >
+                {/* Logo Area */}
+                <div className="p-6 flex items-center justify-between">
+                    <AnimatePresence>
+                        {isSidebarOpen && (
+                            <motion.h1 
+                                initial={{ opacity: 0 }} 
+                                animate={{ opacity: 1 }} 
+                                exit={{ opacity: 0 }}
+                                className="text-2xl font-extrabold text-[#394C97] tracking-tight whitespace-nowrap"
+                            >
+                                Icarir<span className="text-[#FE5900]">. </span>ADM
+                            </motion.h1>
+                        )}
+                    </AnimatePresence>
+                    <button 
+                        onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+                        className="p-2 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors"
+                    >
+                        {isSidebarOpen ? <X size={20} /> : <Menu size={20} />}
+                    </button>
+                </div>
+
+                {/* Navigation */}
+                <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto custom-scrollbar">
                     {tabs.map((tab) => (
                         <button
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
-                            className={`w-full text-left px-4 py-3 rounded-xl transition flex items-center gap-3 ${
+                            className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group relative overflow-hidden ${
                                 activeTab === tab.id
-                                    ? "bg-[#394C97] text-white font-semibold shadow-md"
-                                    : "text-gray-700 hover:bg-gray-100 hover:text-[#FE5900]"
+                                    ? "bg-[#394C97] text-white shadow-lg shadow-blue-900/20"
+                                    : "text-gray-600 hover:bg-blue-50 hover:text-[#394C97]"
                             }`}
                         >
-                            <tab.icon size={20} />
-                            {tab.label}
+                            <div className={`relative z-10 ${!isSidebarOpen && "mx-auto"}`}>
+                                <tab.icon size={22} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
+                            </div>
+                            
+                            <AnimatePresence>
+                                {isSidebarOpen && (
+                                    <motion.span 
+                                        initial={{ opacity: 0, x: -10 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        exit={{ opacity: 0, x: -10 }}
+                                        className="font-medium text-sm whitespace-nowrap relative z-10"
+                                    >
+                                        {tab.label}
+                                    </motion.span>
+                                )}
+                            </AnimatePresence>
+
+                            {/* Indicador Ativo */}
+                            {activeTab === tab.id && isSidebarOpen && (
+                                <ChevronRight size={16} className="ml-auto opacity-50 relative z-10" />
+                            )}
                         </button>
                     ))}
                 </nav>
-            </aside>
 
-            {/* Conteúdo principal */}
-            <main className="flex-1 p-10 max-w-full overflow-x-hidden pt-[150px]">
-                <header className="fixed top-0 left-64 right-0 bg-gray-100 z-10 p-10 pb-4 border-b border-gray-200 pt-[90px]">
-                    <h1 className="text-4xl font-extrabold text-gray-900">{currentTab?.label || 'Painel'}</h1>
-                </header>
-                <div className="max-w-7xl mx-auto">
-                    {currentTab ? currentTab.content : <p className="text-gray-500">Selecione uma opção no menu lateral.</p>}
+                {/* Footer Sidebar */}
+                <div className="p-4 border-t border-gray-100">
+                    <button 
+                        onClick={handleLogout}
+                        className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-red-600 hover:bg-red-50 transition-colors group"
+                    >
+                        <LogOut size={20} className={`group-hover:rotate-180 transition-transform duration-300 ${!isSidebarOpen && "mx-auto"}`} />
+                        {isSidebarOpen && <span className="font-semibold text-sm">Sair do Sistema</span>}
+                    </button>
+                </div>
+            </motion.aside>
+
+            {/* CONTEÚDO PRINCIPAL (Main Area) */}
+            <main className="flex-1 h-screen overflow-y-auto bg-gray-50 relative">
+                <div className="w-full h-full">
+                    <AnimatePresence mode="wait">
+                        <motion.div
+                            key={activeTab}
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -10 }}
+                            transition={{ duration: 0.2 }}
+                            className="w-full"
+                        >
+                            {currentTab ? currentTab.content : (
+                                <div className="flex items-center justify-center h-screen text-gray-400">
+                                    Selecione uma opção no menu.
+                                </div>
+                            )}
+                        </motion.div>
+                    </AnimatePresence>
                 </div>
             </main>
         </div>

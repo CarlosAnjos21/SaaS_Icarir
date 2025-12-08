@@ -1,132 +1,153 @@
-// src/components/AdminPanel/UsersContent.jsx (Código Completo Corrigido)
-
-import React, { useState, useEffect, useCallback } from 'react';
-import { Users, AlertTriangle, Loader, Edit, Trash2, Plus } from 'lucide-react';
-// Importa todas as funções de API
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import { motion } from 'framer-motion';
+import { 
+    Users, 
+    AlertTriangle, 
+    Loader, 
+    Edit, 
+    Trash2, 
+    Plus, 
+    Search, 
+    Shield, 
+    CheckCircle, 
+    Mail, 
+    UserCircle, 
+    RefreshCw 
+} from 'lucide-react';
 import { fetchUsers, createUser, updateUser, deleteUserApi } from '../../api/apiFunctions'; 
-import UserModal from './UserModal'; // Importa o Modal
+import UserModal from './UserModal'; 
 
-// Função auxiliar para determinar a cor do Role/Função
-const getRoleStyle = (role) => {
+// --- ESTILOS DE BADGES ---
+const getRoleBadge = (role) => {
     switch (role) {
         case 'admin':
-            return 'bg-red-200 text-red-900';
+            return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200 uppercase tracking-wide"><Shield size={10} /> Admin</span>;
         case 'validador':
-            return 'bg-yellow-100 text-yellow-800';
+            return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 border border-amber-200 uppercase tracking-wide"><CheckCircle size={10} /> Validador</span>;
         case 'participante':
         default:
-            return 'bg-indigo-100 text-indigo-800';
+            return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 border border-blue-200 uppercase tracking-wide"><Users size={10} /> Participante</span>;
     }
 };
 
-
-// Estado inicial para o formulário de usuário (Ajustado para o DB Schema)
-const INITIAL_USER_STATE = {
-    nome: "",           // <-- Mapeia para a coluna 'nome'
-    email: "",
-    senha: "",          // <-- Mapeia para a coluna 'senha'
-    pontos: 0,          // <-- Mapeia para a coluna 'pontos'
-    role: "participante", // <-- Mapeia para a coluna 'role'
-    ativo: true,        // <-- Mapeia para a coluna 'ativo'
+const getStatusBadge = (active) => {
+    return active ? 
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-600/20"><span className="w-1.5 h-1.5 rounded-full bg-emerald-600"></span> Ativo</span> : 
+        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-medium bg-gray-50 text-gray-600 ring-1 ring-inset ring-gray-500/20"><span className="w-1.5 h-1.5 rounded-full bg-gray-500"></span> Inativo</span>;
 };
 
-
-// Componente auxiliar para a Tabela de Usuários (AJUSTADO)
-const UserTable = ({ users, onEdit, onDelete, isLoading }) => (
-    <div className="overflow-x-auto bg-white rounded-xl shadow-lg border border-gray-100">
-        <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-                <tr>
-                    {/* NOVOS HEADERS */}
-                    {["Nome", "Email", "Função/Role", "Pontos", "Status", "Criado em", "Ações"].map(header => (
-                        <th key={header} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">{header}</th>
-                    ))}
-                </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-                {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-gray-50">
-                        
-                        {/* 1. NOME (usando user.nome) */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.nome}</td>
-                        
-                        {/* 2. EMAIL (usando user.email) */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-                        
-                        {/* 3. FUNÇÃO/ROLE (usando user.role) */}
-                        <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold capitalize rounded-full ${getRoleStyle(user.role)}`}>
-                                {user.role}
-                            </span>
-                        </td>
-                        
-                        {/* 4. PONTOS (usando user.pontos) */}
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-700">{user.pontos}</td>
-                        
-                        {/* 5. STATUS (usando user.ativo) */}
-                        <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                                user.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                            }`}>
-                                {user.ativo ? 'Ativo' : 'Inativo'}
-                            </span>
-                        </td>
-                        
-                        {/* 6. DATA CRIAÇÃO (usando user.data_criacao) */}
-                        <td className="px-6 py-4 whitespace-nowrap text-xs text-gray-500">
-                            {user.data_criacao ? new Date(user.data_criacao).toLocaleDateString() : 'N/A'}
-                        </td>
-
-                        {/* 7. AÇÕES */}
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium flex gap-2">
-                            <button onClick={() => onEdit(user)} disabled={isLoading} className="text-blue-600 hover:text-blue-900 p-1 disabled:opacity-50">
-                                <Edit size={18} />
-                            </button>
-                            <button onClick={() => onDelete(user.id)} disabled={isLoading} className="text-red-600 hover:text-red-900 p-1 disabled:opacity-50">
-                                <Trash2 size={18} />
-                            </button>
-                        </td>
+// --- TABELA REESTILIZADA ---
+const UserTable = ({ users, onEdit, onDelete, isLoading, showPoints }) => (
+    <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-100">
+                <thead className="bg-gray-50/80">
+                    <tr>
+                        {[
+                            "Usuário", "Contato", "Função", showPoints ? "Pontuação" : null, "Status", "Registro", "Ações"
+                        ].filter(Boolean).map((header, idx) => (
+                            <th key={idx} className="px-4 py-3 text-left text-[10px] font-bold text-gray-400 uppercase tracking-wider">{header}</th>
+                        ))}
                     </tr>
-                ))}
-            </tbody>
-        </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-50">
+                    {users.map((user, index) => (
+                        <motion.tr 
+                            key={user.id} 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: index * 0.02 }}
+                            className="hover:bg-blue-50/30 transition-colors group"
+                        >
+                            <td className="px-4 py-2 whitespace-nowrap">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center text-[#394C97] font-bold text-xs border border-gray-200 group-hover:border-blue-200 group-hover:bg-blue-100 transition-colors">
+                                        {user.nome ? user.nome.charAt(0).toUpperCase() : <UserCircle size={16}/>}
+                                    </div>
+                                    <div className="font-semibold text-gray-900 text-sm">{user.nome}</div>
+                                </div>
+                            </td>
+                            <td className="px-4 py-2 whitespace-nowrap text-xs text-gray-500">
+                                <div className="flex items-center gap-1.5"><Mail size={12} className="text-gray-400" />{user.email}</div>
+                            </td>
+                            <td className="px-4 py-2 whitespace-nowrap">{getRoleBadge(user.role)}</td>
+                            {showPoints && (
+                                <td className="px-4 py-2 whitespace-nowrap">
+                                    <span className="font-mono font-bold text-[#394C97] bg-blue-50 px-1.5 py-0.5 rounded text-xs">{user.pontos}</span>
+                                </td>
+                            )}
+                            <td className="px-4 py-2 whitespace-nowrap">{getStatusBadge(user.ativo)}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-[10px] text-gray-400">{user.data_criacao ? new Date(user.data_criacao).toLocaleDateString() : '-'}</td>
+                            <td className="px-4 py-2 whitespace-nowrap text-right text-sm font-medium">
+                                <div className="flex items-center gap-1">
+                                    <button onClick={() => onEdit(user)} disabled={isLoading} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50"><Edit size={14} /></button>
+                                    <button onClick={() => onDelete(user.id)} disabled={isLoading} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50"><Trash2 size={14} /></button>
+                                </div>
+                            </td>
+                        </motion.tr>
+                    ))}
+                </tbody>
+            </table>
+            {users.length === 0 && (
+                <div className="p-8 text-center text-gray-400 flex flex-col items-center">
+                    <Users size={32} className="mb-2 opacity-20" />
+                    <p className="text-sm">Nenhum usuário encontrado nesta categoria.</p>
+                </div>
+            )}
+        </div>
     </div>
 );
 
+const INITIAL_USER_STATE = { nome: "", email: "", senha: "", pontos: 0, role: "participante", ativo: true };
 
 const UsersContent = () => {
-    // ESTADOS DE DADOS
     const [users, setUsers] = useState([]);
-    
-    // ESTADOS DE FLUXO
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
-    
-    // ESTADOS DE CRIAÇÃO/EDIÇÃO
     const [showModal, setShowModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentUser, setCurrentUser] = useState(INITIAL_USER_STATE);
+    const [searchTerm, setSearchTerm] = useState("");
+    const [activeCategory, setActiveCategory] = useState('participante');
 
+    const isMounted = useRef(true);
 
-    // --- FUNÇÕES DE CARREGAMENTO (READ - GET) ---
+    useEffect(() => {
+        isMounted.current = true;
+        return () => { isMounted.current = false; };
+    }, []);
 
     const loadUsers = useCallback(async () => {
         setLoading(true);
         setError(null);
+        
+        // Timeout de segurança: 10 segundos
+        const timeoutPromise = new Promise((_, reject) => 
+            setTimeout(() => reject(new Error("O servidor demorou para responder.")), 10000)
+        );
+
         try {
-            const data = await fetchUsers();
-            // Assegura que data_criacao é um campo válido para a tabela
-            const validUsers = data.map(user => ({
-                ...user,
-                data_criacao: user.data_criacao || user.dataCriacao, // Adiciona fallback para flexibilidade
-            }));
-            setUsers(validUsers);
+            const data = await Promise.race([fetchUsers(), timeoutPromise]);
+            
+            if (isMounted.current) {
+                const validUsers = Array.isArray(data) ? data.map(user => ({
+                    ...user,
+                    data_criacao: user.data_criacao || user.dataCriacao,
+                })) : [];
+                setUsers(validUsers);
+            }
         } catch (err) {
-            setError(`Falha ao carregar a lista de usuários: ${err.message || 'Erro de conexão'}`);
-            console.error("Erro ao carregar usuários:", err);
+            if (isMounted.current) {
+                console.error("Erro no loadUsers:", err);
+                if (err.response?.status !== 401) {
+                    setError(`Erro: ${err.message || 'Falha na conexão'}`);
+                }
+            }
         } finally {
-            setLoading(false);
+            if (isMounted.current) {
+                setLoading(false);
+            }
         }
     }, []);
 
@@ -134,142 +155,108 @@ const UsersContent = () => {
         loadUsers();
     }, [loadUsers]);
 
-    
-    // --- FUNÇÕES DE CONTROLE DO MODAL ---
-
     const handleModalOpen = (userToEdit = null) => {
         if (userToEdit) {
             setIsEditing(true);
-            // Copia o objeto para evitar mutação direta. 
-            setCurrentUser({ 
-                ...userToEdit, 
-                senha: "", // Nunca pré-popule a senha ao editar
-                // Garante que 'pontos' é numérico
-                pontos: Number(userToEdit.pontos) 
-            }); 
+            setCurrentUser({ ...userToEdit, senha: "", pontos: Number(userToEdit.pontos) }); 
         } else {
             setIsEditing(false);
-            setCurrentUser(INITIAL_USER_STATE);
+            const defaultRole = activeCategory === 'admin' ? 'admin' : 'participante';
+            setCurrentUser({ ...INITIAL_USER_STATE, role: defaultRole });
         }
         setShowModal(true);
     };
 
-    const handleModalClose = () => {
-        setShowModal(false);
-        setIsEditing(false);
-        setCurrentUser(INITIAL_USER_STATE);
-        setError(null);
-    };
-
-
-    // --- FUNÇÕES DE API (CREATE/UPDATE/DELETE) ---
+    const handleModalClose = () => { setShowModal(false); setIsEditing(false); setCurrentUser(INITIAL_USER_STATE); setError(null); };
 
     const handleSaveUser = async () => {
-        // Validação básica (usando 'nome' e 'senha')
-        if (!currentUser.nome || !currentUser.email || (!isEditing && !currentUser.senha)) {
-            alert("Preencha Nome, Email e Senha (para novos usuários).");
-            return;
-        }
-
+        if (!currentUser.nome || !currentUser.email || (!isEditing && !currentUser.senha)) { alert("Preencha Nome, Email e Senha."); return; }
         setIsSaving(true);
         try {
             let response;
             if (isEditing) {
-                // Atualizar usuário existente (PUT)
                 response = await updateUser(currentUser.id, currentUser);
-                // NOTA: O backend deve retornar { message: "...", user: {...} } ou apenas {...}
                 const userToUpdate = response.user || response;
-                setUsers(users.map(u => u.id === currentUser.id ? userToUpdate : u));
+                setUsers(prev => prev.map(u => u.id === currentUser.id ? userToUpdate : u));
             } else {
-                // Criar novo usuário (POST)
                 response = await createUser(currentUser); 
-                
-                // 🛑 CORREÇÃO PRINCIPAL: Extrair o objeto 'user' da resposta do backend.
-                const newUser = response.user || response; // Tenta extrair 'user', ou usa a resposta completa
-
-                if (newUser && newUser.id) {
-                    setUsers([...users, newUser]);
-                } else {
-                    throw new Error("Resposta da API de criação inválida.");
-                }
+                const newUser = response.user || response;
+                if (newUser && newUser.id) setUsers(prev => [...prev, newUser]);
             }
             handleModalClose();
-        } catch (err) {
-            // Tratamento de erro aprimorado
-            const errorData = err.response?.data;
-            const errorMsg = errorData?.error || errorData?.message || err.message;
-            setError(`Falha ao salvar usuário: ${errorMsg}`);
-            console.error("Erro ao salvar usuário:", err);
-        } finally {
-            setIsSaving(false);
-        }
+        } catch (err) { setError(`Erro ao salvar: ${err.response?.data?.error || err.message}`); } finally { setIsSaving(false); }
     };
 
     const handleDeleteUser = async (id) => {
-        if (!window.confirm("Tem certeza que deseja excluir este usuário? Esta ação é irreversível.")) {
-            return;
-        }
-
+        if (!window.confirm("Excluir usuário permanentemente?")) return;
         setIsSaving(true);
         try {
             await deleteUserApi(id);
-            setUsers(users.filter(u => u.id !== id));
-        } catch (err) {
-            const errorData = err.response?.data;
-            const errorMsg = errorData?.error || errorData?.message || err.message;
-            setError(`Falha ao excluir usuário: ${errorMsg}`);
-            console.error("Erro ao deletar usuário:", err);
-        } finally {
-            setIsSaving(false);
-        }
+            setUsers(prev => prev.filter(u => u.id !== id));
+        } catch (err) { setError(`Erro ao excluir: ${err.message}`); } finally { setIsSaving(false); }
     };
 
-    // --- RENDERIZAÇÃO ---
-    
+    // Otimização: useMemo para evitar recálculo de filtro a cada render
+    const filteredUsers = useMemo(() => {
+        return users.filter(user => {
+            const matchesSearch = user.nome?.toLowerCase().includes(searchTerm.toLowerCase()) || user.email?.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesCategory = activeCategory === 'participante' ? user.role === 'participante' : (user.role === 'admin' || user.role === 'validador');
+            return matchesSearch && matchesCategory;
+        });
+    }, [users, searchTerm, activeCategory]);
+
     if (loading) {
-        return <div className="text-center p-10"><Loader size={30} className="animate-spin mx-auto text-[#394C97]" /> <p className="mt-2 text-gray-500">Carregando usuários...</p></div>;
+        return (
+            <div className="flex flex-col items-center justify-center h-96">
+                <Loader size={32} className="animate-spin text-[#394C97] mb-4" /> 
+                <p className="text-gray-500 font-medium text-sm">Carregando usuários...</p>
+            </div>
+        );
     }
 
     return (
-        <div>
-            <div className="flex justify-between items-center mb-6">
-                <h2 className="text-3xl font-bold text-gray-800 flex items-center gap-2">👥 Gestão de Usuários</h2>
-                <button
-                    onClick={() => handleModalOpen()}
-                    className="bg-[#FE5900] text-white px-4 py-2 rounded-xl shadow-lg hover:bg-[#d94d00] transition flex items-center gap-2 font-semibold disabled:opacity-50"
-                    disabled={isSaving}
-                >
-                    <Plus size={20} />
-                    Novo Usuário
-                </button>
+        <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
+            {/* BANNER */}
+            <div className="h-64 w-full bg-[#394C97] relative rounded-b-[2.5rem] md:rounded-b-none overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl"></div>
+                <div className="max-w-7xl mx-auto px-6 h-full flex items-center pb-10 md:translate-y-2 relative z-10">
+                    <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="flex items-center gap-5 text-white">
+                        <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md border border-white/10 shadow-xl ring-1 ring-white/20"><Users className="w-6 h-6 text-[#FE5900]" /></div>
+                        <div><h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Gestão de Usuários</h1><p className="text-blue-100/90 text-sm md:text-base mt-1 font-light">Controle de acesso e membros da plataforma</p></div>
+                    </motion.div>
+                </div>
             </div>
 
-            {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative flex items-center gap-3 mb-4" role="alert">
-                    <AlertTriangle size={20} />
-                    <span className="block sm:inline">{error}</span>
-                    <button onClick={loadUsers} className="ml-4 underline font-semibold">Recarregar Lista</button>
+            {/* CONTEÚDO */}
+            <div className="max-w-7xl mx-auto px-6 -mt-24 relative z-20">
+                <div className="flex flex-col md:flex-row justify-between items-center gap-3 mb-6">
+                    <div className="flex bg-white p-1 rounded-lg shadow-md border border-gray-100">
+                        <button onClick={() => setActiveCategory('participante')} className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeCategory === 'participante' ? 'bg-blue-50 text-blue-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Participantes</button>
+                        <button onClick={() => setActiveCategory('admin')} className={`px-4 py-1.5 rounded-md text-xs font-bold transition-all ${activeCategory === 'admin' ? 'bg-rose-50 text-rose-700 shadow-sm' : 'text-gray-500 hover:text-gray-700'}`}>Administrativo</button>
+                    </div>
+                    <div className="flex items-center gap-3 w-full md:w-auto">
+                        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex-1 md:flex-none w-full md:w-64 bg-white p-1.5 rounded-lg shadow-md border border-gray-100 flex items-center gap-2 px-3">
+                            <Search className="text-gray-400 w-4 h-4" /><input type="text" placeholder="Buscar por nome ou email..." className="flex-1 outline-none text-gray-700 placeholder-gray-400 text-xs py-1.5" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                        </motion.div>
+                        <motion.button initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} onClick={() => handleModalOpen()} className="bg-[#FE5900] text-white px-4 py-2 rounded-lg shadow-md hover:bg-[#e04f00] hover:shadow-orange-500/20 transition-all flex items-center justify-center gap-1.5 font-bold text-xs tracking-wide transform hover:-translate-y-0.5 whitespace-nowrap"><Plus size={14} strokeWidth={3} /> NOVO</motion.button>
+                    </div>
                 </div>
-            )}
-            
-            <UserTable 
-                users={users} 
-                onEdit={handleModalOpen} 
-                onDelete={handleDeleteUser} 
-                isLoading={isSaving}
-            />
 
-            {/* Modal de Usuário */}
-            {showModal && (
-                <UserModal 
-                    user={currentUser}
-                    setUser={setCurrentUser}
-                    handleSave={handleSaveUser}
-                    handleClose={handleModalClose}
-                    isEditing={isEditing}
-                    isLoading={isSaving}
-                />
-            )}
+                {error && users.length === 0 && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center justify-between gap-3 mb-4 shadow-sm text-sm">
+                        <div className="flex items-center gap-2"><AlertTriangle size={16} /><span>{error}</span></div>
+                        <button onClick={loadUsers} className="p-1.5 hover:bg-red-100 rounded-md transition-colors"><RefreshCw size={14} /></button>
+                    </motion.div>
+                )}
+
+                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}>
+                    <UserTable users={filteredUsers} onEdit={handleModalOpen} onDelete={handleDeleteUser} isLoading={isSaving} showPoints={activeCategory === 'participante'} />
+                </motion.div>
+
+                <div className="mt-3 text-right text-[10px] font-medium text-gray-400">Total nesta categoria: {filteredUsers.length}</div>
+
+                {showModal && <UserModal user={currentUser} setUser={setCurrentUser} handleSave={handleSaveUser} handleClose={handleModalClose} isEditing={isEditing} isLoading={isSaving} />}
+            </div>
         </div>
     );
 };
