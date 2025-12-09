@@ -1,9 +1,6 @@
 const prisma = require("../config/prismaClient");
 const supabase = require("../config/supabaseClient");
-// 🚨 Importar Multer (necessário para processar o upload de arquivos)
-// Embora o middleware seja usado nas rotas, a função do controller assume que ele existe.
 
-// --- GET /api/users/me (Retorna o perfil COMPLETO do usuário logado) ---
 /**
  * @route   GET /api/users/me
  * @desc    Retorna os dados do usuário logado e seus dados de perfil (flattened)
@@ -13,12 +10,13 @@ const getMyProfile = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        const user = await prisma.usuarios.findUnique({
+        // CORREÇÃO: Alterado de 'usuarios' para 'usuario' (singular)
+        const user = await prisma.usuario.findUnique({
             where: { id: userId },
             select: {
                 id: true,
                 nome: true,
-                email: true, // Inclui email para o PRÓPRIO usuário
+                email: true,
                 role: true,
                 pontos: true,
                 foto_url: true,
@@ -45,8 +43,7 @@ const getMyProfile = async (req, res) => {
         const response = {
             ...usuarioBase,
             ...(perfil || {}),
-
-            // Mapeamento: formata a data para string 'yyyy-mm-dd'
+            // Formata a data para string simples se existir
             data_nascimento: perfil?.data_nascimento
                 ? new Date(perfil.data_nascimento).toISOString().split('T')[0]
                 : null,
@@ -61,17 +58,20 @@ const getMyProfile = async (req, res) => {
 
 // -----------------------------------------------------------------------
 
-// --- PUT /api/users/me (Atualiza o perfil do usuário logado) ---
 /**
  * @route   PUT /api/users/me
- * @desc    Atualiza os dados do perfil do usuário logado (JSON-only)
+ * @desc    Atualiza os dados do perfil do usuário logado (Suporta JSON e Multipart)
  * @access  Privado
  */
 const updateMyProfile = async (req, res) => {
     const userId = req.user.id;
+    
+    // RESTAURAÇÃO: Pega o arquivo do Multer se ele existir
+    const file = req.file;
 
     // Dados da tabela 'usuarios'
-    const { nome, foto_url, email } = req.body;
+    const { nome, email } = req.body;
+    let { foto_url } = req.body; // Pode vir string do frontend ou ser gerada pelo upload
 
     // Dados da tabela 'perfis'
     const {
@@ -83,89 +83,127 @@ const updateMyProfile = async (req, res) => {
         telefone,
     } = req.body;
 
-    // Dados preparados para o upsert do perfil
-    const profileData = {
-        curiosidades,
-        linkedin_url,
-        website,
-        interesses,
-        // Converte a string de data para objeto Date se existir
-        data_nascimento: data_nascimento ? new Date(data_nascimento) : null,
-        telefone,
-    };
-
     try {
-        // Transação garante consistência entre as tabelas 'usuarios' e 'perfis'
-        await prisma.$transaction([
-            // Atualiza o usuário
-            prisma.usuarios.update({
+        // 1. LÓGICA DE UPLOAD SUPABASE (Reinserida para não quebrar seu frontend)
+        if (file) {
+            const fileExt = file.mimetype.split('/')[1] || 'jpg';
+            // Padronizei para pasta 'avatars' para organização
+            const fileName = `avatars/${userId}-${Date.now()}.${fileExt}`;
+
+            const { error: uploadError } = await supabase
+                .storage
+                .from('images') // Nome correto do bucket
+                .upload(fileName, file.buffer, {
+                    contentType: file.mimetype,
+                    upsert: true
+                });
+
+            if (uploadError) {
+                console.error("Erro Supabase:", uploadError);
+                // Não interrompe, tenta salvar os dados de texto
+            } else {
+                const { data: urlData } = supabase
+                    .storage
+                    .from('images')
+                    .getPublicUrl(fileName);
+                
+                foto_url = urlData.publicUrl;
+            }
+        }
+
+        // 2. Transação Prisma (CORRIGIDO: Nomes no Singular)
+        await prisma.$transaction(async (tx) => {
+            // Atualiza o usuário (tabela 'usuario')
+            await tx.usuario.update({
                 where: { id: userId },
                 data: {
-                    nome,
-                    foto_url,
-                    email, // Email agora é incluído na atualização
+                    ...(nome && { nome }),
+                    ...(email && { email }),
+                    ...(foto_url && { foto_url }), // Atualiza URL se houver nova
                     data_atualizacao: new Date(),
                 },
-            }),
+            });
 
-            // Cria ou atualiza o perfil (UPSERT)
-            prisma.perfis.upsert({
-                where: { usuario_id: userId },
-                update: {
-                    ...profileData,
-                    data_atualizacao: new Date(),
-                },
-                create: {
-                    ...profileData,
-                    usuario_id: userId,
-                    data_criacao: new Date(),
-                    data_atualizacao: new Date(),
-                },
-            }),
-        ]);
+            // Dados preparados para o upsert do perfil
+            const profileData = {
+                curiosidades,
+                linkedin_url,
+                website,
+                interesses,
+                // Converte string para Date, se válida
+                data_nascimento: data_nascimento && data_nascimento !== 'null' 
+                    ? new Date(data_nascimento) 
+                    : undefined,
+                telefone,
+            };
 
-        // 🚨 Retorna o perfil atualizado
-        const updatedUser = await getMyProfile(req, { json: (data) => data });
-        return res.json(updatedUser);
+            // Remove chaves undefined
+            Object.keys(profileData).forEach(key => profileData[key] === undefined && delete profileData[key]);
+
+            if (Object.keys(profileData).length > 0) {
+                // Atualiza ou cria perfil (tabela 'perfil')
+                await tx.perfil.upsert({
+                    where: { usuario_id: userId },
+                    update: {
+                        ...profileData,
+                        data_atualizacao: new Date(),
+                    },
+                    create: {
+                        ...profileData,
+                        usuario_id: userId,
+                        data_criacao: new Date(),
+                        data_atualizacao: new Date(),
+                    },
+                });
+            }
+        });
+
+        // 3. Retorna os dados atualizados
+        const updatedUserRaw = await prisma.usuario.findUnique({
+             where: { id: userId },
+             include: { perfil: true }
+        });
+        
+        const { perfil, ...uBase } = updatedUserRaw;
+        const response = { ...uBase, ...(perfil || {}) };
+
+        return res.json(response);
 
     } catch (error) {
         console.error("Erro ao atualizar perfil:", error);
-        // Retorna 400 se for erro de validação (ex: email já existe - P2002 é o código do Prisma)
+        // Trata erro de email duplicado
         if (error.code === 'P2002') {
             return res.status(400).json({ error: "O email fornecido já está em uso." });
         }
-        res.status(500).json({ error: "Erro interno do servidor." });
+        res.status(500).json({ error: "Erro interno do servidor: " + error.message });
     }
 };
 
 // -----------------------------------------------------------------------
 
-// --- PUT /api/users/me/upload-foto ---
 /**
  * @route   PUT /api/users/me/upload-foto
- * @desc    Atualiza a foto de perfil do usuário logado (requer Multer na rota)
+ * @desc    Rota dedicada para upload de foto (Implementação da Equipe - Corrigida)
  * @access  Privado
  */
 const uploadProfilePhoto = async (req, res) => {
     const userId = req.user.id;
-    const file = req.file; // Arquivo anexado pelo middleware Multer (Assumindo uso do Multer)
-    const BUCKET_NAME = process.env.SUPABASE_BUCKET_PERFIL || 'seu-bucket-de-fotos'; // Usar variável de ambiente
+    const file = req.file;
+    // Ajuste: Força o nome 'images' se a var de ambiente falhar
+    const BUCKET_NAME = process.env.SUPABASE_BUCKET_PERFIL || 'images'; 
 
     if (!file) {
         return res.status(400).json({ error: "Nenhum arquivo de imagem fornecido." });
     }
 
     try {
-        // 1. 📂 Define o caminho do arquivo no Supabase
-        // Nome do arquivo: ID_TIMESTAMP.extensao
         const fileExtension = file.originalname.split('.').pop();
-        const filename = `${userId}_${Date.now()}.${fileExtension}`;
-        const filePath = `fotos_perfil/${filename}`;
+        const filename = `avatars/${userId}-${Date.now()}.${fileExtension}`;
 
-        // 2. ⬆️ Envia o arquivo para o Supabase Storage
+        // Envia para o Supabase
         const { error: uploadError } = await supabase.storage
             .from(BUCKET_NAME)
-            .upload(filePath, file.buffer, {
+            .upload(filename, file.buffer, {
                 contentType: file.mimetype,
                 upsert: true,
             });
@@ -175,15 +213,15 @@ const uploadProfilePhoto = async (req, res) => {
             return res.status(500).json({ error: "Falha ao enviar a imagem para o storage." });
         }
 
-        // 3. 🌐 Obtém a URL pública
+        // Obtém URL pública
         const { data: publicUrlData } = supabase.storage
             .from(BUCKET_NAME)
-            .getPublicUrl(filePath);
+            .getPublicUrl(filename);
 
         const foto_url = publicUrlData.publicUrl;
 
-        // 4. 💾 Atualiza a URL no banco de dados (Prisma)
-        await prisma.usuarios.update({
+        // CORREÇÃO: prisma.usuario.update (singular)
+        await prisma.usuario.update({
             where: { id: userId },
             data: {
                 foto_url: foto_url,
@@ -191,7 +229,6 @@ const uploadProfilePhoto = async (req, res) => {
             },
         });
 
-        // 5. Retorna sucesso com a nova URL
         return res.json({
             message: "Foto de perfil atualizada com sucesso!",
             foto_url: foto_url,
@@ -203,14 +240,12 @@ const uploadProfilePhoto = async (req, res) => {
     }
 };
 
-
 // -----------------------------------------------------------------------
 
-// --- GET /api/users/:id/profile (Busca perfil público) ---
 /**
  * @route   GET /api/users/:id/profile
  * @desc    Busca o perfil público de outro usuário
- * @access  Público (ou protegido se preferir)
+ * @access  Público/Privado
  */
 const getUserProfileById = async (req, res) => {
     try {
@@ -219,38 +254,33 @@ const getUserProfileById = async (req, res) => {
             return res.status(400).json({ error: "ID de usuário inválido." });
         }
 
-        // Busca o usuário e inclui dados do perfil (substitui o LEFT JOIN)
-        const user = await prisma.usuarios.findFirst({
+        // CORREÇÃO: prisma.usuario (singular)
+        const user = await prisma.usuario.findFirst({
             where: {
                 id: userId,
                 ativo: true,
-                role: "user",
+                // role: "participante", // Descomente se quiser restringir a busca
             },
             select: {
                 id: true,
                 nome: true,
                 foto_url: true,
                 pontos: true,
-                // 🚨 GARANTINDO PRIVACIDADE: Não inclua o email de outros usuários
                 perfil: {
                     select: {
                         curiosidades: true,
                         linkedin_url: true,
                         website: true,
                         interesses: true,
-                        // Data de nascimento e telefone são privados
                     },
                 },
             },
         });
 
         if (!user) {
-            return res
-                .status(404)
-                .json({ error: "Perfil de usuário não encontrado ou inativo." });
+            return res.status(404).json({ error: "Perfil não encontrado." });
         }
 
-        // Achata o objeto para manter o mesmo formato da resposta SQL anterior
         const { perfil, ...usuarioBase } = user;
         const response = {
             ...usuarioBase,
@@ -268,6 +298,5 @@ module.exports = {
     updateMyProfile,
     getUserProfileById,
     getMyProfile,
-    // 🚨 Exportação da nova função
     uploadProfilePhoto, 
 };

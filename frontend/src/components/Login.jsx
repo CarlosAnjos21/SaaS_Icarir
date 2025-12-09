@@ -28,8 +28,11 @@ export default function Login() {
       localStorage.setItem("token", accessToken);
       localStorage.setItem("user", JSON.stringify(user));
 
-      // Redireciona com base no papel do usuário
+      // 🚀 LÓGICA DE REDIRECIONAMENTO:
+      // Admin -> /admin
+      // Cliente/Participante -> /missions
       navigate(user.role === "admin" ? "/admin" : "/missions");
+      
     } catch (err) {
       console.error("Erro no login:", err);
       setError(
