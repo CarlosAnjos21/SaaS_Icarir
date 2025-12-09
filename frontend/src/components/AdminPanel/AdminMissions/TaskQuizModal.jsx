@@ -88,7 +88,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                                 type="text"
                                 name="titulo"
                                 placeholder="Ex: Completar perfil"
-                                className="w-full border p-3 rounded-lg"
+                                className="w-full border p-3 rounded-lg caret-black text-gray-900"
                                 value={task.titulo || ''}
                                 onChange={handleChange}
                                 disabled={isLoading}
@@ -98,7 +98,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                             <label className="text-xs text-gray-600 font-medium mb-1 block">Categoria *</label>
                             <select
                                 name="categoria_id"
-                                className="w-full border p-3 rounded-lg appearance-none"
+                                className="w-full border p-3 rounded-lg appearance-none caret-black text-gray-900"
                                 value={task.categoria_id || ''}
                                 onChange={handleChange}
                                 disabled={isLoading}
@@ -117,7 +117,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                             name="descricao"
                             placeholder="Descreva os detalhes da tarefa..."
                             rows="3"
-                            className="w-full border p-3 rounded-lg"
+                            className="w-full border p-3 rounded-lg caret-black text-gray-900"
                             value={task.descricao || ''}
                             onChange={handleChange}
                             disabled={isLoading}
@@ -129,7 +129,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                             <label className="text-xs text-gray-600 font-medium mb-1 block">Tipo (opcional)</label>
                             <select
                                 name="tipo"
-                                className="w-full border p-3 rounded-lg appearance-none"
+                                className="w-full border p-3 rounded-lg appearance-none caret-black text-gray-900"
                                 value={task.tipo || ''}
                                 onChange={handleChange}
                                 disabled={isLoading}
@@ -148,7 +148,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                                 type="number"
                                 name="pontos"
                                 placeholder="Ex: 100"
-                                className="w-full border p-3 rounded-lg"
+                                className="w-full border p-3 rounded-lg caret-black text-gray-900"
                                 value={task.pontos ?? ''}
                                 onChange={handleChange}
                                 disabled={isLoading}
@@ -160,7 +160,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                                 type="number"
                                 name="ordem"
                                 placeholder="Ex: 1"
-                                className="w-full border p-3 rounded-lg"
+                                className="w-full border p-3 rounded-lg caret-black text-gray-900"
                                 value={task.ordem ?? ''}
                                 onChange={handleChange}
                                 disabled={isLoading}
@@ -170,7 +170,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                             <label className="text-xs text-gray-600 font-medium mb-1 block">Dificuldade</label>
                             <select
                                 name="dificuldade"
-                                className="w-full border p-3 rounded-lg appearance-none"
+                                className="w-full border p-3 rounded-lg appearance-none caret-black text-gray-900"
                                 value={task.dificuldade || 'facil'}
                                 onChange={handleChange}
                                 disabled={isLoading}
@@ -188,7 +188,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                             name="instrucoes"
                             placeholder="Ex: Acesse o link, preencha o formulário..."
                             rows="2"
-                            className="w-full border p-3 rounded-lg"
+                            className="w-full border p-3 rounded-lg caret-black text-gray-900"
                             value={task.instrucoes || ''}
                             onChange={handleChange}
                             disabled={isLoading}
@@ -202,7 +202,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                             name="requisitos"
                             placeholder='Ex: email_verificado,perfil_completo'
                             rows="2"
-                            className="w-full border p-3 rounded-lg"
+                            className="w-full border p-3 rounded-lg caret-black text-gray-900"
                             value={typeof task.requisitos === 'string' ? task.requisitos : (task.requisitos ? JSON.stringify(task.requisitos) : '')}
                             onChange={handleChange}
                             disabled={isLoading}
@@ -215,7 +215,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                             <label className="text-xs text-gray-600 font-medium mb-1 block">Missão Vinculada (opcional)</label>
                             <select
                                 name="missao_id"
-                                className="w-full border p-3 rounded-lg appearance-none"
+                                className="w-full border p-3 rounded-lg appearance-none caret-black text-gray-900"
                                 value={task.missao_id ?? ''}
                                 onChange={handleChange}
                                 disabled={isLoading}
@@ -246,7 +246,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                                 <input
                                     type="text"
                                     placeholder="Ex: Qual é a capital da França?"
-                                    className="w-full border p-3 rounded-lg"
+                                    className="w-full border p-3 rounded-lg caret-black text-gray-900"
                                     value={quizData.enunciado || ''}
                                     onChange={(e) => handleQuizChange("enunciado", e.target.value)}
                                     disabled={isLoading}
@@ -268,7 +268,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                                         <input
                                             type="text"
                                             placeholder={`Opção ${i + 1}`}
-                                            className={`flex-1 border p-2 rounded ${quizData.resposta_correta === opt ? 'border-green-400 bg-green-50' : 'border-gray-300'}`}
+                                            className={`flex-1 border p-2 rounded caret-black text-gray-900 ${quizData.resposta_correta === opt ? 'border-green-400 bg-green-50' : 'border-gray-300'}`}
                                             value={opt}
                                             onChange={(e) => handleOptionChange(i, e.target.value)}
                                             disabled={isLoading}
