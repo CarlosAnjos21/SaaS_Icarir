@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
-import Navbar from "../components/Navbar"; 
+import Navbar from "../components/Navbar";
 import HomeCard from "../components/HomeCard";
 import FeedbackBar from "../components/Feedbacks/FeedbackBar";
 
@@ -12,10 +12,10 @@ import logoIcarir from "../assets/símbolo-icarir.png";
 
 // --- DADOS (Mantidos) ---
 const GALERIA_PADRAO = [
-  'https://images.unsplash.com/photo-1483729558449-99ef09a8c325?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1518639192441-8fce0a366e2e?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=300&q=80',
-  'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=300&q=80'
+  'https://images.unsplash.com/photo-1483729558449-99ef09a8c325?auto=format&fit=crop&w=300&q=80',
+  'https://images.unsplash.com/photo-1518639192441-8fce0a366e2e?auto=format&fit=crop&w=300&q=80',
+  'https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?auto=format&fit=crop&w=300&q=80',
+  'https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=300&q=80'
 ];
 
 const DADOS_DAS_MISSOES = {
@@ -138,18 +138,18 @@ const DADOS_DAS_MISSOES = {
 };
 
 const destinations = [
-  { id: 1, city: "São Paulo, SP", image: DADOS_DAS_MISSOES["São Paulo, SP"].imagem },
-  { id: 2, city: "Rio de Janeiro, RJ", image: DADOS_DAS_MISSOES["Rio de Janeiro, RJ"].imagem },
-  { id: 3, city: "Florianópolis, SC", image: DADOS_DAS_MISSOES["Florianópolis, SC"].imagem },
-  { id: 4, city: "Recife, PE", image: DADOS_DAS_MISSOES["Recife, PE"].imagem },
-  { id: 5, city: "Belo Horizonte, MG", image: DADOS_DAS_MISSOES["Belo Horizonte, MG"].imagem },
-  { id: 6, city: "Brasília, DF", image: DADOS_DAS_MISSOES["Brasília, DF"].imagem },
-  { id: 7, city: "Curitiba, PR", image: DADOS_DAS_MISSOES["Curitiba, PR"].imagem },
-  { id: 8, city: "Fortaleza, CE", image: DADOS_DAS_MISSOES["Fortaleza, CE"].imagem },
-  { id: 9, city: "Manaus, AM", image: DADOS_DAS_MISSOES["Manaus, AM"].imagem },
-  { id: 10, city: "Salvador, BA", image: DADOS_DAS_MISSOES["Salvador, BA"].imagem },
-  { id: 11, city: "Gramado, RS", image: DADOS_DAS_MISSOES["Gramado, RS"].imagem },
-  { id: 12, city: "Foz do Iguaçu, PR", image: DADOS_DAS_MISSOES["Foz do Iguaçu, PR"].imagem },
+  { id: 1, city: "São Paulo, SP", image: DADOS_DAS_MISSOES["São Paulo, SP"].imagem },
+  { id: 2, city: "Rio de Janeiro, RJ", image: DADOS_DAS_MISSOES["Rio de Janeiro, RJ"].imagem },
+  { id: 3, city: "Florianópolis, SC", image: DADOS_DAS_MISSOES["Florianópolis, SC"].imagem },
+  { id: 4, city: "Recife, PE", image: DADOS_DAS_MISSOES["Recife, PE"].imagem },
+  { id: 5, city: "Belo Horizonte, MG", image: DADOS_DAS_MISSOES["Belo Horizonte, MG"].imagem },
+  { id: 6, city: "Brasília, DF", image: DADOS_DAS_MISSOES["Brasília, DF"].imagem },
+  { id: 7, city: "Curitiba, PR", image: DADOS_DAS_MISSOES["Curitiba, PR"].imagem },
+  { id: 8, city: "Fortaleza, CE", image: DADOS_DAS_MISSOES["Fortaleza, CE"].imagem },
+  { id: 9, city: "Manaus, AM", image: DADOS_DAS_MISSOES["Manaus, AM"].imagem },
+  { id: 10, city: "Salvador, BA", image: DADOS_DAS_MISSOES["Salvador, BA"].imagem },
+  { id: 11, city: "Gramado, RS", image: DADOS_DAS_MISSOES["Gramado, RS"].imagem },
+  { id: 12, city: "Foz do Iguaçu, PR", image: DADOS_DAS_MISSOES["Foz do Iguaçu, PR"].imagem },
 ];
 
 export default function Home() {
@@ -157,19 +157,20 @@ export default function Home() {
 
   useEffect(() => {
     // Inicializa animações AOS
-    AOS.init({ duration: 800, once: false });
+    // O 'once: false' permite que a animação ocorra toda vez que o elemento entra na viewport
+    AOS.init({ duration: 800, once: false }); 
     AOS.refresh();
 
     // Injeção do Script do Elfsight (Singleton Pattern)
     const scriptId = "elfsight-platform-script";
-    
+
     // Verifica se o script já existe para evitar duplicação
     if (!document.getElementById(scriptId)) {
-        const script = document.createElement("script");
-        script.src = "https://elfsightcdn.com/platform.js";
-        script.id = scriptId;
-        script.defer = true; // Defer ajuda a garantir que o DOM esteja pronto
-        document.body.appendChild(script);
+      const script = document.createElement("script");
+      script.src = "https://elfsightcdn.com/platform.js";
+      script.id = scriptId;
+      script.defer = true; // Defer ajuda a garantir que o DOM esteja pronto
+      document.body.appendChild(script);
     }
   }, []);
 
@@ -186,25 +187,30 @@ export default function Home() {
       imagem: destinations.find(d => d.city === city)?.image,
       galeria: GALERIA_PADRAO
     };
+
+    const id = destinations.find(d => d.city === city)?.id;
+    if (!id) return;
+
     dadosParaEnviar.cidade = city;
-    navigate('/missao-detalhes', { state: { missionData: dadosParaEnviar } });
+
+    navigate(`/missao/${id}`, { state: { missionData: dadosParaEnviar } });
   };
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
-      
+
       <Navbar />
 
       {/* --- SEÇÃO INSTAGRAM FEED (Widget Elfsight) --- */}
       <section className="relative bg-gradient-to-b from-[#002B5B] to-gray-50 pt-20 pb-8 overflow-hidden min-h-[200px]">
-        
+
         <div className="max-w-[1000px] mx-auto px-4 z-10 relative">
-            {/* Widget do Elfsight sem Lazy Load */}
-            <div className="elfsight-app-86adf4a7-150a-4b09-9aea-cb904cc41a4a">
-                <p className="text-center text-white/50 text-sm py-10">
-                    Carregando Instagram... (Se não aparecer, verifique o bloqueio de scripts externos)
-                </p>
-            </div>
+          {/* Widget do Elfsight sem Lazy Load */}
+          <div className="elfsight-app-86adf4a7-150a-4b09-9aea-cb904cc41a4a">
+            <p className="text-center text-white/50 text-sm py-10">
+              Carregando Instagram... (Se não aparecer, verifique o bloqueio de scripts externos)
+            </p>
+          </div>
         </div>
 
         {/* Fundo Decorativo */}
@@ -213,7 +219,7 @@ export default function Home() {
 
       {/* --- SEÇÃO DE DESTINOS --- */}
       <section className="relative max-w-[1800px] mx-auto py-16 px-6 z-20">
-        
+
         <div className="bg-white/90 backdrop-blur-md rounded-2xl p-8 shadow-xl mb-12 relative z-10 max-w-4xl mx-auto text-center border border-gray-100">
           <span className="text-[#FE5900] font-bold uppercase tracking-widest text-sm">Expandir Horizontes</span>
           <h2 className="text-3xl md:text-5xl font-bold text-[#394C97] mt-2">Destinos para Empreendedores</h2>
@@ -223,21 +229,23 @@ export default function Home() {
           <div className="w-24 h-1.5 bg-[#FE5900] mx-auto mt-6 rounded-full"></div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 relative z-10">
-          {destinations.map((dest) => (
-            <HomeCard
-              key={dest.id}
-              city={dest.city}
-              image={dest.image}
-              onStartMission={() => iniciarMissao(dest.city)}
-              loading={false}
-              animation="fade-up"
-            />
-          ))}
-        </div>
-      </section>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 relative z-10">
+          {destinations.map((dest) => ( // Removido o 'index' da desestruturação
+            <HomeCard
+              key={dest.id}
+              city={dest.city}
+              image={dest.image}
+              onStartMission={() => iniciarMissao(dest.city)}
+              loading={false}
+              // Mantemos a animação para o efeito de "subir"
+              animation="fade-up" 
+              
+            />
+          ))}
+        </div>
+      </section>
 
-      <FeedbackBar />
-    </div>
-  );
+      <FeedbackBar />
+    </div>
+  );
 }

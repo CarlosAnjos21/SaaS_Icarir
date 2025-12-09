@@ -42,7 +42,7 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             {/* 🗺️ Rotas de Conteúdo/Gamificação Protegidas */}
             <Route path="/missions" element={<Missions />} />
-            <Route path="/missao/:id" element={<MissaoDetalhes />} />
+            <Route path="/missao/:id" element={<MissionDetails />} />
             <Route path="/ranking" element={<Ranking />} />
             <Route path="/carreira" element={<CareerPanel />} />
             <Route path="/sorteio" element={<Sorteio />} />
