@@ -1,14 +1,18 @@
-// src/components/AdminPanel/AdminMissions/CategoriesContent.jsx
-
 import React, { useState, useEffect, useCallback } from 'react';
-import { Settings, Plus, Loader, Edit, Trash2, AlertTriangle } from 'lucide-react';
-// Certifique-se que você atualizou o apiFunctions.js para incluir estas:
-import { fetchCategories, createCategory, updateCategory, deleteCategory } from '../../../api/apiFunctions'; 
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+    Settings, 
+    Plus, 
+    Loader, 
+    AlertTriangle, 
+    RefreshCw, 
+    Layers, 
+    FolderOpen 
+} from 'lucide-react';
+import { fetchCategories, createCategory, updateCategory, deleteCategory, createTask, updateTask, deleteTask, fetchMissions } from '../../../api/apiFunctions'; 
 import CategoryModal from './CategoryModal';
 import CategoryCard from './CategoryCard';
 import TaskQuizModal from './TaskQuizModal';
-import { createTask, updateTask, deleteTask } from '../../../api/apiFunctions';
-import { fetchMissions } from '../../../api/apiFunctions';
 
 const INITIAL_CATEGORY_STATE = {
     nome: "",
@@ -25,10 +29,11 @@ const CategoriesContent = () => {
     const [error, setError] = useState(null);
     const [isSaving, setIsSaving] = useState(false);
 
-    // Estado do Modal (A ser expandido com um CategoryModal)
+    // Estado do Modal de Categoria
     const [showModal, setShowModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [currentCategory, setCurrentCategory] = useState(INITIAL_CATEGORY_STATE);
+    
     // Estado do modal de Tarefa
     const [showTaskModal, setShowTaskModal] = useState(false);
     const [currentTask, setCurrentTask] = useState(null);
@@ -67,7 +72,7 @@ const CategoriesContent = () => {
     }, []);
 
 
-    // --- FUNÇÕES DE CRUD ---
+    // --- FUNÇÕES DE CRUD CATEGORIA ---
 
     const handleCreateEdit = async (data) => {
         setIsSaving(true);
@@ -124,11 +129,6 @@ const CategoriesContent = () => {
         setShowTaskModal(true);
     };
 
-    const openEditTask = (task) => {
-        setCurrentTask(JSON.parse(JSON.stringify(task)));
-        setShowTaskModal(true);
-    };
-
     const handleSaveTask = async (task) => {
         setIsTaskSaving(true);
         try {
@@ -150,48 +150,106 @@ const CategoriesContent = () => {
             setIsTaskSaving(false);
         }
     };
-
-    const handleDeleteTask = async (taskId) => {
-        if (!window.confirm('Remover esta tarefa?')) return;
-        try {
-            await deleteTask(taskId);
-            await loadCategories();
-        } catch (err) {
-            const message = err.response?.data?.error || err.message;
-            alert(`Falha ao remover tarefa: ${message}`);
-        }
-    };
     
     // --- RENDERIZAÇÃO ---
 
-    if (loading) return <div className="text-center p-10"><Loader size={30} className="animate-spin mx-auto text-gray-500" /> <p className="mt-2 text-gray-500">Carregando categorias...</p></div>;
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 bg-white rounded-2xl shadow-sm border border-gray-100">
+                <Loader size={32} className="animate-spin text-[#394C97] mb-4" /> 
+                <p className="text-gray-500 font-medium text-sm">Carregando estrutura...</p>
+            </div>
+        );
+    }
 
     return (
-        <div>
-             <div className="flex justify-between items-center mb-6">
-                <h3 className="text-2xl font-bold text-gray-800 flex items-center gap-2"><Settings size={22}/> Gestão de Categorias de Tarefas</h3>
-                <button 
-                    onClick={() => { setIsEditing(false); setCurrentCategory(INITIAL_CATEGORY_STATE); setShowModal(true); }}
-                    className="bg-green-600 text-white px-4 py-2 rounded-xl hover:bg-green-700 transition flex items-center gap-2 font-semibold disabled:opacity-50"
-                    disabled={isSaving}
-                >
-                    <Plus size={20} /> Nova Categoria
-                </button>
+        <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
+            
+            {/* --- BANNER SUPERIOR --- */}
+            <div className="h-64 w-full bg-[#394C97] relative rounded-b-[2.5rem] md:rounded-b-none overflow-hidden">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl"></div>
+                <div className="max-w-7xl mx-auto px-6 h-full flex items-center pb-10 md:translate-y-2 relative z-10">
+                    <motion.div 
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center gap-5 text-white"
+                    >
+                        <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-md border border-white/10 shadow-xl ring-1 ring-white/20">
+                            <Layers className="w-6 h-6 text-[#FE5900]" />
+                        </div>
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Categorias</h1>
+                            <p className="text-blue-100/90 text-sm md:text-base mt-1 font-light">Organização estrutural das tarefas</p>
+                        </div>
+                    </motion.div>
+                </div>
             </div>
-            <div className="grid gap-4">
-                {categories.length === 0 ? (
-                    <p className="text-gray-500 p-4 bg-white rounded-lg shadow">Nenhuma categoria cadastrada.</p>
-                ) : (
-                    categories.map(cat => (
-                        <CategoryCard
-                            key={cat.id}
-                            category={cat}
-                            onEdit={() => { setIsEditing(true); setCurrentCategory(cat); setShowModal(true); }}
-                            onDelete={() => handleDelete(cat.id)}
-                            onCreateTask={(c) => openCreateTaskForCategory(c)}
-                        />
-                    ))
+
+            {/* --- CONTEÚDO PRINCIPAL --- */}
+            <div className="max-w-7xl mx-auto px-6 -mt-24 relative z-20">
+                
+                {/* Header de Ações */}
+                <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+                    <div className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/50 text-sm text-gray-600 font-medium shadow-sm">
+                        Total de Categorias: <span className="text-[#394C97] font-bold">{categories.length}</span>
+                    </div>
+
+                    <motion.button
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        onClick={() => { setIsEditing(false); setCurrentCategory(INITIAL_CATEGORY_STATE); setShowModal(true); }}
+                        className="bg-[#FE5900] text-white px-6 py-3 rounded-xl shadow-lg hover:bg-[#e04f00] hover:shadow-orange-500/20 transition-all flex items-center gap-2 font-bold text-xs uppercase tracking-wide transform hover:-translate-y-0.5"
+                        disabled={isSaving}
+                    >
+                        <Plus size={16} strokeWidth={3} />
+                        Nova Categoria
+                    </motion.button>
+                </div>
+
+                {/* Erro */}
+                {error && (
+                    <motion.div 
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl flex items-center justify-between gap-3 mb-6 shadow-sm text-sm"
+                    >
+                        <div className="flex items-center gap-2">
+                            <AlertTriangle size={16} />
+                            <span>{error}</span>
+                        </div>
+                        <button onClick={loadCategories} className="p-1.5 hover:bg-red-100 rounded-md transition-colors">
+                            <RefreshCw size={14} />
+                        </button>
+                    </motion.div>
                 )}
+
+                {/* Grid de Categorias */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <AnimatePresence>
+                        {categories.length === 0 && !error ? (
+                            <div className="col-span-full p-12 text-center text-gray-400 bg-white rounded-2xl border-2 border-dashed border-gray-200 flex flex-col items-center">
+                                <FolderOpen size={40} className="mb-3 opacity-20" />
+                                <p className="text-sm font-medium">Nenhuma categoria cadastrada.</p>
+                            </div>
+                        ) : (
+                            categories.map((cat, index) => (
+                                <motion.div
+                                    key={cat.id}
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: index * 0.05 }}
+                                >
+                                    <CategoryCard
+                                        category={cat}
+                                        onEdit={() => { setIsEditing(true); setCurrentCategory(cat); setShowModal(true); }}
+                                        onDelete={() => handleDelete(cat.id)}
+                                        onCreateTask={(c) => openCreateTaskForCategory(c)}
+                                    />
+                                </motion.div>
+                            ))
+                        )}
+                    </AnimatePresence>
+                </div>
             </div>
 
             {/* Modal de Categoria */}
@@ -206,7 +264,7 @@ const CategoriesContent = () => {
                 />
             )}
 
-            {/* Modal de Tarefa (create/edit) */}
+            {/* Modal de Tarefa (create only via category card) */}
             {showTaskModal && (
                 <TaskQuizModal
                     task={currentTask}

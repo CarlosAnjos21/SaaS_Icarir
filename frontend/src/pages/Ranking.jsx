@@ -1,213 +1,316 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { Trophy, Search, Crown, Medal, User, Loader, AlertTriangle, RefreshCw } from "lucide-react";
 import Navbar from "../components/Navbar";
 import FeedbackBar from "../components/Feedbacks/FeedbackBar";
-
-// --- DADOS MOCKADOS ---
-const MOCK_RANKING_DATA = [
-  { id: 1, name: "Roberto Silva", points: 5200, initials: "RS", department: "Comercial", variation: 1, avatar: "https://i.pravatar.cc/150?img=11" },
-  { id: 2, name: "Mariana Costa", points: 4850, initials: "MC", department: "Marketing", variation: 2, avatar: "https://i.pravatar.cc/150?img=5" },
-  { id: 3, name: "Julia Mendes", points: 4600, initials: "JM", department: "Vendas", variation: -1, avatar: "https://i.pravatar.cc/150?img=9" },
-  { id: 4, name: "Fernanda Oliveira", points: 4100, initials: "FO", department: "Marketing", variation: 2, avatar: "https://i.pravatar.cc/150?img=1" },
-  { id: 5, name: "Lucas Santos", points: 3950, initials: "LS", department: "Vendas", variation: -1, avatar: "https://i.pravatar.cc/150?img=3" },
-  { id: 6, name: "Patricia Lima", points: 3800, initials: "PL", department: "Operações", variation: 0, avatar: null },
-  { id: 7, name: "Ricardo Alves", points: 3650, initials: "RA", department: "TI", variation: 4, avatar: "https://i.pravatar.cc/150?img=13" },
-  { id: 8, name: "Sofia Martins", points: 3500, initials: "SM", department: "RH", variation: -2, avatar: "https://i.pravatar.cc/150?img=20" },
-  { id: 9, name: "Bruno Costa", points: 3350, initials: "BC", department: "Financeiro", variation: 0, avatar: "https://i.pravatar.cc/150?img=33" },
-  { id: 10, name: "Amanda Souza", points: 3200, initials: "AS", department: "Jurídico", variation: 1, avatar: "https://i.pravatar.cc/150?img=41" },
-  { id: 11, name: "Diego Pereira", points: 3000, initials: "DP", department: "TI", variation: -3, avatar: null },
-  { id: 12, name: "Carlos Anjos", points: 2850, initials: "CA", department: "Desenvolvimento", variation: 2, avatar: null },
-  { id: 13, name: "Beatriz Silva", points: 2500, initials: "BS", department: "Atendimento", variation: 0, avatar: "https://i.pravatar.cc/150?img=44" },
-];
-
-const VariationTag = ({ value }) => {
-  const val = value || 0;
-  if (val === 0) return <span className="text-gray-400 font-bold">-</span>;
-  const isPositive = val > 0;
-  const bgColor = isPositive ? "bg-green-100 text-green-600" : "bg-red-100 text-red-600";
-  const arrow = isPositive ? "▲" : "▼";
-
-  return (
-    <div className={`flex items-center justify-center gap-1 px-3 py-1 rounded-full text-xs font-bold ${bgColor} w-16`}>
-      <span>{arrow} {Math.abs(val)}</span>
-    </div>
-  );
-};
+import api from "../api/api";
 
 export default function Ranking() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [rankingData, setRankingData] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const currentUser = {
-    name: "Você (Carlos_Anjos21)",
-    points: 2850,
-    rank: 12,
-    initials: "CA",
-    department: "Desenvolvimento - Nível 4"
+  const getInitials = (name) => {
+    if (!name) return "US";
+    return name
+      .split(" ")
+      .filter(Boolean)
+      .map((n) => n[0])
+      .join("")
+      .toUpperCase()
+      .slice(0, 2);
   };
 
-  // 1. Ordena TODOS os dados por pontos (Essa é a verdade absoluta do ranking)
-  const sortedGlobal = [...MOCK_RANKING_DATA].sort((a, b) => b.points - a.points);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        const [rankingRes, userRes] = await Promise.all([
+            api.get("/ranking"), 
+            api.get("/auth/me")
+        ]);
 
-  // 2. Extrai o Top 3 FIXO (Não muda com a busca)
-  const [firstPlace, secondPlace, thirdPlace] = sortedGlobal;
+        const backendData = rankingRes.data || [];
+        const loggedUser = userRes.data;
 
-  // 3. Pega o resto da lista (do 4º em diante)
-  const restOfListOriginal = sortedGlobal.slice(3);
+        const formattedRanking = backendData.map(user => ({
+            id: user.id,
+            name: user.nome || user.name || "Sem Nome",
+            points: user.pontos || user.points || 0,
+            department: user.departamento || user.role || "Geral",
+            avatar: user.foto_url || null,
+            initials: getInitials(user.nome || user.name),
+        })).sort((a, b) => b.points - a.points);
 
-  // 4. Aplica o filtro APENAS na lista de baixo
+        setRankingData(formattedRanking);
+
+        const userInRanking = formattedRanking.find(u => u.id === loggedUser.id);
+        const rankPosition = formattedRanking.findIndex(u => u.id === loggedUser.id) + 1;
+
+        setCurrentUser({
+            ...loggedUser,
+            name: loggedUser.nome,
+            points: userInRanking ? userInRanking.points : (loggedUser.pontos || 0),
+            rank: rankPosition > 0 ? rankPosition : "-",
+            department: loggedUser.departamento || "Sem departamento",
+            initials: getInitials(loggedUser.nome)
+        });
+
+      } catch (err) {
+        console.error("Erro ao carregar ranking:", err);
+        setError("Não foi possível carregar o ranking. Verifique sua conexão.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  const firstPlace = rankingData[0] || { name: "-", points: 0, initials: "-" };
+  const secondPlace = rankingData[1] || { name: "-", points: 0, initials: "-" };
+  const thirdPlace = rankingData[2] || { name: "-", points: 0, initials: "-" };
+  const restOfListOriginal = rankingData.slice(3);
+
   const listData = restOfListOriginal.filter((user) =>
     user.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Função auxiliar para descobrir a posição REAL do usuário no ranking global
   const getRealRank = (userId) => {
-    return sortedGlobal.findIndex(u => u.id === userId) + 1;
+    return rankingData.findIndex(u => u.id === userId) + 1;
+  };
+
+  // Renderização de Conteúdo
+  const renderContent = () => {
+    if (loading) {
+        return (
+          <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100">
+              <Loader size={40} className="animate-spin text-[#394C97] mb-4" /> 
+              <p className="text-gray-500 font-medium">Calculando pontuações...</p>
+          </div>
+        );
+    }
+
+    if (error) {
+        return (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-8 rounded-2xl flex flex-col items-center gap-3 text-center">
+            <AlertTriangle size={32} />
+            <span className="font-semibold text-lg">Ocorreu um erro</span>
+            <span className="text-sm opacity-80">{error}</span>
+            <button onClick={() => window.location.reload()} className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition flex items-center gap-2">
+              <RefreshCw size={16} /> Tentar Novamente
+            </button>
+          </div>
+        );
+    }
+
+    return (
+        <>
+            {/* BUSCA */}
+            <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-white p-4 rounded-2xl shadow-sm border border-gray-100 mb-8 flex items-center gap-3"
+            >
+                <Search className="text-gray-400 w-5 h-5" />
+                <input
+                    type="text"
+                    placeholder="Buscar participante..."
+                    className="flex-1 outline-none text-gray-700 placeholder-gray-400"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                />
+            </motion.div>
+
+            {/* PÓDIO */}
+            {rankingData.length > 0 && !searchTerm && (
+                <div className="flex justify-center items-end gap-3 md:gap-8 mb-12">
+                    
+                    {/* 2º LUGAR */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="flex flex-col items-center"
+                    >
+                        <div className="relative mb-2">
+                            {secondPlace.avatar ? (
+                            <img src={secondPlace.avatar} alt={secondPlace.name} className="w-14 h-14 md:w-16 md:h-16 rounded-full border-4 border-gray-300 object-cover shadow-md" />
+                            ) : (
+                            <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border-4 border-gray-300 bg-gray-100 flex items-center justify-center font-bold text-gray-500 text-lg shadow-md">{secondPlace.initials}</div>
+                            )}
+                            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-gray-400 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm">2</div>
+                        </div>
+                        <h3 className="font-bold text-gray-800 text-xs md:text-sm text-center max-w-[80px] truncate">{secondPlace.name}</h3>
+                        <p className="text-[#394C97] font-bold text-sm">{secondPlace.points}</p>
+                        <div className="w-20 md:w-28 h-24 md:h-28 bg-gradient-to-t from-gray-200 to-gray-50 rounded-t-lg border-x border-t border-gray-200 mt-2"></div>
+                    </motion.div>
+
+                    {/* 1º LUGAR */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="flex flex-col items-center z-10 -mt-6"
+                    >
+                        <div className="relative mb-2">
+                            <div className="absolute -top-6 left-1/2 transform -translate-x-1/2 text-yellow-400 drop-shadow-sm">
+                                <Crown size={24} fill="currentColor" />
+                            </div>
+                            {firstPlace.avatar ? (
+                            <img src={firstPlace.avatar} alt={firstPlace.name} className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-yellow-400 object-cover shadow-lg ring-2 ring-yellow-100" />
+                            ) : (
+                            <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border-4 border-yellow-400 bg-yellow-50 flex items-center justify-center font-bold text-yellow-600 text-2xl shadow-lg ring-2 ring-yellow-100">{firstPlace.initials}</div>
+                            )}
+                            <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-white text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full border-2 border-white shadow-sm">1</div>
+                        </div>
+                        <h3 className="font-bold text-gray-800 text-sm md:text-base text-center max-w-[120px] truncate mt-1">{firstPlace.name}</h3>
+                        <p className="text-yellow-600 font-extrabold text-lg">{firstPlace.points}</p>
+                        <div className="w-24 md:w-36 h-32 md:h-40 bg-gradient-to-t from-yellow-100 to-yellow-50 rounded-t-lg border-x border-t border-yellow-200 mt-2 relative overflow-hidden">
+                             <div className="absolute inset-0 bg-white opacity-30 bg-gradient-to-tr from-transparent via-white to-transparent transform rotate-45 translate-y-full animate-pulse"></div>
+                        </div>
+                    </motion.div>
+
+                    {/* 3º LUGAR */}
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="flex flex-col items-center"
+                    >
+                        <div className="relative mb-2">
+                            {thirdPlace.avatar ? (
+                            <img src={thirdPlace.avatar} alt={thirdPlace.name} className="w-14 h-14 md:w-16 md:h-16 rounded-full border-4 border-orange-300 object-cover shadow-md" />
+                            ) : (
+                            <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border-4 border-orange-300 bg-orange-50 flex items-center justify-center font-bold text-orange-600 text-lg shadow-md">{thirdPlace.initials}</div>
+                            )}
+                            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-orange-500 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm">3</div>
+                        </div>
+                        <h3 className="font-bold text-gray-800 text-xs md:text-sm text-center max-w-[80px] truncate">{thirdPlace.name}</h3>
+                        <p className="text-[#394C97] font-bold text-sm">{thirdPlace.points}</p>
+                        <div className="w-20 md:w-28 h-16 md:h-20 bg-gradient-to-t from-orange-100 to-orange-50 rounded-t-lg border-x border-t border-orange-200 mt-2"></div>
+                    </motion.div>
+                </div>
+            )}
+
+            {/* LISTA DE RANKING */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+                <div className="grid grid-cols-12 text-xs font-bold text-gray-400 uppercase tracking-wider p-4 border-b border-gray-100 bg-gray-50/50">
+                    <div className="col-span-2 md:col-span-1 text-center">#</div>
+                    <div className="col-span-7 md:col-span-7 text-left pl-2">Participante</div>
+                    <div className="col-span-3 md:col-span-4 text-right pr-2">Pontos</div>
+                </div>
+
+                <div className="divide-y divide-gray-50">
+                    {listData.length > 0 ? (
+                        listData.map((user, index) => (
+                            <motion.div 
+                                key={user.id} 
+                                initial={{ opacity: 0, x: -10 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: index * 0.05 }}
+                                className={`grid grid-cols-12 items-center p-4 transition-colors ${user.id === currentUser?.id ? 'bg-blue-50/60' : 'hover:bg-gray-50'}`}
+                            >
+                                <div className="col-span-2 md:col-span-1 text-center">
+                                    <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold ${user.id === currentUser?.id ? 'bg-blue-200 text-blue-800' : 'text-gray-500'}`}>
+                                        {getRealRank(user.id)}
+                                    </span>
+                                </div>
+                                
+                                <div className="col-span-7 md:col-span-7 flex items-center gap-3 pl-2">
+                                    {user.avatar ? (
+                                        <img src={user.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover border border-gray-200" />
+                                    ) : (
+                                        <div className="w-10 h-10 rounded-full bg-gray-100 text-gray-500 flex items-center justify-center text-xs font-bold border border-gray-200">
+                                            {user.initials}
+                                        </div>
+                                    )}
+                                    <div className="overflow-hidden">
+                                        <h4 className={`font-bold text-sm truncate ${user.id === currentUser?.id ? 'text-[#394C97]' : 'text-gray-700'}`}>
+                                            {user.name} {user.id === currentUser?.id && <span className="text-[10px] bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded ml-1 font-normal">Você</span>}
+                                        </h4>
+                                        <p className="text-[11px] text-gray-400 uppercase truncate flex items-center gap-1">
+                                            {user.department}
+                                        </p>
+                                    </div>
+                                </div>
+
+                                <div className="col-span-3 md:col-span-4 text-right pr-2 font-bold text-gray-700">
+                                    {user.points}
+                                </div>
+                            </motion.div>
+                        ))
+                    ) : (
+                        <div className="p-8 text-center text-gray-400 flex flex-col items-center">
+                            <User size={40} className="mb-2 opacity-20" />
+                            <p>Nenhum participante encontrado.</p>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-[#F5F7FA] pb-24 text-gray-800 font-sans pt-[50px]">
+    <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
       <Navbar />
 
-      <section className="pt-8 px-4 max-w-4xl mx-auto">
+      {/* --- BANNER SUPERIOR --- */}
+      <div className="h-64 w-full bg-[#394C97] relative pt-[50px]">
+        <div className="absolute top-4 right-4 text-white/80 text-sm font-medium hidden md:block mt-[50px]">
+          Temporada Atual
+        </div>
         
-        {/* Cabeçalho e Busca */}
-        <div className="text-center mb-10">
-          <h2 className="text-3xl font-extrabold text-[#002B5B] mb-2">
-            Líderes da Temporada
-          </h2>
-          <p className="text-gray-500 text-sm mb-6">O ranking é atualizado diariamente</p>
-          
-          <input
-            type="text"
-            placeholder="Buscar na lista de participantes..."
-            className="px-4 py-2 border border-gray-300 rounded-full w-full max-w-sm mx-auto block shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-          />
-        </div>
-
-        {/* --- PÓDIO (TOP 3 FIXO - NÃO MUDA COM A BUSCA) --- */}
-        <div className="flex justify-center items-end gap-3 md:gap-8 mb-16">
-            
-            {/* 2º LUGAR */}
-            <div className="flex flex-col items-center">
-                <div className="relative mb-2">
-                    {secondPlace.avatar ? (
-                    <img src={secondPlace.avatar} alt={secondPlace.name} className="w-14 h-14 md:w-16 md:h-16 rounded-full border-4 border-gray-300 object-cover" />
-                    ) : (
-                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border-4 border-gray-300 bg-gray-200 flex items-center justify-center font-bold text-gray-600">{secondPlace.initials}</div>
-                    )}
-                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-gray-400 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm">#2</div>
-                </div>
-                <h3 className="font-bold text-gray-800 text-xs md:text-sm text-center max-w-[80px] truncate">{secondPlace.name}</h3>
-                <p className="text-blue-900 font-extrabold mb-2 text-sm">{secondPlace.points}</p>
-                <div className="w-20 md:w-32 h-28 md:h-32 bg-gradient-to-b from-gray-200 to-gray-300 rounded-t-lg shadow-sm"></div>
-            </div>
-
-            {/* 1º LUGAR */}
-            <div className="flex flex-col items-center z-10 -mt-6 md:-mt-10">
-                <div className="relative mb-2">
-                    {firstPlace.avatar ? (
-                    <img src={firstPlace.avatar} alt={firstPlace.name} className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-yellow-400 object-cover" />
-                    ) : (
-                    <div className="w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-yellow-400 bg-yellow-100 flex items-center justify-center font-bold text-yellow-700 text-xl">{firstPlace.initials}</div>
-                    )}
-                    <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 bg-yellow-500 text-white text-sm font-bold w-8 h-8 flex items-center justify-center rounded-full border-2 border-white shadow-sm">#1</div>
-                </div>
-                <h3 className="font-bold text-gray-800 text-sm text-center max-w-[100px] truncate">{firstPlace.name}</h3>
-                <p className="text-yellow-600 font-extrabold text-lg mb-2">{firstPlace.points}</p>
-                <div className="w-24 md:w-40 h-36 md:h-44 bg-gradient-to-b from-yellow-200 via-yellow-300 to-yellow-400 rounded-t-lg shadow-md relative overflow-hidden">
-                    <div className="absolute inset-0 bg-white opacity-20 bg-gradient-to-tr from-transparent via-white to-transparent transform rotate-45 translate-y-full animate-pulse"></div>
-                </div>
-            </div>
-
-            {/* 3º LUGAR */}
-            <div className="flex flex-col items-center">
-                <div className="relative mb-2">
-                    {thirdPlace.avatar ? (
-                    <img src={thirdPlace.avatar} alt={thirdPlace.name} className="w-14 h-14 md:w-16 md:h-16 rounded-full border-4 border-orange-300 object-cover" />
-                    ) : (
-                    <div className="w-14 h-14 md:w-16 md:h-16 rounded-full border-4 border-orange-300 bg-orange-100 flex items-center justify-center font-bold text-orange-700">{thirdPlace.initials}</div>
-                    )}
-                    <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 bg-orange-600 text-white text-xs font-bold w-6 h-6 flex items-center justify-center rounded-full border-2 border-white shadow-sm">#3</div>
-                </div>
-                <h3 className="font-bold text-gray-800 text-xs md:text-sm text-center max-w-[80px] truncate">{thirdPlace.name}</h3>
-                <p className="text-blue-900 font-extrabold mb-2 text-sm">{thirdPlace.points}</p>
-                <div className="w-20 md:w-32 h-20 md:h-24 bg-gradient-to-b from-orange-200 to-orange-300 rounded-t-lg shadow-sm"></div>
-            </div>
-
-        </div>
-
-        {/* --- LISTA DO 4º EM DIANTE (FILTRÁVEL) --- */}
-        <div className="bg-white rounded-xl shadow-sm p-4 md:p-6 mb-8 border border-gray-100">
-          <div className="grid grid-cols-12 text-xs font-bold text-gray-400 uppercase tracking-wider mb-4 px-2">
-            <div className="col-span-2 md:col-span-1 text-center">Pos</div>
-            <div className="col-span-7 md:col-span-7 text-left">Participante</div>
-            <div className="col-span-3 md:col-span-2 text-right">Pontos</div>
-        {/* <div className="col-span-2 text-center hidden md:block">Var</div> */}
-          </div>
-
-          <div className="space-y-2">
-            {listData.length > 0 ? (
-                listData.map((user) => (
-                <div key={user.id} className="grid grid-cols-12 items-center bg-white border border-gray-100 hover:border-blue-100 hover:shadow-md hover:bg-blue-50/30 rounded-lg p-3 transition-all">
-                    
-                    {/* Posição Real (Calculada com base na lista global, não no índice filtrado) */}
-                    <div className="col-span-2 md:col-span-1 text-center font-bold text-gray-500">
-                      {getRealRank(user.id)}º
-                    </div>
-                    
-                    <div className="col-span-7 md:col-span-7 flex items-center gap-3">
-                        {user.avatar ? (
-                           <img src={user.avatar} alt="Avatar" className="w-9 h-9 rounded-full object-cover flex-shrink-0" />
-                        ) : (
-                           <div className="w-9 h-9 rounded-full bg-blue-100 text-blue-800 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                             {user.initials}
-                           </div>
-                        )}
-                        <div className="overflow-hidden">
-                            <h4 className="font-bold text-gray-800 text-sm md:text-base truncate">{user.name}</h4>
-                            <p className="text-[10px] md:text-xs text-gray-400 uppercase truncate">{user.department}</p>
-                        </div>
-                    </div>
-
-                    <div className="col-span-3 md:col-span-4 text-right font-extrabold text-gray-800 text-sm md:text-base">
-                        {user.points}
-                    </div>
-                    
-                {/* <div className="col-span-2 hidden md:flex justify-center">
-                        <VariationTag value={user.variation} />
-                    </div> */}
-                </div>
-                ))
-            ) : (
-                <p className="text-center text-gray-400 py-4">Nenhum participante encontrado na lista.</p>
-            )}
-          </div>
-        </div>
-
-      </section>
-
-      {/* --- FOOTER FIXO --- */}
-      <div className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] py-3 px-4 md:px-8 z-50">
-        <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-900 text-white font-bold text-sm w-10 h-10 flex flex-col items-center justify-center rounded-lg leading-tight shadow-md">
-              <span className="text-[8px] uppercase opacity-80">Rank</span>
-              <span>{currentUser.rank}</span>
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 h-full flex items-center pb-12 md:translate-y-2">
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex items-center gap-4 text-white"
+          >
+            <div className="p-3 bg-white/10 rounded-2xl backdrop-blur-sm">
+              <Trophy className="w-10 h-10 text-[#FE5900]" />
             </div>
             <div>
-              <h4 className="font-bold text-gray-800 text-sm">{currentUser.name}</h4>
-              <p className="text-xs text-gray-500">{currentUser.department}</p>
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Líderes da Temporada</h1>
+              <p className="text-blue-100 text-lg mt-1">Os maiores pontuadores em tempo real</p>
             </div>
-          </div>
-          <div className="text-right">
-             <div className="text-xl md:text-2xl font-extrabold text-blue-900 leading-none">
-              {currentUser.points} <span className="text-xs font-normal text-gray-400">pts</span>
-            </div>
-            <div className="text-[10px] text-gray-400 mt-1 hidden sm:block">Faltam 650 pts para o próximo nível</div>
-          </div>
+          </motion.div>
         </div>
       </div>
+
+      {/* --- CONTEÚDO PRINCIPAL (Sobreposto) --- */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-20 relative z-10">
+        {renderContent()}
+      </div>
+
+      {/* FOOTER FIXO (USUÁRIO LOGADO) */}
+      {currentUser && (
+          <motion.div 
+            initial={{ y: 100 }}
+            animate={{ y: 0 }}
+            className="fixed bottom-0 left-0 w-full bg-white border-t border-gray-200 shadow-[0_-4px_20px_-5px_rgba(0,0,0,0.1)] py-3 px-4 md:px-8 z-50"
+          >
+            <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="bg-[#394C97] text-white font-bold text-sm w-10 h-10 flex flex-col items-center justify-center rounded-xl leading-tight shadow-md ring-2 ring-blue-100">
+                  <span className="text-[9px] uppercase opacity-70">Pos</span>
+                  <span>{currentUser.rank}</span>
+                </div>
+                <div>
+                  <h4 className="font-bold text-gray-800 text-sm">{currentUser.name} (Você)</h4>
+                  <p className="text-xs text-gray-500">{currentUser.department}</p>
+                </div>
+              </div>
+              <div className="text-right">
+                  <div className="text-xl md:text-2xl font-black text-[#394C97] leading-none">
+                  {currentUser.points} <span className="text-xs font-normal text-gray-400">pts</span>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+      )}
 
       <FeedbackBar />
     </div>
