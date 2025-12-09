@@ -5,8 +5,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 // Components
 import Navbar from "./components/Navbar";
 import Login from "./components/Login";
-import MissaoDetalhes from "./components/MissaoDetalhes"; 
-import ProtectedRoute from "./components/ProtectedRoute"; // 🛑 IMPORTANTE: Importe o Guardião de Rota
+import MissionDetails from "./components/MissionDetails"; 
+import ProtectedRoute from "./components/ProtectedRoute"; 
 
 // Pages
 import Home from "./pages/Home";
@@ -22,41 +22,45 @@ import CareerPanel from "./pages/CareerPanel";
 import Sorteio from "./pages/RafflePage";
 
 export default function App() {
-  return (
-    <Router>
-      <div className="bg-white text-dark min-h-screen">
-        <Navbar />
-        <Routes>
-          
-          {/* 1. 🌍 ROTAS PÚBLICAS (Acessíveis a todos) */}
-          <Route path="/register" element={<Register />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/logout" element={<Logout />} />
-          <Route path="/quiz" element={<Quiz />} /> 
-          <Route path="/trips" element={<Trips />} /> {/* Se Trips não precisar de login */}
-          
-          {/* ------------------------------------------------------------- */}
-          
-          {/* 2. 🔒 ROTAS PROTEGIDAS (Apenas para usuários Logados) */}
-          <Route element={<ProtectedRoute />}>
-            {/* 🗺️ Rotas de Conteúdo/Gamificação Protegidas */}
-            <Route path="/" element={<Home />} />
-            <Route path="/missions" element={<Missions />} />
-            <Route path="/missao/:id" element={<MissaoDetalhes />} />
-            <Route path="/ranking" element={<Ranking />} />
-            <Route path="/carreira" element={<CareerPanel />} />
-            <Route path="/sorteio" element={<Sorteio />} />
+  return (
+    <Router>
+      <div className="bg-white text-dark min-h-screen">
+        <Navbar />
+        <Routes>
+          
+          {/* 1. 🌍 ROTAS PÚBLICAS (Acessíveis a todos) */}
+          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/logout" element={<Logout />} />
+          <Route path="/quiz" element={<Quiz />} /> 
+          <Route path="/trips" element={<Trips />} /> 
+          
+          {/* ------------------------------------------------------------- */}
+          
+          {/* 2. 🔒 ROTAS PROTEGIDAS (Apenas para usuários Logados) */}
+          <Route element={<ProtectedRoute />}>
+            {/* 🗺️ Rotas de Conteúdo/Gamificação Protegidas */}
+            <Route path="/" element={<Home />} />
+            <Route path="/missions" element={<Missions />} />
+            
+            {/* ✅ ROTA DINÂMICA: Exige um ID na URL (ex: /missao/1) */}
+            <Route path="/missao-detalhes" element={<MissionDetails />} />
 
-            {/* 👤 Rotas de Perfil Protegidas */}
-            <Route path="/profile" element={<Profile />} />
 
-            {/* 🔑 Rota de Administração Protegida */}
-            <Route path="/admin" element={<Admin />} />
+            <Route path="/ranking" element={<Ranking />} />
+            <Route path="/carreira" element={<CareerPanel />} />
+            <Route path="/sorteio" element={<Sorteio />} />
 
-          </Route>
-          
-        </Routes>
-      </div>
-    </Router>
-  );
+            {/* 👤 Rotas de Perfil Protegidas */}
+            <Route path="/profile" element={<Profile />} />
+
+            {/* 🔑 Rota de Administração Protegida */}
+            <Route path="/admin" element={<Admin />} />
+
+          </Route>
+          
+        </Routes>
+      </div>
+    </Router>
+  );
 }
