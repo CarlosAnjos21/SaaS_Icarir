@@ -4,25 +4,30 @@ import AOS from "aos";
 import "aos/dist/aos.css";
 import Navbar from "../components/Navbar";
 import { Briefcase, MapPin, Clock, Trophy } from "lucide-react";
+import { useParams } from "react-router-dom";
+
 
 export default function MissionDetails() {
   const location = useLocation();
   const navigate = useNavigate();
   const mission = location.state?.missionData;
+  const { id } = useParams();
+  console.log("ID da Missão:", id);
+
 
   // 1. Redirecionamento e Inicialização do AOS
   useEffect(() => {
-    if (!mission) navigate("/");
-    
+    if (!mission) navigate("/missions");
+
     // **🌟 MUDANÇA PRINCIPAL AQUI: Rola para o topo ao carregar a página.**
-    window.scrollTo(0, 0); 
-    
-    AOS.init({ 
-      duration: 900, 
-      once: false, 
-      offset: 50 
-    }); 
-    
+    window.scrollTo(0, 0);
+
+    AOS.init({
+      duration: 900,
+      once: false,
+      offset: 50
+    });
+
     AOS.refresh();
 
   }, [mission, navigate]); // Dependências garantem que o efeito roda ao entrar na página
@@ -122,22 +127,22 @@ export default function MissionDetails() {
                 />
               ))}
             </div>
-            
+
             {/* Seção 3: Regras e Guias (Se necessário) */}
             <h3 className="text-2xl font-bold text-gray-700 mb-4 border-b pb-2" data-aos="fade-up">
               Compromisso e Requisitos
             </h3>
             <p className="text-lg text-gray-700 leading-relaxed mb-6" data-aos="fade-up" data-aos-delay="100">
-                Para o sucesso completo desta missão, é essencial seguir rigorosamente o guia de procedimentos. A pontuação é diretamente ligada à qualidade e veracidade das evidências fornecidas.
+              Para o sucesso completo desta missão, é essencial seguir rigorosamente o guia de procedimentos. A pontuação é diretamente ligada à qualidade e veracidade das evidências fornecidas.
             </p>
 
             <ul className="space-y-4 text-gray-800 text-lg list-disc list-inside px-4">
-                <li data-aos="fade-up" data-aos-delay="200">
-                    <strong className="text-[#394C97]">Regras de Evidência:</strong> Use somente os métodos de coleta e formatos de evidências solicitados.
-                </li>
-                <li data-aos="fade-up" data-aos-delay="300">
-                    <strong className="text-[#394C97]">Guia Completo:</strong> O <span className="text-blue-600 font-semibold cursor-pointer hover:underline">Guia Operacional (PDF)</span> detalhado é disponibilizado no Painel da Missão após o início.
-                </li>
+              <li data-aos="fade-up" data-aos-delay="200">
+                <strong className="text-[#394C97]">Regras de Evidência:</strong> Use somente os métodos de coleta e formatos de evidências solicitados.
+              </li>
+              <li data-aos="fade-up" data-aos-delay="300">
+                <strong className="text-[#394C97]">Guia Completo:</strong> O <span className="text-blue-600 font-semibold cursor-pointer hover:underline">Guia Operacional (PDF)</span> detalhado é disponibilizado no Painel da Missão após o início.
+              </li>
             </ul>
 
           </div>
@@ -150,7 +155,7 @@ export default function MissionDetails() {
                 <Briefcase className="w-6 h-6 mr-3 text-[#FE5900]" />
                 Ficha Técnica
               </h3>
-              
+
               <ul className="space-y-5 text-gray-800 text-base">
                 <li className="flex items-center" data-aos="fade-left" data-aos-delay="100">
                   <Trophy className="w-5 h-5 text-green-600 mr-3" />
@@ -177,7 +182,7 @@ export default function MissionDetails() {
                 </li>
               </ul>
             </div>
-            
+
             {/* Box de Autor/Publicação */}
             <div className="mt-8 p-6 bg-gray-100 rounded-xl border border-gray-200" data-aos="fade-left" data-aos-delay="400">
               <p className="text-sm uppercase font-semibold text-gray-500 mb-3">Publicado por</p>
@@ -196,7 +201,7 @@ export default function MissionDetails() {
           </div>
         </div>
       </div>
-      
+
       {/* Rodapé - Opcional */}
       <footer className="bg-gray-800 text-white text-center py-6 mt-12">
         <p className="text-sm">&copy; {new Date().getFullYear()} Plataforma de Missões. Todos os direitos reservados.</p>

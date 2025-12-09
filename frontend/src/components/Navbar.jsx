@@ -30,7 +30,7 @@ export default function Navbar() {
     const isHome = location.pathname === "/";
 
     useEffect(() => {
-        const handleScroll = () => setScrolledEnough(window.scrollY > 700);
+        const handleScroll = () => setScrolledEnough(window.scrollY > 400);
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
@@ -90,7 +90,7 @@ export default function Navbar() {
 
     const isTransparent = isHome && !scrolledEnough;
 
-    const navbarClasses = `w-full px-8 py-3 flex justify-between items-center fixed top-0 left-0 z-50 backdrop-blur-md transition-all duration-500 ${isTransparent
+    const navbarClasses = `w-full px-8 py-2 flex justify-between items-center fixed top-0 left-0 z-50 backdrop-blur-md transition-all duration-500 ${isTransparent
                 ? "bg-transparent text-white"
                 : "bg-white text-[#394C97] shadow-md"
             }`;
