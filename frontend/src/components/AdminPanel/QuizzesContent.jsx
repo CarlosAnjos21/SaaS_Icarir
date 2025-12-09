@@ -70,12 +70,25 @@ export default function QuizzesContent() {
 
     const hydrateFromQuiz = (quiz) => {
         const firstQuestion = Array.isArray(quiz.perguntas) ? quiz.perguntas[0] : null;
-        const alternativas = Array.isArray(firstQuestion?.alternativas) && firstQuestion.alternativas.length
-            ? firstQuestion.alternativas
-            : ['', '', '', ''];
+        
+        // O backend salva em 'opcoes' (campo JSON no banco)
+        let alternativas = ['', '', '', ''];
+        if (firstQuestion?.opcoes) {
+            // Se opcoes for JSON string, parseia; se já for array, usa direto
+            alternativas = typeof firstQuestion.opcoes === 'string' 
+                ? JSON.parse(firstQuestion.opcoes)
+                : firstQuestion.opcoes;
+        }
+        
+        // Garante que sempre tenha pelo menos 4 alternativas para o form
+        while (alternativas.length < 4) {
+            alternativas.push('');
+        }
+        
         const correctIndex = firstQuestion?.resposta_correta
             ? alternativas.findIndex(a => a === firstQuestion.resposta_correta)
             : 0;
+        
         setForm({
             titulo: quiz.titulo || '',
             descricao: quiz.descricao || '',
