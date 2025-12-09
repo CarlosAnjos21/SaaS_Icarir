@@ -1,0 +1,359 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Dark Mode Styles */
+html.dark {
+  @apply bg-[#2a2a2a] text-white;
+}
+
+html.dark body {
+  @apply bg-[#2a2a2a] text-white;
+}
+
+html.dark .bg-white {
+  @apply bg-[#3a3a3a];
+}
+
+html.dark .text-gray-800 {
+  @apply text-gray-100;
+}
+
+html.dark .text-gray-700 {
+  @apply text-gray-200;
+}
+
+html.dark .text-gray-600 {
+  @apply text-gray-300;
+}
+
+html.dark .text-gray-500 {
+  @apply text-gray-400;
+}
+
+html.dark .border-gray-100 {
+  @apply border-gray-700;
+}
+
+html.dark .border-gray-200 {
+  @apply border-gray-600;
+}
+
+html.dark .bg-gray-50 {
+  @apply bg-[#333333];
+}
+
+html.dark .bg-gray-100 {
+  @apply bg-[#404040];
+}
+
+html.dark .hover\:bg-gray-100:hover {
+  @apply bg-[#404040];
+}
+
+html.dark .shadow-sm {
+  @apply shadow-none border border-gray-700;
+}
+
+html.dark .shadow-md {
+  @apply shadow-none border border-gray-700;
+}
+
+html.dark .shadow-lg {
+  @apply shadow-none border border-gray-700;
+}
+
+html.dark .shadow-xl {
+  @apply shadow-none border border-gray-700;
+}
+
+/* Dark Mode: Escurecer backgrounds semi-transparentes */
+html.dark .bg-white\/10 {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  border-color: #4a4a4a !important;
+}
+
+html.dark .bg-white\/20 {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+html.dark .border-white\/10 {
+  border-color: #4a4a4a !important;
+}
+
+html.dark .border-white\/15 {
+  border-color: #4a4a4a !important;
+}
+
+/* Azul para Laranja no Dark Mode */
+html.dark .bg-\[\#394C97\] {
+  @apply bg-[#FE5900];
+}
+
+html.dark .text-\[\#394C97\] {
+  @apply text-[#FE5900];
+}
+
+html.dark .hover\:text-\[\#394C97\]:hover {
+  @apply text-[#FE5900];
+}
+
+/* SVG Foguete: Laranja em light mode, Azul em dark mode */
+html.dark .lucide-rocket {
+  color: #394C97 !important;
+}
+
+/* Todos os SVGs Lucide: Azul em dark mode */
+html.dark svg.lucide {
+  color: #394C97 !important;
+  stroke: #394C97 !important;
+}
+
+/* Barra de Busca em Dark Mode */
+html.dark .bg-white.rounded-lg.shadow-md {
+  background-color: #404040 !important;
+  border-color: #505050 !important;
+}
+
+html.dark input.placeholder-gray-400 {
+  background-color: #404040 !important;
+  color: #ffffff !important;
+}
+
+html.dark input.placeholder-gray-400::placeholder {
+  color: #b0b0b0 !important;
+}
+
+/* Cards de Missão em Dark Mode */
+html.dark div[class*="shadow-xl"][class*="border-l-8"] {
+  background-color: #3a3a3a !important;
+  border-color: #505050 !important;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5) !important;
+}
+
+html.dark div[class*="shadow-xl"][class*="border-l-8"]:hover {
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.6) !important;
+}
+
+html.dark div[class*="border-l-8"] h2,
+html.dark div[class*="border-l-8"] .text-gray-900 {
+  color: #ffffff !important;
+}
+
+html.dark div[class*="border-l-8"] .text-gray-600 {
+  color: #c0c0c0 !important;
+}
+
+html.dark div[class*="border-l-8"] .text-gray-700 {
+  color: #d0d0d0 !important;
+}
+
+html.dark div[class*="border-l-8"] .text-gray-800 {
+  color: #e0e0e0 !important;
+}
+
+html.dark div[class*="border-l-8"] .bg-gray-50 {
+  background-color: #404040 !important;
+}
+
+html.dark div[class*="border-l-8"] .border-gray-200 {
+  border-color: #505050 !important;
+}
+
+html.dark div[class*="border-l-8"] .border-l-8 {
+  border-left-color: #FE5900 !important;
+}
+
+html.dark .border-\[\#394C97\] {
+  @apply border-[#FE5900];
+}
+
+/* Cards de Categorias/Tarefas/Quizzes em Dark Mode - Background mais escuro e texto claro */
+html.dark div[class*="bg-white"][class*="shadow-sm"][class*="border-gray-100"] {
+  background-color: #2f2f2f !important;
+  border-color: #404040 !important;
+  color: #e0e0e0 !important;
+}
+
+html.dark div[class*="bg-white"][class*="shadow-sm"][class*="border-gray-100"] h3,
+html.dark div[class*="bg-white"][class*="shadow-sm"][class*="border-gray-100"] [class*="text-gray-8"] {
+  color: #ffffff !important;
+}
+
+html.dark div[class*="bg-white"][class*="shadow-sm"][class*="border-gray-100"] [class*="text-gray-6"],
+html.dark div[class*="bg-white"][class*="shadow-sm"][class*="border-gray-100"] [class*="text-gray-5"] {
+  color: #b0b0b0 !important;
+}
+
+html.dark div[class*="bg-white"][class*="shadow-sm"][class*="border-gray-100"] [class*="text-gray-4"] {
+  color: #909090 !important;
+}
+
+html.dark div[class*="bg-white"][class*="shadow-sm"][class*="border-gray-100"] [class*="bg-gray-5"] {
+  background-color: #3a3a3a !important;
+}
+
+/* Cards clicados/hover em Dark Mode - letras mais claras */
+html.dark div[class*="bg-white"][class*="shadow-sm"][class*="border-gray-100"]:hover h3,
+html.dark div[class*="bg-white"][class*="shadow-sm"][class*="border-gray-100"]:hover [class*="text-gray"] {
+  color: #ffffff !important;
+}
+
+html.dark div[class*="bg-white"][class*="shadow-sm"][class*="border-gray-100"]:active h3,
+html.dark div[class*="bg-white"][class*="shadow-sm"][class*="border-gray-100"]:active [class*="text-gray"] {
+  color: #ffffff !important;
+}
+
+/* Ícone + do botão Nova Categoria em dark mode */
+html.dark button[class*="bg-[#394C97]"] svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Botões laranjas ficam azuis no dark mode */
+html.dark button[class*="bg-[#FE5900]"] {
+  background-color: #394C97 !important;
+}
+
+html.dark button[class*="bg-[#FE5900]"]:hover {
+  background-color: #2d3a75 !important;
+}
+
+html.dark button[class*="bg-[#FE5900]"] svg {
+  color: #ffffff !important;
+  stroke: #ffffff !important;
+}
+
+/* Inputs preenchidos no modal ficam com texto mais escuro */
+input:not(:placeholder-shown),
+textarea:not(:placeholder-shown),
+select:not([value=""]) {
+  color: #000000 !important;
+  font-weight: 600;
+}
+
+html.dark input:not(:placeholder-shown),
+html.dark textarea:not(:placeholder-shown),
+html.dark select:not([value=""]) {
+  color: #797474 !important;
+  font-weight: 600;
+}
+
+html.dark .bg-blue-50 {
+  @apply bg-orange-900/20;
+}
+
+html.dark .text-blue-600 {
+  @apply text-orange-400;
+}
+
+html.dark .hover\:text-blue-600:hover {
+  @apply text-orange-400;
+}
+
+html.dark .hover\:border-blue-100:hover {
+  @apply border-orange-600;
+}
+
+html.dark .bg-indigo-50 {
+  @apply bg-orange-900/30;
+}
+
+html.dark .text-indigo-700 {
+  @apply text-orange-400;
+}
+
+html.dark .border-indigo-100 {
+  @apply border-orange-600;
+}
+
+html.dark .text-blue-100 {
+  @apply text-orange-200;
+}
+
+html.dark .text-blue-100\/80 {
+  @apply text-orange-200/80;
+}
+
+html.dark .text-blue-100\/85 {
+  @apply text-orange-200/85;
+}
+
+html.dark .bg-white\/10 {
+  @apply bg-white/5;
+}
+
+html.dark .border-white\/10 {
+  @apply border-orange-600;
+}
+
+html.dark .border-white\/15 {
+  @apply border-orange-600;
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fadeIn 0.8s ease-out forwards;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+.feedback-form {
+  width: 450px;
+}
+
+@media (max-width: 1490px) {
+  .feedback-form {
+    width: 425px;
+  }
+}
+@media (max-width: 1390px) {
+  .feedback-form {
+    width: 405px;
+  }
+}
+@media (max-width: 1290px) {
+  .feedback-form {
+    width: 385px;
+  }
+}
+@media (max-width: 1190px) {
+  .feedback-form {
+    width: 365px;
+  }
+}
+@media (max-width: 1090px) {
+  .feedback-form {
+    width: 345px;
+  }
+}
+@media (max-width: 990px) {
+  .feedback-form {
+    width: 325px;
+  }
+}
+@media (max-width: 890px) {
+  .feedback-form {
+    width: 305px;
+  }
+}
+@media (max-width: 790px) {
+  .feedback-form {
+    width: 285px;
+  }
+}
+@media (max-width: 690px) {
+  .feedback-form {
+    width: 265px;
+  }
+}
