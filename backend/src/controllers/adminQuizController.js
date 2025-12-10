@@ -28,6 +28,14 @@ const createQuiz = async (req, res) => {
       },
     });
 
+    // Tentar manter a referência bidirecional (preencher Tarefa.quizId)
+    try {
+      await prisma.tarefa.update({ where: { id: Number(tarefa_id) }, data: { quizId: novoQuiz.id } });
+    } catch (err) {
+      // Não falhar se a atualização não for possível; o fallback de leitura lida com isso.
+      console.warn('adminQuizController.createQuiz - falha ao setar tarefa.quizId (não crítico):', err?.message || err);
+    }
+
     res.status(201).json({
       message: 'Quiz criado e vinculado à tarefa com sucesso!',
       quiz: novoQuiz,

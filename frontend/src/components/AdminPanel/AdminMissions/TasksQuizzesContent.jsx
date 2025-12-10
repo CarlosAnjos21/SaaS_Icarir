@@ -14,7 +14,7 @@ import {
     Trophy,
     RefreshCw
 } from "lucide-react";
-import { fetchTasks, createTask, updateTask, deleteTask, fetchCategories, fetchMissions } from '../../../api/apiFunctions'; 
+import { fetchTasks, fetchTaskById, createTask, updateTask, deleteTask, fetchCategories, fetchMissions } from '../../../api/apiFunctions'; 
 import TaskQuizModal from './TaskQuizModal'; 
 
 const INITIAL_TASK_STATE = {
@@ -87,10 +87,22 @@ const TasksQuizzesContent = () => {
 
     // --- HANDLERS ---
 
-    const handleModalOpen = (taskToEdit = null) => {
+    const handleModalOpen = async (taskToEdit = null) => {
         if (taskToEdit) {
             setIsEditing(true);
-            setCurrentTask(JSON.parse(JSON.stringify(taskToEdit))); 
+            // Tentar buscar a versão completa da tarefa por ID (garante quiz + perguntas)
+            try {
+                console.log('handleModalOpen - requested taskToEdit:', taskToEdit);
+                const fresh = await fetchTaskById(taskToEdit.id);
+                console.log('handleModalOpen - fetched fresh task:', fresh);
+                const taskCopy = JSON.parse(JSON.stringify(fresh || taskToEdit));
+                console.log('handleModalOpen - taskCopy.quiz:', taskCopy.quiz);
+                setCurrentTask(taskCopy);
+            } catch (err) {
+                console.warn('handleModalOpen - falha ao buscar tarefa completa, usando objeto local:', err?.message || err);
+                const taskCopy = JSON.parse(JSON.stringify(taskToEdit));
+                setCurrentTask(taskCopy);
+            }
         } else {
             setIsEditing(false);
             setCurrentTask(INITIAL_TASK_STATE);

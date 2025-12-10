@@ -20,12 +20,20 @@ const getAllActiveMissions = async (req, res) => {
         destino: true, // [cite: 65, 260]
         data_inicio: true, // [cite: 66, 271]
         data_fim: true, // [cite: 66, 271]
-        preco: true // [cite: 67, 271]
+        preco: true, // [cite: 67, 271]
+        vagas_disponiveis: true
       },
       orderBy: { data_inicio: 'asc' }
     });
+
+    // Transformar Decimal para número
+    const transformedMissoes = missoes.map(m => ({
+      ...m,
+      preco: m.preco ? parseFloat(m.preco.toString()) : null,
+      vagas_disponiveis: m.vagas_disponiveis ? parseInt(m.vagas_disponiveis.toString(), 10) : null,
+    }));
     
-    res.json(missoes);
+    res.json(transformedMissoes);
 
   } catch (error) {
     console.error('Erro ao buscar missões:', error);

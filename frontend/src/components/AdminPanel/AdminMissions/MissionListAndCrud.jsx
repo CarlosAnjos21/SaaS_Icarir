@@ -4,16 +4,20 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Plus, AlertTriangle, Loader } from "lucide-react";
 
 // Importa as funções de API para Missões
-import { fetchMissions, createMission, updateMission, deleteMissionApi, createTask, updateTask, deleteTask } from '../../../api/apiFunctions'; 
+import { fetchMissionsAdmin, fetchTasks, createMission, updateMission, deleteMissionApi, createTask, updateTask, deleteTask } from '../../../api/apiFunctions'; 
 
 // Importa os componentes desmembrados (certifique-se que estão no mesmo diretório)
 import MissionModal from './MissionModal';
 import MissionCard from './MissionCard';
 
 const INITIAL_QUIZ_STATE = {
-    question: "",
-    options: ["", "", "", ""],
-    correctIndex: 0,
+    questions: [
+        {
+            question: "",
+            options: ["", "", "", ""],
+            correctIndex: 0,
+        }
+    ],
 };
 
 // Estado inicial para o formulário de missão
@@ -25,8 +29,8 @@ const INITIAL_MISSION_STATE = {
     destino: "",
     data_inicio: "",
     data_fim: "",
-    preco: 0.00,
-    vagas_disponiveis: 0,
+    preco: null,
+    vagas_disponiveis: null,
     ativa: true,
     missao_anterior_id: null,
     foto_url: "",
@@ -50,19 +54,36 @@ const createEmptyMission = () => ({
 // Converte quiz vindo do backend (ou já no formato da UI) para a estrutura usada pelo formulário
 function normalizeQuizToUI(quiz) {
     if (!quiz) return null;
-    if (quiz.question || quiz.options) {
-        const opts = Array.isArray(quiz.options) && quiz.options.length ? quiz.options : INITIAL_QUIZ_STATE.options;
-        const idx = (typeof quiz.correctIndex === 'number' && quiz.correctIndex >= 0 && quiz.correctIndex < opts.length) ? quiz.correctIndex : 0;
-        return { question: quiz.question || '', options: opts, correctIndex: idx };
+    
+    // Se já estiver no formato novo (questions array)
+    if (Array.isArray(quiz.questions)) {
+        return { questions: quiz.questions };
     }
-    const firstQuestion = Array.isArray(quiz.perguntas) ? quiz.perguntas[0] : null;
-    const opts = Array.isArray(firstQuestion?.opcoes) && firstQuestion.opcoes.length ? firstQuestion.opcoes : INITIAL_QUIZ_STATE.options;
-    const idx = firstQuestion?.resposta_correta ? opts.findIndex(opt => opt === firstQuestion.resposta_correta) : -1;
-    return {
-        question: firstQuestion?.enunciado || firstQuestion?.titulo || '',
-        options: opts,
-        correctIndex: idx >= 0 ? idx : 0,
-    };
+    
+    // Se for formato antigo (question singular)
+    if (quiz.question || quiz.options) {
+        const opts = Array.isArray(quiz.options) && quiz.options.length ? quiz.options : ["", "", "", ""];
+        const idx = (typeof quiz.correctIndex === 'number' && quiz.correctIndex >= 0 && quiz.correctIndex < opts.length) ? quiz.correctIndex : 0;
+        return { questions: [{ question: quiz.question || '', options: opts, correctIndex: idx }] };
+    }
+    
+    // Se for do backend (perguntas array)
+    if (Array.isArray(quiz.perguntas) && quiz.perguntas.length > 0) {
+        return {
+            questions: quiz.perguntas.map(p => {
+                const opts = Array.isArray(p.opcoes) && p.opcoes.length ? p.opcoes : ["", "", "", ""];
+                const idx = p.resposta_correta ? opts.findIndex(opt => opt === p.resposta_correta) : 0;
+                return {
+                    question: p.enunciado || p.titulo || '',
+                    options: opts,
+                    correctIndex: idx >= 0 ? idx : 0,
+                };
+            })
+        };
+    }
+    
+    // Default: uma pergunta vazia
+    return { ...INITIAL_QUIZ_STATE };
 }
 
 // Normaliza o objeto de missão vindo da API para o formato usado pelos componentes
@@ -75,9 +96,15 @@ function normalizeMission(m) {
         expirationDate: '',
         steps: [],
         quiz: null,
+        preco: null,
+        vagas_disponiveis: null,
+        descricao: '',
         // keep original for debugging
         _raw: m,
     };
+
+    // DEBUG: log dos dados brutos
+    console.log('normalizeMission - dados brutos do backend:', { id: m.id, vagas_disponiveis: m.vagas_disponiveis, preco: m.preco });
 
     // Detecta lista de tarefas (tarefas / steps) e mapeia para estrutura simples
     let steps = [];
@@ -90,7 +117,7 @@ function normalizeMission(m) {
     // Calcular pontos totais a partir das tarefas (se houver)
     const totalPoints = steps.reduce((sum, s) => sum + (Number(s.points) || 0), 0);
 
-    return {
+    const normalized = {
         id: m.id,
         // aliases para UI
         title: m.titulo || m.title || '',
@@ -98,9 +125,9 @@ function normalizeMission(m) {
         descricao: m.descricao || '',
         // points: soma das tarefas se disponível, caso contrário tentar campos fallback
         points: totalPoints || Number(m.points || m.pontos || 0),
-        // preço e vagas separados
-        preco: m.preco != null ? m.preco : null,
-        vagas_disponiveis: m.vagas_disponiveis != null ? m.vagas_disponiveis : null,
+        // preço e vagas separados - garantir que seja número ou null
+        preco: m.preco != null ? Number(m.preco) : null,
+        vagas_disponiveis: m.vagas_disponiveis != null ? Number(m.vagas_disponiveis) : null,
         expirationDate: m.data_fim ? String(m.data_fim).slice(0,10) : (m.expirationDate || ''),
         steps: steps.length ? steps : (m.steps || []),
         quiz: normalizeQuizToUI(m.quiz),
@@ -109,6 +136,11 @@ function normalizeMission(m) {
         // keep original payload for reference
         _raw: m,
     };
+
+    // DEBUG: log dos dados normalizados
+    console.log('normalizeMission - após normalização:', { id: normalized.id, vagas_disponiveis: normalized.vagas_disponiveis, preco: normalized.preco });
+
+    return normalized;
 }
 
 // Sincroniza as etapas (steps) com o backend: cria novas tarefas ou atualiza existentes
@@ -170,16 +202,45 @@ const MissionListAndCRUD = () => {
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [newMission, setNewMission] = useState(createEmptyMission);
+    const [activeModalTab, setActiveModalTab] = useState('details'); // 'details' ou 'tasks'
 
     // FUNÇÃO DE CARREGAMENTO (READ - GET)
     const loadMissions = useCallback(async () => {
         setLoading(true);
         setError(null);
         try {
-            const data = await fetchMissions();
-            // Normalizar cada missão para o formato esperado pelos componentes UI
-            // Filtrar missões desativadas (soft-delete) para não aparecer na listagem
-            const normalized = (data || []).map(normalizeMission).filter(m => m.ativa !== false);
+            const [missionsRaw, tasksRaw] = await Promise.all([
+                fetchMissionsAdmin(),
+                fetchTasks(),
+            ]);
+
+            // Agrupa tarefas por missao_id vindas do endpoint de tarefas
+            const tasksByMission = Array.isArray(tasksRaw)
+                ? tasksRaw.reduce((acc, t) => {
+                    const missionId = t.missao_id || t.mission_id || t.missaoId;
+                    if (!missionId) return acc;
+                    if (!acc[missionId]) acc[missionId] = [];
+                    acc[missionId].push({
+                        id: t.id,
+                        description: t.descricao || t.titulo || t.description || '',
+                        points: t.pontos != null ? Number(t.pontos) : Number(t.points || 0),
+                    });
+                    return acc;
+                }, {})
+                : {};
+
+            // Normalizar missões; se não vierem tarefas junto, tenta preencher a partir do mapa
+            const normalized = (missionsRaw || [])
+                .map(normalizeMission)
+                .map(m => {
+                    if (m.steps && m.steps.length > 0) return m;
+                    const extra = tasksByMission[m.id] || [];
+                    if (extra.length === 0) return m;
+                    return { ...m, steps: extra };
+                })
+                // Filtrar missões desativadas (soft-delete)
+                .filter(m => m.ativa !== false);
+
             setMissions(normalized);
         } catch (err) {
             setError(`Falha ao carregar a lista de missões: ${err.message || 'Erro de conexão'}`);
@@ -195,10 +256,11 @@ const MissionListAndCRUD = () => {
 
     // --- FUNÇÕES DE CONTROLE DO MODAL ---
     
-    const handleModalOpen = (missionToEdit = null) => {
+    const handleModalOpen = (missionToEdit = null, tab = 'details') => {
         if (missionToEdit) {
             setIsEditing(true);
             setEditingId(missionToEdit.id);
+            setActiveModalTab(tab); // Define qual aba abrir
             // Normaliza o objeto vindo da API para incluir aliases usados pelo modal
             const m = JSON.parse(JSON.stringify(missionToEdit));
             const normalized = {
@@ -216,6 +278,7 @@ const MissionListAndCRUD = () => {
         } else {
             setIsEditing(false);
             setEditingId(null);
+            setActiveModalTab('details');
             setNewMission(createEmptyMission());
         }
         setShowModal(true);
@@ -225,6 +288,7 @@ const MissionListAndCRUD = () => {
     const handleModalClose = () => {
         setShowModal(false);
         setIsEditing(false);
+        setActiveModalTab('details');
         setNewMission(createEmptyMission());
     };
 
@@ -273,7 +337,7 @@ const MissionListAndCRUD = () => {
                 data_inicio: startDate,
                 data_fim: endDate,
                 preco: newMission.preco != null ? newMission.preco : newMission.points || 0,
-                vagas_disponiveis: newMission.vagas_disponiveis != null ? newMission.vagas_disponiveis : newMission.slots || 0,
+                vagas_disponiveis: newMission.vagas_disponiveis ?? null,
                 ativa: newMission.ativa != null ? newMission.ativa : true,
                 missao_anterior_id: newMission.missao_anterior_id || null,
                 // nota: `foto_url` não existe no modelo Prisma `Missao`, omitir campo
@@ -391,7 +455,7 @@ const MissionListAndCRUD = () => {
                         <MissionCard 
                             key={mission.id} 
                             mission={mission} 
-                            onEdit={() => handleModalOpen(mission)} 
+                            onEdit={(missionToEdit, tab) => handleModalOpen(missionToEdit || mission, tab || 'details')}
                             onDelete={() => handleDeleteMission(mission.id)} 
                         />
                     ))
@@ -410,6 +474,8 @@ const MissionListAndCRUD = () => {
                     handleModalClose={handleModalClose}
                     isEditing={isEditing}
                     isLoading={isSaving}
+                    activeTab={activeModalTab}
+                    setActiveTab={setActiveModalTab}
                 />
             )}
         </div>

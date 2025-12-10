@@ -73,7 +73,14 @@ const getAllMissions = async (req, res) => {
       }
     });
 
-    res.json(missions);
+    // Transformar Decimal para número
+    const transformedMissions = missions.map(m => ({
+      ...m,
+      preco: m.preco ? parseFloat(m.preco.toString()) : null,
+      vagas_disponiveis: m.vagas_disponiveis ? parseInt(m.vagas_disponiveis.toString(), 10) : null,
+    }));
+
+    res.json(transformedMissions);
   } catch (error) {
     console.error('Erro ao buscar todas as missões:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
@@ -107,7 +114,14 @@ const getMissionById = async (req, res) => {
       return res.status(404).json({ error: 'Missão não encontrada.' });
     }
 
-    res.json(mission);
+    // Transformar Decimal para número
+    const transformedMission = {
+      ...mission,
+      preco: mission.preco ? parseFloat(mission.preco.toString()) : null,
+      vagas_disponiveis: mission.vagas_disponiveis ? parseInt(mission.vagas_disponiveis.toString(), 10) : null,
+    };
+
+    res.json(transformedMission);
   } catch (error) {
     console.error('Erro ao buscar missão por ID:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
