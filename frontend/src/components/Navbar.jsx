@@ -15,7 +15,7 @@ import api from "../api/api"; // ✅ Import real
 
 export default function Navbar() {
     const navigate = useNavigate();
-    
+
     const [menuOpen, setMenuOpen] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [scrolledEnough, setScrolledEnough] = useState(false);
@@ -50,7 +50,7 @@ export default function Navbar() {
     };
 
     useEffect(() => {
-        const handleScroll = () => setScrolledEnough(window.scrollY > 400);
+        const handleScroll = () => setScrolledEnough(window.scrollY > 430);
         window.addEventListener("scroll", handleScroll);
         return () => window.removeEventListener("scroll", handleScroll);
     }, []);
@@ -74,9 +74,9 @@ export default function Navbar() {
         };
 
         window.addEventListener("storage", checkAuth);
-        checkAuth(); 
+        checkAuth();
         return () => window.removeEventListener("storage", checkAuth);
-    }, [location]); 
+    }, [location]);
 
     const handleLogout = () => {
         localStorage.removeItem("token");
@@ -84,7 +84,7 @@ export default function Navbar() {
         setIsAuthenticated(false);
         setUser(null);
         setMenuOpen(false);
-        navigate("/login"); 
+        navigate("/login");
     };
 
     const getInitials = (name) => {
@@ -110,23 +110,23 @@ export default function Navbar() {
 
     const isTransparent = isHome && !scrolledEnough;
 
-    const navbarClasses = `w-full px-8 py-2 flex justify-between items-center fixed top-0 left-0 z-50 backdrop-blur-md transition-all duration-500 ${isTransparent
-                ? "bg-transparent text-white"
-                : "bg-white text-[#394C97] shadow-md"
-            }`;
+    const navbarClasses = `w-full px-8 py-1 flex justify-between items-center fixed top-0 left-0 z-50 backdrop-blur-md transition-all duration-500 ${isTransparent
+        ? "bg-transparent text-white"
+        : "bg-white text-[#394C97] shadow-md"
+        }`;
 
     // --- LÓGICA DE VISIBILIDADE DOS LINKS ---
     const navLinks = [
         // Início agora aparece SEMPRE (Padrão)
         { name: "Início", path: "/" },
-        
+
         // Cadastro só aparece se NÃO estiver logado
         !isAuthenticated && { name: "Cadastro", path: "/register" },
-        
+
         // 🔒 Missões e Ranking: Só aparecem se estiver LOGADO e NÃO for ADMIN
         (isAuthenticated && user?.role !== "admin") && { name: "Missão", path: "/missions" },
         (isAuthenticated && user?.role !== "admin") && { name: "Classificação", path: "/ranking" },
-        
+
         // Admin só vê o botão Administrador
         (user?.role === "admin") && { name: "Administrador", path: "/admin" },
     ].filter(Boolean);
@@ -146,25 +146,35 @@ export default function Navbar() {
                 <img
                     src={logoIcarir}
                     alt="Logo ICARIR"
-                    className="h-12 w-auto transition-transform duration-300 hover:scale-105"
+                    className="h-14 w-auto transition-transform duration-300 hover:scale-105"
                 />
             </Link>
 
             {/* MENU DESKTOP */}
-            <ul className="hidden md:flex gap-8 text-sm font-medium tracking-wide">
+            <ul className="hidden md:flex gap-8 text-base font-medium tracking-wide">
                 {navLinks.map((item, index) => (
                     <li key={index} className="relative group">
                         <Link
                             to={item.path}
-                            className={`transition duration-300 ${isTransparent ? "text-white" : "text-[#394C97]"
-                                } hover:text-orange`}
+                            className={`
+                    transition-all duration-200
+                    hover:scale-110 active:scale-95
+                    ${isTransparent ? "text-white hover:text-orange-500" : "text-[#394C97] hover:text-orange-500"}
+                `}
                         >
                             {item.name}
-                            <span className="absolute left-0 -bottom-1 w-full h-[2px] bg-orange scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300"></span>
+
+                            {/* Underline animado */}
+                            <span
+                                className="absolute left-0 -bottom-1 w-full h-[2px] bg-orange-500
+                    scale-x-0 group-hover:scale-x-100
+                    origin-left transition-transform duration-300"
+                            ></span>
                         </Link>
                     </li>
                 ))}
             </ul>
+
 
             {/* ÍCONES */}
             <div className="relative flex items-center gap-5">
@@ -174,32 +184,60 @@ export default function Navbar() {
                     href="https://www.instagram.com/escoladeempreendedores"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center gap-2 text-sm hover:text-orange transition hidden md:flex"
+                    className="
+        hidden md:flex items-center gap-2 text-sm font-medium
+        relative group
+        transition-all duration-200
+        active:scale-95
+        hover:text-orange-500
+    "
                 >
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5"
+                        fill="currentColor"
+                        viewBox="0 0 24 24"
+                    >
                         <path d="M7.75 2h8.5A5.75 5.75 0 0 1 22 7.75v8.5A5.75 5.75 0 0 1 16.25 22h-8.5A5.75 5.75 0 0 1 7.75 2zm0 1.5A4.25 4.25 0 0 0 3.5 7.75v8.5A4.25 4.25 0 0 0 7.75 20.5h8.5A4.25 4.25 0 0 0 20.5 16.25v-8.5A4.25 4.25 0 0 0 16.25 3.5h-8.5zm8.75 2.25a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5a.75.75 0 0 1 .75-.75zM12 7a5 5 0 1 1 0 10 5 5 0 0 1 0-10zm0 1.5a3.5 3.5 0 1 0 0 7 3.5 3.5 0 0 0 0-7z" />
                     </svg>
                     <span>Instagram</span>
+
+                    {/* Underline animado */}
+                    <span
+                        className="
+            absolute left-0 -bottom-1 w-full h-[2px] bg-orange-500
+            scale-x-0 group-hover:scale-x-100
+            origin-left transition-transform duration-300
+        "
+                    ></span>
                 </a>
 
-                {/* Toggle Tema Dark/Light */}
-                <button
-                    onClick={toggleTheme}
-                    className="flex items-center gap-2 text-sm hover:text-orange transition hidden md:flex p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
-                    title={isDarkMode ? "Modo Claro" : "Modo Escuro"}
-                >
-                    {isDarkMode ? (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                            {/* Ícone de Sol */}
-                            <path d="M12 2v6m0 8v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M2 12h6m8 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
-                        </svg>
-                    ) : (
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
-                            {/* Ícone de Lua */}
-                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor"/>
-                        </svg>
-                    )}
-                </button>
+
+{/* Toggle Tema Dark/Light */}
+<button
+    onClick={toggleTheme}
+    className="
+        hidden md:flex items-center gap-2 p-2 rounded-lg
+        text-sm transition-all duration-200
+        hover:text-orange-500 active:scale-95
+    "
+    title={isDarkMode ? 'Modo Claro' : 'Modo Escuro'}
+>
+    {isDarkMode ? (
+        // Ícone Sol
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M12 2v6m0 8v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M2 12h6m8 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"
+                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
+        </svg>
+    ) : (
+        // Ícone Lua
+        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor"
+            viewBox="0 0 24 24">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+    )}
+</button>
+
 
                 {/* Mobile burger */}
                 <div className="md:hidden">
@@ -226,14 +264,13 @@ export default function Navbar() {
                                 <img
                                     src={user.foto_url}
                                     alt="Perfil"
-                                    className="h-9 w-9 rounded-full object-cover border-2 border-orange"
+                                    className="h-10 w-10 rounded-full object-cover border-2 border-orange"
                                 />
                             ) : (
-                                <div className={`h-9 w-9 rounded-full flex items-center justify-center border-2 font-bold text-xs ${
-                                    isTransparent 
-                                        ? "bg-white/20 border-white text-white" 
-                                        : "bg-[#394C97] border-[#394C97] text-white"
-                                }`}>
+                                <div className={`h-9 w-9 rounded-full flex items-center justify-center border-2 font-bold text-xs ${isTransparent
+                                    ? "bg-white/20 border-white text-white"
+                                    : "bg-[#394C97] border-[#394C97] text-white"
+                                    }`}>
                                     {getInitials(user?.nome)}
                                 </div>
                             )}
@@ -247,7 +284,7 @@ export default function Navbar() {
                                     <LockClosedIcon className="h-6 w-6" />
                                 </button>
                             </Link>
-                            
+
                             {/* 2. Ícone de Login Padrão */}
                             <Link to="/login" title="Login de Usuário">
                                 <button className="hover:text-orange transition focus:outline-none flex items-center">
@@ -264,7 +301,7 @@ export default function Navbar() {
                                 <p className="text-xs text-gray-500 uppercase font-semibold">Olá,</p>
                                 <p className="text-sm font-bold truncate text-[#FE5900]">{user.nome}</p>
                             </div>
-                            
+
                             <ul className="flex flex-col">
                                 {userMenuItems.map((item, index) => {
                                     const Icon = item.icon;
@@ -312,7 +349,7 @@ export default function Navbar() {
                                 </Link>
                             </li>
                         ))}
-                        
+
                         {!isAuthenticated && (
                             <>
                                 <li className="border-t border-gray-100 mt-2 pt-2">
