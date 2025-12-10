@@ -3,7 +3,18 @@
 import React from 'react';
 import { Edit, Trash2, Calendar, MapPin, Briefcase } from 'lucide-react';
 
-const MissionCard = ({ mission, onEdit, onDelete }) => (
+const MissionCard = ({ mission, onEdit, onDelete }) => {
+    // Debug: verificar se descricao está chegando
+    console.log('MissionCard - mission object:', mission);
+    
+    // Função para inverter a data (de YYYY-MM-DD para DD-MM-YYYY)
+    const formatDateReverse = (dateString) => {
+        if (!dateString) return 'N/A';
+        const [year, month, day] = dateString.split('-');
+        return `${day}-${month}-${year}`;
+    };
+    
+    return (
     <div className="bg-white shadow-xl p-6 rounded-xl border-l-8 border-[#394C97] flex justify-between items-start transition duration-300 hover:shadow-2xl">
         <div className="flex-1">
             <div className="flex items-center gap-3 mb-2">
@@ -13,22 +24,33 @@ const MissionCard = ({ mission, onEdit, onDelete }) => (
 
             <div className="flex items-center text-sm text-gray-600 gap-4 mt-1">
                 <p className="flex items-center gap-1"><MapPin size={16} /> {mission.city || 'Global'}</p>
-                <p className="flex items-center gap-1"><Calendar size={16} /> Expira: {mission.expirationDate || 'N/A'}</p>
+                <p className="flex items-center gap-1"><Calendar size={16} /> Expira: {formatDateReverse(mission.expirationDate)}</p>
                 <p className="font-semibold text-green-600">{mission.points} Pontos</p>
                 <p className="flex items-center gap-1">{(mission.preco !== undefined && mission.preco !== null) ? `R$ ${Number(mission.preco).toFixed(2)}` : 'R$ —'}</p>
                 <p className="flex items-center gap-1">{(mission.vagas_disponiveis !== undefined && mission.vagas_disponiveis !== null) ? `${mission.vagas_disponiveis} vagas` : '— vagas'}</p>
             </div>
-            
-            <ul className="mt-4 space-y-1 text-sm text-gray-700 p-3 bg-gray-50 rounded">
-                <p className="font-semibold mb-1 flex items-center gap-2"><Briefcase size={16} /> Etapas ({mission.steps.length})</p>
-                {/* Mostra apenas as 2 primeiras etapas para a visualização */}
-                {mission.steps.slice(0, 2).map((step, i) => (
-                    <li key={i} className="flex items-center gap-2">
-                        <span className="text-xs text-[#394C97]">✓</span> {step.description} ({step.points} pts)
-                    </li>
-                ))}
-                {mission.steps.length > 2 && <li className="text-xs text-gray-500">e mais {mission.steps.length - 2} etapas...</li>}
-            </ul>
+
+            {mission.descricao && mission.descricao.trim() && (
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                    <p className="text-sm text-gray-700">
+                        <span className="font-semibold text-gray-800">Descrição: </span>
+                        {mission.descricao}
+                    </p>
+                </div>
+            )}
+
+            {/* Etapas (exibe as duas primeiras) */}
+            {mission.steps && mission.steps.length > 0 && (
+                <ul className="mt-4 space-y-1 text-sm text-gray-700 p-3 bg-gray-50 rounded">
+                    <p className="font-semibold mb-1 flex items-center gap-2"><Briefcase size={16} /> Etapas ({mission.steps.length})</p>
+                    {mission.steps.slice(0, 2).map((step, i) => (
+                        <li key={i} className="flex items-center gap-2">
+                            <span className="text-xs text-[#394C97]">✓</span> {step.description} ({step.points} pts)
+                        </li>
+                    ))}
+                    {mission.steps.length > 2 && <li className="text-xs text-gray-500">e mais {mission.steps.length - 2} etapas...</li>}
+                </ul>
+            )}
         </div>
         
         <div className="flex gap-2 min-w-[120px] justify-end">
@@ -40,6 +62,7 @@ const MissionCard = ({ mission, onEdit, onDelete }) => (
             </button>
         </div>
     </div>
-);
+    );
+};
 
 export default MissionCard;

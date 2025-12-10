@@ -202,8 +202,8 @@ export default function Home() {
       <Navbar />
 
       {/* --- SEÇÃO INSTAGRAM FEED (Widget Elfsight) --- */}
-      <section className="relative bg-gradient-to-b from-[#002B5B] to-gray-50 pt-20 pb-8 overflow-hidden min-h-[200px]">
-
+      <section className="relative bg-gradient-to-b from-[#002B5B] to-gray-50 dark:from-[#001a40] dark:to-[#3a3a3a] pt-20 pb-8 overflow-hidden min-h-[200px]">
+        
         <div className="max-w-[1000px] mx-auto px-4 z-10 relative">
           {/* Widget do Elfsight sem Lazy Load */}
           <div className="elfsight-app-86adf4a7-150a-4b09-9aea-cb904cc41a4a">
@@ -219,14 +219,14 @@ export default function Home() {
 
       {/* --- SEÇÃO DE DESTINOS --- */}
       <section className="relative max-w-[1800px] mx-auto py-16 px-6 z-20">
-
-        <div className="bg-white/90 backdrop-blur-md rounded-2xl p-8 shadow-xl mb-12 relative z-10 max-w-4xl mx-auto text-center border border-gray-100">
-          <span className="text-[#FE5900] font-bold uppercase tracking-widest text-sm">Expandir Horizontes</span>
-          <h2 className="text-3xl md:text-5xl font-bold text-[#394C97] mt-2">Destinos para Empreendedores</h2>
-          <p className="text-gray-600 mt-4 max-w-2xl mx-auto">
+        
+        <div className="bg-white/90 dark:bg-[#2f2f2f] backdrop-blur-md rounded-2xl p-8 shadow-xl dark:shadow-2xl mb-12 relative z-10 max-w-4xl mx-auto text-center border border-gray-100 dark:border-gray-700">
+          <span className="text-[#FE5900] dark:text-[#394C97] font-bold uppercase tracking-widest text-sm">Expandir Horizontes</span>
+          <h2 className="text-3xl md:text-5xl font-bold text-[#394C97] dark:text-[#FE5900] mt-2">Destinos para Empreendedores</h2>
+          <p className="text-gray-600 dark:text-gray-300 mt-4 max-w-2xl mx-auto">
             Descubra ecossistemas de inovação, feche negócios e participe de missões exclusivas nas cidades mais dinâmicas do nosso país.
           </p>
-          <div className="w-24 h-1.5 bg-[#FE5900] mx-auto mt-6 rounded-full"></div>
+          <div className="w-24 h-1.5 bg-[#FE5900] dark:bg-[#394C97] mx-auto mt-6 rounded-full"></div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 relative z-10">
