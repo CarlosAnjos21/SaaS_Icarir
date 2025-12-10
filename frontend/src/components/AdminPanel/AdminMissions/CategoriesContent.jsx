@@ -190,15 +190,15 @@ const CategoriesContent = () => {
                 
                 {/* Header de Ações */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                    <div className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/50 text-sm text-gray-600 font-medium shadow-sm">
-                        Total de Categorias: <span className="text-[#394C97] font-bold">{categories.length}</span>
+                    <div className="bg-[#FE5900] dark:bg-[#394C97] px-4 py-2 rounded-xl text-sm text-white font-medium shadow-lg">
+                        Total de Categorias: <span className="font-bold">{categories.length}</span>
                     </div>
 
                     <motion.button
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         onClick={() => { setIsEditing(false); setCurrentCategory(INITIAL_CATEGORY_STATE); setShowModal(true); }}
-                        className="bg-[#FE5900] text-white px-6 py-3 rounded-xl shadow-lg hover:bg-[#e04f00] hover:shadow-orange-500/20 transition-all flex items-center gap-2 font-bold text-xs uppercase tracking-wide transform hover:-translate-y-0.5"
+                        className="bg-[#FE5900] dark:bg-[#394C97] text-white px-6 py-3 rounded-xl shadow-lg hover:bg-[#e04f00] dark:hover:bg-[#2d3a75] hover:shadow-orange-500/20 dark:hover:shadow-blue-500/20 transition-all flex items-center gap-2 font-bold text-xs uppercase tracking-wide transform hover:-translate-y-0.5"
                         disabled={isSaving}
                     >
                         <Plus size={16} strokeWidth={3} />

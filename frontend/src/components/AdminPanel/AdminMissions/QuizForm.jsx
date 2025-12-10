@@ -5,44 +5,50 @@ import { Plus, X } from 'lucide-react';
 
 // Este componente recebe a missão e o setter como props
 const QuizForm = ({ newMission, setNewMission, isLoading }) => {
-    const quiz = newMission.quiz;
+    if (!newMission.quiz) return null; // Não renderiza se o quiz não estiver ativo
 
-    const handleUpdateQuiz = (field, value) => {
+    const DEFAULT_QUIZ = { question: '', options: ["", "", "", ""], correctIndex: 0 };
+    const baseQuiz = { ...DEFAULT_QUIZ, ...newMission.quiz };
+    const options = Array.isArray(baseQuiz.options) && baseQuiz.options.length ? baseQuiz.options : DEFAULT_QUIZ.options;
+    const correctIndex = (typeof baseQuiz.correctIndex === 'number' && baseQuiz.correctIndex >= 0 && baseQuiz.correctIndex < options.length) ? baseQuiz.correctIndex : 0;
+    const quiz = { ...baseQuiz, options, correctIndex };
+
+    const setQuiz = (updatedQuiz) => {
         setNewMission({
             ...newMission,
-            quiz: { ...quiz, [field]: value },
+            quiz: updatedQuiz,
         });
+    };
+
+    const handleUpdateQuiz = (field, value) => {
+        setQuiz({ ...quiz, [field]: value });
     };
 
     const handleUpdateOption = (index, value) => {
         const updatedOptions = [...quiz.options];
         updatedOptions[index] = value;
-        handleUpdateQuiz("options", updatedOptions);
+        setQuiz({ ...quiz, options: updatedOptions });
     };
 
     const handleAddOption = () => {
         if (quiz.options.length < 6) {
-            handleUpdateQuiz("options", [...quiz.options, ""]);
+            setQuiz({ ...quiz, options: [...quiz.options, ""] });
         }
     };
 
     const handleRemoveOption = (index) => {
         const updatedOptions = quiz.options.filter((_, i) => i !== index);
-        // Garante que o correctIndex ainda seja válido
-        let newCorrectIndex = quiz.correctIndex;
-        if (newCorrectIndex === index) {
-            newCorrectIndex = 0; 
-        } else if (newCorrectIndex > index) {
-            newCorrectIndex -= 1; 
-        }
+        const correctedIndex = Math.min(
+            Math.max(0, quiz.correctIndex - (quiz.correctIndex > index ? 1 : 0)),
+            Math.max(0, updatedOptions.length - 1),
+        );
 
-        setNewMission({
-            ...newMission,
-            quiz: { ...updatedOptions, correctIndex: newCorrectIndex },
+        setQuiz({
+            ...quiz,
+            options: updatedOptions,
+            correctIndex: correctedIndex,
         });
     };
-
-    if (!quiz) return null; // Não renderiza se o quiz não estiver ativo
 
     return (
         <div className="space-y-4 p-4 border rounded-lg bg-gray-50">

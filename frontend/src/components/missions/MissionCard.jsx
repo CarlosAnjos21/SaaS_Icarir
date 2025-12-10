@@ -1,18 +1,19 @@
-// src/components/missions/MissionCard.jsx
-
-import { ArrowRight, Calendar, List, Clock } from 'lucide-react';
+import { ArrowRight, Calendar, List, Clock } from 'lucide-react'; // Importando ícones (necessário instalar: npm install lucide-react)
 
 export default function MissionCard({ mission, onClick }) {
-  // Os dados já vêm normalizados do componente Missions.jsx
+  // Desestruturando os dados da missão para facilitar o uso
   const {
     title,
     category,
-    status,
-    progress,
+    status, // Usado na imagem como "Em Andamento"
+    progress, // Já calculamos no Missions.jsx, vamos usar este valor
     deadline,
     totalTasks,
     completedTasks,
   } = mission;
+
+  // Calculando as tarefas para o caso de você querer usar o cálculo localmente (opcional)
+  // const calculatedProgress = Math.round((completedTasks / totalTasks) * 100);
 
   return (
     <div
@@ -23,11 +24,12 @@ export default function MissionCard({ mission, onClick }) {
       <div className="flex justify-between items-start mb-4">
         <h2 className="text-xl font-bold text-gray-800 pr-2 leading-snug">
           {title}
-          {title && title.length > 20 ? ' ...' : ''}
+          {/* Adicionando "..." no final do título se ele for muito longo (como na imagem) */}
+          {title.length > 20 ? ' ...' : ''}
         </h2>
         {/* Categoria/Tag no canto superior direito */}
         <span className="bg-blue-100 text-blue-600 text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
-          {category || 'Geral'}
+          {category}
         </span>
       </div>
 
@@ -53,13 +55,13 @@ export default function MissionCard({ mission, onClick }) {
         <div className="flex items-center space-x-2">
           <Calendar className="w-4 h-4 text-gray-500" />
           <span>
-            **Prazo:** {deadline || 'Não definido'}
+            *Prazo:* {deadline}
           </span>
         </div>
         <div className="flex items-center space-x-2">
           <List className="w-4 h-4 text-gray-500" />
           <span>
-            **Tarefas:** {completedTasks} de {totalTasks} Tarefas
+            *Tarefas:* {completedTasks} de {totalTasks} Tarefas
           </span>
         </div>
       </div>
@@ -70,7 +72,8 @@ export default function MissionCard({ mission, onClick }) {
           className="flex items-center text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors"
           onClick={onClick}
         >
-          Ver Tarefas <ArrowRight className="w-4 h-4 ml-1" />
+          Ver Tarefas →
+          {/* O ícone ArrowRight já foi integrado acima, mas pode ser adicionado aqui também se preferir um visual diferente */}
         </button>
       </div>
     </div>
