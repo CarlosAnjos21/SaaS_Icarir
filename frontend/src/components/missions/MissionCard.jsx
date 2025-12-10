@@ -1,81 +1,97 @@
-import { ArrowRight, Calendar, List, Clock } from 'lucide-react'; // Importando ícones (necessário instalar: npm install lucide-react)
+import React from 'react';
+import { Calendar, MapPin, CheckCircle, Lock, Trophy, Award } from 'lucide-react';
 
-export default function MissionCard({ mission, onClick }) {
-  // Desestruturando os dados da missão para facilitar o uso
-  const {
-    title,
-    category,
-    status, // Usado na imagem como "Em Andamento"
-    progress, // Já calculamos no Missions.jsx, vamos usar este valor
-    deadline,
-    totalTasks,
-    completedTasks,
-  } = mission;
+const MissionCard = ({ mission, onClick }) => {
+    // CORREÇÃO: Garante que a imagem seja encontrada independente do nome da propriedade
+    const displayImage = mission.image || mission.imageUrl || mission.foto_url;
 
-  // Calculando as tarefas para o caso de você querer usar o cálculo localmente (opcional)
-  // const calculatedProgress = Math.round((completedTasks / totalTasks) * 100);
+    const { 
+        title, 
+        category, 
+        deadline, 
+        progress = 0, 
+        isJoined,
+        points 
+    } = mission;
 
-  return (
-    <div
-      className="bg-white rounded-xl shadow-md p-6 cursor-pointer hover:shadow-lg transition-shadow duration-300 transform hover:translate-y-[-2px]"
-      onClick={onClick}
-    >
-      {/* Título e Categoria */}
-      <div className="flex justify-between items-start mb-4">
-        <h2 className="text-xl font-bold text-gray-800 pr-2 leading-snug">
-          {title}
-          {/* Adicionando "..." no final do título se ele for muito longo (como na imagem) */}
-          {title.length > 20 ? ' ...' : ''}
-        </h2>
-        {/* Categoria/Tag no canto superior direito */}
-        <span className="bg-blue-100 text-blue-600 text-xs font-medium px-3 py-1 rounded-full whitespace-nowrap">
-          {category}
-        </span>
-      </div>
-
-      {/* Status e Progresso */}
-      <div className="flex justify-between items-center mb-2 text-sm text-gray-700">
-        <div className="flex items-center space-x-1">
-          <Clock className="w-4 h-4 text-gray-500" />
-          <span className="font-semibold">{status}</span>
-        </div>
-        <span className="font-bold text-gray-800">{progress}%</span>
-      </div>
-
-      {/* Progress Bar */}
-      <div className="w-full bg-gray-200 h-2 rounded-full mb-3">
-        <div
-          className="h-2 bg-blue-600 rounded-full transition-all duration-500"
-          style={{ width: `${progress}%` }}
-        />
-      </div>
-
-      {/* Detalhes: Prazo e Tarefas */}
-      <div className="space-y-2 text-sm text-gray-600">
-        <div className="flex items-center space-x-2">
-          <Calendar className="w-4 h-4 text-gray-500" />
-          <span>
-            *Prazo:* {deadline}
-          </span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <List className="w-4 h-4 text-gray-500" />
-          <span>
-            *Tarefas:* {completedTasks} de {totalTasks} Tarefas
-          </span>
-        </div>
-      </div>
-
-      {/* Botão Ver Tarefas */}
-      <div className="mt-4 pt-4 border-t border-gray-100">
-        <button
-          className="flex items-center text-blue-600 hover:text-blue-700 font-semibold text-sm transition-colors"
-          onClick={onClick}
+    return (
+        <div 
+            onClick={onClick}
+            className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-lg transition-all cursor-pointer group overflow-hidden flex flex-col h-full relative"
         >
-          Ver Tarefas →
-          {/* O ícone ArrowRight já foi integrado acima, mas pode ser adicionado aqui também se preferir um visual diferente */}
-        </button>
-      </div>
-    </div>
-  );
-}
+            {/* Área da Imagem de Capa */}
+            <div className="h-44 w-full relative bg-gray-100 overflow-hidden">
+                {displayImage ? (
+                    <img 
+                        src={displayImage} 
+                        alt={title} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                ) : (
+                    // Fallback visual apenas se não houver URL de imagem definida
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-200">
+                        <MapPin size={48} />
+                    </div>
+                )}
+
+                {/* Badge de Status (Inscrito/Disponível) */}
+                <div className="absolute top-3 right-3 z-10">
+                    {isJoined ? (
+                        <span className="bg-green-100/95 backdrop-blur text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm flex items-center gap-1 border border-green-200">
+                            <CheckCircle size={10} /> PARTICIPANDO
+                        </span>
+                    ) : (
+                        <span className="bg-gray-900/70 backdrop-blur text-white text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm flex items-center gap-1 border border-white/20">
+                            <Lock size={10} /> DISPONÍVEL
+                        </span>
+                    )}
+                </div>
+
+                 {/* Badge de Pontos */}
+                 <div className="absolute bottom-3 left-3 z-10">
+                     <span className="bg-white/90 backdrop-blur text-[#FE5900] text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">
+                        <Award size={10} /> {points || 0} XP
+                     </span>
+                 </div>
+            </div>
+
+            {/* Conteúdo do Card */}
+            <div className="p-5 flex-1 flex flex-col">
+                <div className="mb-2">
+                    <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md uppercase tracking-wide">
+                        {category || 'Geral'}
+                    </span>
+                </div>
+
+                <h3 className="text-lg font-bold text-gray-800 line-clamp-2 group-hover:text-[#394C97] transition-colors mb-2">
+                    {title}
+                </h3>
+
+                {/* Barra de Progresso (se inscrito) ou Data (se não inscrito) */}
+                <div className="mt-auto pt-4 border-t border-gray-100">
+                    {isJoined ? (
+                        <div className="space-y-2">
+                            <div className="flex justify-between text-xs text-gray-500 font-medium">
+                                <span>Progresso</span>
+                                <span>{Math.round(progress)}%</span>
+                            </div>
+                            <div className="w-full bg-gray-100 h-2 rounded-full overflow-hidden">
+                                <div 
+                                    className="h-full bg-[#394C97] rounded-full transition-all duration-500" 
+                                    style={{ width: `${progress}%` }} 
+                                />
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="flex items-center text-xs text-gray-400 font-medium">
+                            <Calendar size={12} className="mr-1.5" /> 
+                            Expira em: {deadline || 'Sem prazo'}
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default MissionCard;

@@ -1,46 +1,56 @@
-// Importa o Prisma Client
-const prisma = require('../config/prismaClient');
-const { Prisma } = require('@prisma/client'); // Para capturar erros
+// Importa o Prisma Client de forma segura
+const prismaModule = require("../config/prismaClient");
+const prisma = prismaModule.prisma || prismaModule.default || prismaModule;
+const { Prisma } = require('@prisma/client'); 
 
 /**
  * @route   GET /api/missions
- * @desc    Listar todas as missões ativas
+ * @desc    Listar todas as missões ativas (Com status de inscrição do usuário)
  * @access  Privado (requer token)
  */
 const getAllActiveMissions = async (req, res) => {
   try {
-    // Busca missões onde 'ativa' = true, ordenadas pela data de início
+    const userId = req.user?.id; // Pega o ID do usuário logado
+
     const missoes = await prisma.missao.findMany({
       where: { ativa: true },
-      // Seleciona os mesmos campos da query SQL original
       select: {
         id: true,
-        titulo: true, // [cite: 57, 254]
-        descricao: true, // [cite: 60, 257]
-        destino: true, // [cite: 65, 260]
-        data_inicio: true, // [cite: 66, 271]
-        data_fim: true, // [cite: 66, 271]
-        preco: true, // [cite: 67, 271]
-        vagas_disponiveis: true
+        titulo: true,
+        descricao: true,
+        destino: true,
+        data_inicio: true,
+        data_fim: true,
+        preco: true,
+        vagas_disponiveis: true,
+        foto_url: true 
       },
       orderBy: { data_inicio: 'asc' }
     });
 
-    // Transformar Decimal para número
-    const transformedMissoes = missoes.map(m => ({
-      ...m,
-      preco: m.preco ? parseFloat(m.preco.toString()) : null,
-      vagas_disponiveis: m.vagas_disponiveis ? parseInt(m.vagas_disponiveis.toString(), 10) : null,
-    }));
+    // Busca quais dessas missões o usuário já está inscrito
+    let joinedMissionIds = [];
+    if (userId) {
+        const inscricoes = await prisma.usuarioMissao.findMany({
+            where: { usuario_id: userId },
+            select: { missao_id: true }
+        });
+        joinedMissionIds = inscricoes.map(i => i.missao_id);
+    }
     
-    res.json(transformedMissoes);
+    // Formata e adiciona a flag 'isJoined'
+    const formatted = missoes.map(m => ({
+        ...m,
+        preco: m.preco ? Number(m.preco) : 0,
+        isJoined: joinedMissionIds.includes(m.id) // True se o ID estiver na lista de inscrições
+    }));
 
+    res.json(formatted);
   } catch (error) {
     console.error('Erro ao buscar missões:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
-
 
 /**
  * @route   GET /api/missions/:missionId
@@ -50,176 +60,298 @@ const getAllActiveMissions = async (req, res) => {
 const getMissionById = async (req, res) => {
   try {
     const missionId = parseInt(req.params.missionId, 10);
-    if (isNaN(missionId)) {
-      return res.status(400).json({ error: 'ID da missão inválido.' });
-    }
+    if (isNaN(missionId)) return res.status(400).json({ error: 'ID inválido.' });
 
-    const missao = await prisma.missao.findFirst({
+    const missao = await prisma.missao.findUnique({
       where: { id: missionId }
     });
 
-    if (!missao) {
-      return res.status(404).json({ error: 'Missão não encontrada.' });
-    }
+    if (!missao) return res.status(404).json({ error: 'Missão não encontrada.' });
     
     res.json(missao);
-
   } catch (error) {
-    console.error('Erro ao buscar missão por ID:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
+    console.error('Erro ao buscar missão:', error);
+    res.status(500).json({ error: 'Erro interno.' });
   }
 };
 
-
 /**
  * @route   GET /api/missions/:missionId/full
- * @desc    Buscar dados completos de uma missão (tarefas, inscritos, logs, contagens)
- * @access  Privado (requer token)
+ * @desc    Dados completos da missão + Contexto do Usuário (Inscrição, Progresso)
+ * @access  Privado
  */
 const getMissionFullById = async (req, res) => {
   try {
     const missionId = parseInt(req.params.missionId, 10);
-    if (isNaN(missionId)) {
-      return res.status(400).json({ error: 'ID da missão inválido.' });
-    }
+    const userId = req.user?.id; 
 
-    const missao = await prisma.missao.findFirst({
+    if (isNaN(missionId)) return res.status(400).json({ error: 'ID inválido.' });
+
+    // 1. Busca dados da missão e tarefas
+    const missao = await prisma.missao.findUnique({
       where: { id: missionId },
       include: {
-        // Incluir tarefas da missão com categoria e quiz
         tarefas: {
           where: { ativa: true },
           orderBy: { ordem: 'asc' },
           include: {
-            categoria: { select: { id: true, nome: true, icone: true, cor: true } },
-            quiz: { select: { id: true, titulo: true, descricao: true } },
-          },
+            categoria: true,
+            quiz: { select: { id: true, titulo: true } } 
+          }
         },
-        // Incluir inscrições com dados básicos do usuário
-        usuarios: {
-          include: {
-            usuario: { select: { id: true, nome: true, email: true, foto_url: true } },
-          },
-        },
-        // Incluir logs relacionados à missão (últimos primeiro)
-        logs: {
-          orderBy: { data_criacao: 'desc' },
-          select: { id: true, usuario_id: true, pontos: true, tipo: true, descricao: true, data_criacao: true },
-        },
-        // Incluir referência à missão anterior (se houver)
-        missaoAnterior: { select: { id: true, titulo: true } },
-        proximasMissoes: { select: { id: true, titulo: true } },
-        _count: { select: { usuarios: true, tarefas: true } },
-      },
+        _count: { select: { usuarios: true, tarefas: true } }
+      }
     });
 
-    if (!missao) {
-      return res.status(404).json({ error: 'Missão não encontrada.' });
+    if (!missao) return res.status(404).json({ error: 'Missão não encontrada.' });
+
+    // 2. Busca contexto do usuário (Verificação rigorosa)
+    const inscricao = await prisma.usuarioMissao.findUnique({
+      where: {
+        usuario_id_missao_id: {
+          usuario_id: userId,
+          missao_id: missionId
+        }
+      }
+    });
+
+    let progressoUsuario = [];
+    if (inscricao) {
+      // Se inscrito, busca o status de cada tarefa
+      progressoUsuario = await prisma.usuarioTarefa.findMany({
+        where: {
+          usuario_id: userId,
+          tarefa_id: { in: missao.tarefas.map(t => t.id) }
+        },
+        select: {
+          tarefa_id: true,
+          concluida: true,
+          pontos_obtidos: true,
+          validado_por: true
+        }
+      });
     }
 
-    res.json(missao);
+    // 3. Calcula Ranking (Top 5)
+    const topRankingRaw = await prisma.usuarioTarefa.groupBy({
+      by: ['usuario_id'],
+      where: {
+        tarefa: { missao_id: missionId },
+        concluida: true
+      },
+      _sum: { pontos_obtidos: true },
+      orderBy: { _sum: { pontos_obtidos: 'desc' } },
+      take: 5
+    });
+
+    const rankingIds = topRankingRaw.map(r => r.usuario_id);
+    const usersInfo = await prisma.usuario.findMany({
+      where: { id: { in: rankingIds } },
+      select: { id: true, nome: true, foto_url: true }
+    });
+
+    const ranking = topRankingRaw.map(r => {
+      const u = usersInfo.find(user => user.id === r.usuario_id);
+      return {
+        id: r.usuario_id,
+        name: u ? u.nome : 'Usuário',
+        avatar: u ? u.foto_url : null,
+        points: r._sum.pontos_obtidos || 0,
+        isCurrentUser: r.usuario_id === userId
+      };
+    });
+
+    const myPoints = progressoUsuario.reduce((acc, curr) => acc + (curr.pontos_obtidos || 0), 0);
+    
+    // 4. Monta resposta estruturada
+    const response = {
+      ...missao,
+      preco: missao.preco ? Number(missao.preco) : 0,
+      isJoined: !!inscricao, // Boolean seguro
+      participationStatus: inscricao ? inscricao.status_participacao : null,
+      userProgress: {
+        totalPoints: myPoints,
+        completedTasksCount: progressoUsuario.filter(p => p.concluida).length,
+        tasksStatus: progressoUsuario.reduce((acc, curr) => {
+          acc[curr.tarefa_id] = { concluida: curr.concluida, validado: !!curr.validado_por };
+          return acc;
+        }, {})
+      },
+      ranking
+    };
+
+    res.json(response);
+
   } catch (error) {
-    console.error('Erro ao buscar missão completa por ID:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
+    console.error('Erro ao buscar dados completos:', error);
+    res.status(500).json({ error: 'Erro interno.' });
   }
 };
-
 
 /**
  * @route   POST /api/missions/:missionId/join
- * @desc    Inscrever o usuário logado em uma missão
- * @access  Privado
+ * @desc    Inscrever usuário na missão
  */
 const joinMission = async (req, res) => {
   const missionId = parseInt(req.params.missionId, 10);
-  if (isNaN(missionId)) {
-    return res.status(400).json({ error: 'ID da missão inválido.' });
-  }
-  
-  const userId = req.user.id; // Vem do authMiddleware
-  
+  const userId = req.user.id;
+
+  if (isNaN(missionId)) return res.status(400).json({ error: 'ID inválido.' });
+
   try {
-    // Transação para garantir atomicidade (tudo ou nada)
-    const newSubscription = await prisma.$transaction(async (tx) => {
-      
-      // 1. Verificar a missão
-      const mission = await tx.missao.findUnique({
-        where: { id: missionId },
-        select: { preco: true, ativa: true }
+    const result = await prisma.$transaction(async (tx) => {
+      const mission = await tx.missao.findUnique({ where: { id: missionId } });
+      if (!mission || !mission.ativa) throw new Error('Missão indisponível.');
+
+      const exists = await tx.usuarioMissao.findUnique({
+        where: { usuario_id_missao_id: { usuario_id: userId, missao_id: missionId } }
       });
+      if (exists) throw new Error('Já inscrito.');
 
-      if (!mission) {
-        throw new Error('Missão não encontrada.');
-      }
-      if (!mission.ativa) {
-        throw new Error('Esta missão não está ativa.');
-      }
-
-      // 2. Verificar se o usuário já está inscrito
-      const existingSub = await tx.usuarioMissao.findUnique({
-        where: {
-          usuario_id_missao_id: {
-            usuario_id: userId,
-            missao_id: missionId
-          }
-        },
-        select: { id: true }
-      });
-
-      if (existingSub) {
-        throw new Error('Você já está inscrito nesta missão.');
-      }
-
-      // 3. Preparar dados
-      const missionPrice = mission.preco || 0.00;
-      // O enum StatusPagamento no schema Prisma não tem 'nao_aplicavel'.
-      // Para missões gratuitas, marcar como 'pago' (valor válido do enum).
-      const paymentStatus = (Number(missionPrice) > 0) ? 'pendente' : 'pago';
-      const participationStatus = 'inscrito';
-
-      // 4. Inserir inscrição
-      const subscription = await tx.usuarioMissao.create({
+      return await tx.usuarioMissao.create({
         data: {
           usuario_id: userId,
           missao_id: missionId,
-          valor_pago: missionPrice,
-          status_pagamento: paymentStatus,
-          status_participacao: participationStatus,
+          valor_pago: mission.preco || 0,
+          status_pagamento: Number(mission.preco) > 0 ? 'pendente' : 'pago',
+          status_participacao: 'inscrito'
         }
       });
-
-      return subscription;
     });
 
-    res.status(201).json({
-      message: 'Inscrição na missão realizada com sucesso!',
-      subscription: newSubscription,
-    });
+    res.json({ message: 'Inscrição realizada!', subscription: result });
 
   } catch (error) {
-    // Captura o erro de chave única (usuário já inscrito)
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-      return res.status(409).json({ error: 'Você já está inscrito nesta missão.' });
-    }
-
-    // Captura erros lançados manualmente
-    if (error.message.includes('Missão não encontrada') || error.message.includes('Esta missão não está ativa')) {
-      return res.status(404).json({ error: error.message });
-    }
-    if (error.message.includes('Você já está inscrito')) {
-      return res.status(409).json({ error: error.message });
-    }
-
-    console.error('Erro ao inscrever na missão:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
+    const status = error.message === 'Já inscrito.' ? 409 : 400;
+    res.status(status).json({ error: error.message || 'Erro ao inscrever.' });
   }
 };
 
+/**
+ * @route   DELETE /api/missions/:missionId/join
+ * @desc    Cancelar inscrição (Sair da missão)
+ */
+const leaveMission = async (req, res) => {
+  const missionId = parseInt(req.params.missionId, 10);
+  const userId = req.user.id;
+
+  if (isNaN(missionId)) return res.status(400).json({ error: 'ID inválido.' });
+
+  try {
+    // Verifica se a inscrição existe
+    const exists = await prisma.usuarioMissao.findUnique({
+        where: { usuario_id_missao_id: { usuario_id: userId, missao_id: missionId } }
+    });
+
+    if (!exists) {
+        return res.status(404).json({ error: 'Você não está inscrito nesta missão.' });
+    }
+
+    // Remove a inscrição
+    await prisma.usuarioMissao.delete({
+        where: { usuario_id_missao_id: { usuario_id: userId, missao_id: missionId } }
+    });
+
+    // Opcional: Se quiser limpar o progresso das tarefas ao sair, descomente abaixo
+    // await prisma.usuarioTarefa.deleteMany({
+    //    where: { usuario_id: userId, tarefa: { missao_id: missionId } }
+    // });
+
+    res.json({ message: 'Inscrição cancelada com sucesso.' });
+
+  } catch (error) {
+    console.error('Erro ao sair da missão:', error);
+    res.status(500).json({ error: 'Erro ao cancelar inscrição.' });
+  }
+};
+
+// Funções administrativas (mantidas)
+const getMissionParticipants = async (req, res) => {
+    const missionId = parseInt(req.params.missionId, 10);
+    if (isNaN(missionId)) return res.status(400).json({ error: 'ID inválido.' });
+
+    try {
+        const participants = await prisma.usuarioMissao.findMany({
+            where: { missao_id: missionId },
+            include: {
+                usuario: {
+                    select: { id: true, nome: true, email: true, foto_url: true }
+                }
+            },
+            orderBy: { data_compra: 'desc' }
+        });
+        
+        const formatted = participants.map(p => ({
+            id: p.id,
+            userId: p.usuario.id,
+            name: p.usuario.nome,
+            email: p.usuario.email,
+            avatar: p.usuario.foto_url,
+            status: p.status_participacao,
+            paymentStatus: p.status_pagamento,
+            date: p.data_compra
+        }));
+
+        res.json(formatted);
+    } catch (error) {
+        console.error('Erro ao buscar participantes:', error);
+        res.status(500).json({ error: 'Erro ao buscar participantes.' });
+    }
+};
+
+const addParticipantToMission = async (req, res) => {
+    const missionId = parseInt(req.params.missionId, 10);
+    const { userId } = req.body;
+
+    if (isNaN(missionId) || !userId) return res.status(400).json({ error: 'Dados incompletos.' });
+
+    try {
+        const newSub = await prisma.usuarioMissao.create({
+            data: {
+                usuario_id: parseInt(userId),
+                missao_id: missionId,
+                status_participacao: 'confirmado',
+                status_pagamento: 'pago',
+                valor_pago: 0
+            }
+        });
+        res.json(newSub);
+    } catch (error) {
+        if (error.code === 'P2002') return res.status(409).json({ error: 'Usuário já inscrito.' });
+        console.error('Erro ao adicionar participante:', error);
+        res.status(500).json({ error: 'Erro ao adicionar participante.' });
+    }
+};
+
+const removeParticipantFromMission = async (req, res) => {
+    const missionId = parseInt(req.params.missionId, 10);
+    const userId = parseInt(req.params.userId, 10);
+
+    if (isNaN(missionId) || isNaN(userId)) return res.status(400).json({ error: 'IDs inválidos.' });
+
+    try {
+        await prisma.usuarioMissao.delete({
+            where: {
+                usuario_id_missao_id: {
+                    usuario_id: userId,
+                    missao_id: missionId
+                }
+            }
+        });
+        res.json({ message: 'Participante removido com sucesso.' });
+    } catch (error) {
+        console.error('Erro ao remover participante:', error);
+        res.status(500).json({ error: 'Erro ao remover participante.' });
+    }
+};
 
 module.exports = {
   getAllActiveMissions,
   getMissionById,
   getMissionFullById,
   joinMission,
+  leaveMission, // Nova função exportada
+  getMissionParticipants,
+  addParticipantToMission,
+  removeParticipantFromMission
 };
-

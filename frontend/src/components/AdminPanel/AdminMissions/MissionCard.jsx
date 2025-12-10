@@ -1,83 +1,115 @@
-// src/components/AdminPanel/AdminMissions/MissionCard.jsx
-
 import React from 'react';
-import { Edit, Trash2, Calendar, MapPin, Briefcase, CheckSquare } from 'lucide-react';
+import { Edit, Trash2, Calendar, MapPin, Trophy, Users } from 'lucide-react';
 
-const MissionCard = ({ mission, onEdit, onDelete }) => {
-    // Debug: verificar se descricao está chegando
-    console.log('MissionCard - mission object:', mission);
-    console.log('MissionCard - vagas_disponiveis:', mission.vagas_disponiveis, 'tipo:', typeof mission.vagas_disponiveis);
-    
-    // Função para inverter a data (de YYYY-MM-DD para DD-MM-YYYY)
-    const formatDateReverse = (dateString) => {
-        if (!dateString) return 'N/A';
-        const [year, month, day] = dateString.split('-');
-        return `${day}-${month}-${year}`;
-    };
-    
+const MissionCard = ({ mission, onEdit, onDelete, onManageParticipants }) => {
+    // CORREÇÃO: Verifica todas as possíveis origens da imagem
+    // imageUrl: vem do estado local/edição
+    // foto_url: vem do banco de dados (backend)
+    // image: vem da normalização do frontend
+    const displayImage = mission.imageUrl || mission.foto_url || mission.image;
+
+    // Garante números válidos
+    const price = mission.preco ? Number(mission.preco) : 0;
+    const vacancies = mission.vagas_disponiveis;
+
     return (
-    <div className="bg-white shadow-xl p-6 rounded-xl border-l-8 border-[#394C97] flex justify-between items-start transition duration-300 hover:shadow-2xl">
-        <div className="flex-1">
-            <div className="flex items-center gap-3 mb-2">
-                <h2 className="text-2xl font-bold text-gray-900">{mission.title}</h2>
-                {mission.quiz && <span className="text-xs bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full font-semibold">C/ QUIZ</span>}
-            </div>
-
-            <div className="flex items-center text-sm text-gray-600 gap-4 mt-1">
-                <p className="flex items-center gap-1"><MapPin size={16} /> {mission.city || 'Global'}</p>
-                <p className="flex items-center gap-1"><Calendar size={16} /> Expira: {formatDateReverse(mission.expirationDate)}</p>
-                <p className="font-semibold text-green-600">{mission.points} Pontos</p>
-                <p className="flex items-center gap-1">{(mission.preco !== undefined && mission.preco !== null) ? `R$ ${Number(mission.preco).toFixed(2)}` : 'R$ —'}</p>
-                <p className="flex items-center gap-1">
-                    {(mission.vagas_disponiveis !== undefined && mission.vagas_disponiveis !== null) 
-                        ? `${mission.vagas_disponiveis} vagas` 
-                        : 'Vagas: —'}
-                </p>
-            </div>
-
-            {mission.descricao && mission.descricao.trim() && (
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                    <p className="text-sm text-gray-700">
-                        <span className="font-semibold text-gray-800">Descrição: </span>
-                        {mission.descricao}
-                    </p>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all group overflow-hidden flex flex-col h-full relative">
+            
+            {/* Área da Imagem de Capa */}
+            <div className="h-44 w-full relative bg-gray-100 overflow-hidden">
+                {displayImage ? (
+                    <img 
+                        src={displayImage} 
+                        alt={mission.title} 
+                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        onError={(e) => {
+                            e.target.style.display = 'none'; // Oculta se quebrar
+                            e.target.nextSibling.style.display = 'flex'; // Mostra fallback (se implementado via CSS irmão, mas aqui usamos condicional JS acima)
+                        }}
+                    />
+                ) : (
+                    <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-200">
+                        <MapPin size={48} />
+                    </div>
+                )}
+                
+                {/* Badges Administrativos (Preço e Vagas) */}
+                <div className="absolute top-3 right-3 flex flex-col items-end gap-1">
+                    {price > 0 && (
+                        <span className="bg-white/90 backdrop-blur text-green-700 text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm border border-green-100">
+                            R$ {price.toFixed(2)}
+                        </span>
+                    )}
+                    {(vacancies !== null && vacancies !== undefined) && (
+                        <span className="bg-white/90 backdrop-blur text-blue-700 text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm border border-blue-100">
+                            {vacancies} Vagas
+                        </span>
+                    )}
                 </div>
-            )}
+            </div>
 
-            {/* Etapas (exibe as duas primeiras) */}
-            {mission.steps && mission.steps.length > 0 && (
-                <ul className="mt-4 space-y-1 text-sm text-gray-700 p-3 bg-gray-50 rounded">
-                    <p className="font-semibold mb-1 flex items-center gap-2"><Briefcase size={16} /> Etapas ({mission.steps.length})</p>
-                    {mission.steps.slice(0, 2).map((step, i) => (
-                        <li key={i} className="flex items-center gap-2">
-                            <span className="text-xs text-[#394C97]">✓</span> {step.description} ({step.points} pts)
-                        </li>
-                    ))}
-                    {mission.steps.length > 2 && <li className="text-xs text-gray-500">e mais {mission.steps.length - 2} etapas...</li>}
-                </ul>
-            )}
+            {/* Conteúdo */}
+            <div className="p-5 flex-1 flex flex-col">
+                <div className="mb-2">
+                    <span className="text-[10px] font-bold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-md uppercase tracking-wide">
+                        {mission.city || mission.destino || 'Geral'}
+                    </span>
+                </div>
+
+                <div className="flex justify-between items-start mb-2">
+                    <h3 className="text-lg font-bold text-gray-800 line-clamp-1 group-hover:text-[#394C97] transition-colors" title={mission.title}>
+                        {mission.title}
+                    </h3>
+                </div>
+
+                <div className="flex items-center text-xs text-gray-500 mb-4 gap-3">
+                    <span className="flex items-center gap-1">
+                        <Trophy size={14} className="text-[#FE5900]" /> 
+                        <span className="font-semibold">{mission.points || mission.pontos || 0} XP</span>
+                    </span>
+                </div>
+
+                <p className="text-xs text-gray-500 line-clamp-2 mb-4 flex-1">
+                    {mission.descricao || "Sem descrição definida."}
+                </p>
+
+                {/* Rodapé com Ações Administrativas */}
+                <div className="pt-4 border-t border-gray-100 flex items-center justify-between mt-auto">
+                    <span className="flex items-center gap-1 text-[10px] text-gray-400 font-medium">
+                        <Calendar size={12} />
+                        {mission.expirationDate 
+                            ? new Date(mission.expirationDate).toLocaleDateString() 
+                            : (mission.data_fim ? new Date(mission.data_fim).toLocaleDateString() : 'Sem data')}
+                    </span>
+
+                    <div className="flex items-center gap-2">
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onManageParticipants(); }}
+                            className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors border border-transparent hover:border-blue-100"
+                            title="Gerenciar Participantes"
+                        >
+                            <Users size={16} />
+                        </button>
+
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+                            className="p-2 text-gray-400 hover:text-[#394C97] hover:bg-gray-50 rounded-lg transition-colors border border-transparent hover:border-gray-200"
+                            title="Editar Missão"
+                        >
+                            <Edit size={16} />
+                        </button>
+                        
+                        <button 
+                            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                            className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors border border-transparent hover:border-red-100"
+                            title="Excluir Missão"
+                        >
+                            <Trash2 size={16} />
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
-        
-        <div className="flex gap-2 min-w-[150px] justify-end">
-            <button
-                onClick={() => onEdit(mission, 'details')}
-                className="text-blue-600 hover:text-blue-800 p-2 rounded-full transition hover:bg-blue-50"
-                title="Editar missão"
-            >
-                <Edit size={20} />
-            </button>
-            <button 
-                onClick={() => onEdit(mission, 'tasks')}
-                className="text-orange-600 hover:text-orange-800 p-2 rounded-full transition hover:bg-orange-50" 
-                title="Gerenciar tarefas"
-            >
-                <CheckSquare size={20} />
-            </button>
-            <button onClick={onDelete} className="text-red-500 hover:text-red-700 p-2 rounded-full transition hover:bg-red-50" title="Deletar missão">
-                <Trash2 size={20} />
-            </button>
-        </div>
-    </div>
     );
 };
 

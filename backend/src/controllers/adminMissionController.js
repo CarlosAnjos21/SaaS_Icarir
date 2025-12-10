@@ -17,7 +17,8 @@ const createMission = async (req, res) => {
     preco,
     vagas_disponiveis,
     ativa,
-    missao_anterior_id
+    missao_anterior_id,
+    foto_url // <--- ADICIONADO AQUI
   } = req.body;
 
   if (!titulo || !data_inicio || !data_fim) {
@@ -29,7 +30,7 @@ const createMission = async (req, res) => {
       data: {
         titulo,
         descricao: descricao || null,
-        // foto_url: foto_url || null,
+        foto_url: foto_url || null, // <--- DESCOMENTADO E ATIVADO
         destino: destino || null,
         data_inicio: new Date(data_inicio),
         data_fim: new Date(data_fim),
@@ -148,7 +149,8 @@ const updateMission = async (req, res) => {
     preco,
     vagas_disponiveis,
     ativa,
-    missao_anterior_id
+    missao_anterior_id,
+    foto_url // <--- ADICIONADO AQUI
   } = req.body;
 
   console.log('updateMission - payload recebido:', req.body);
@@ -159,6 +161,7 @@ const updateMission = async (req, res) => {
   if (titulo !== undefined) dataToUpdate.titulo = titulo;
   if (descricao !== undefined) dataToUpdate.descricao = descricao;
   if (destino !== undefined) dataToUpdate.destino = destino;
+  if (foto_url !== undefined) dataToUpdate.foto_url = foto_url; // <--- ADICIONADO AQUI
 
   if (data_inicio !== undefined) {
     const di = new Date(data_inicio);
