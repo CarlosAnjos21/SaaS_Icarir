@@ -44,6 +44,18 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
             setHasQuiz(false);
         }
     }, [task.id, JSON.stringify(task?.quiz || null)]); // Sincroniza quando a tarefa muda (deep watch)
+
+    // Preservar/editar descrição do quiz
+    const [quizDescricao, setQuizDescricao] = useState(() => task?.quiz?.descricao || '');
+
+    // Sincroniza quizDescricao quando a tarefa muda
+    useEffect(() => {
+        try {
+            setQuizDescricao(task?.quiz?.descricao || '');
+        } catch (err) {
+            setQuizDescricao('');
+        }
+    }, [task.id, JSON.stringify(task?.quiz || null)]);
     
     // Trata mudanças nos campos simples (título, pontos, etc.)
     const handleChange = (e) => {
@@ -102,7 +114,8 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
             setTask(prev => ({
                 ...prev,
                 quiz: { 
-                    titulo: `Quiz da Tarefa: ${prev.titulo || 'Novo'}`,
+                    titulo: prev.quiz?.titulo || `Quiz da Tarefa: ${prev.titulo || 'Novo'}`,
+                    descricao: quizDescricao || prev.quiz?.descricao || '',
                     perguntas: quizPerguntas
                 }
             }));
@@ -113,7 +126,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
             }));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [quizPerguntas, hasQuiz, setTask, task.titulo]); // Dependências controladas
+    }, [quizPerguntas, hasQuiz, setTask, task.titulo, quizDescricao]); // Dependências controladas
 
 
     return (
@@ -297,6 +310,19 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                                 >
                                     <Plus size={14} /> Adicionar Pergunta
                                 </button>
+                            </div>
+
+                            {/* Descrição do Quiz (opcional) */}
+                            <div>
+                                <label className="text-xs text-gray-600 font-medium mb-1 block">Descrição do Quiz (opcional)</label>
+                                <textarea
+                                    rows={2}
+                                    className="w-full border p-3 rounded-lg caret-black text-gray-900"
+                                    placeholder="Breve contexto do quiz..."
+                                    value={quizDescricao}
+                                    onChange={(e) => setQuizDescricao(e.target.value)}
+                                    disabled={isLoading}
+                                />
                             </div>
 
                             {quizPerguntas.map((q, qIndex) => (

@@ -14,7 +14,7 @@ import {
     Trophy,
     RefreshCw
 } from "lucide-react";
-import { fetchTasks, fetchTaskById, createTask, updateTask, deleteTask, fetchCategories, fetchMissions } from '../../../api/apiFunctions'; 
+import { fetchTasks, fetchTaskById, fetchQuizzes, createTask, updateTask, deleteTask, fetchCategories, fetchMissions } from '../../../api/apiFunctions'; 
 import TaskQuizModal from './TaskQuizModal'; 
 
 const INITIAL_TASK_STATE = {
@@ -95,8 +95,27 @@ const TasksQuizzesContent = () => {
                 console.log('handleModalOpen - requested taskToEdit:', taskToEdit);
                 const fresh = await fetchTaskById(taskToEdit.id);
                 console.log('handleModalOpen - fetched fresh task:', fresh);
-                const taskCopy = JSON.parse(JSON.stringify(fresh || taskToEdit));
-                console.log('handleModalOpen - taskCopy.quiz:', taskCopy.quiz);
+                let taskCopy = JSON.parse(JSON.stringify(fresh || taskToEdit));
+                console.log('handleModalOpen - taskCopy.quiz (before fallback):', taskCopy.quiz);
+
+                // Se o backend não retornou o quiz aninhado, tentar buscar pelos quizzes e anexar aqui (fallback)
+                if (!taskCopy.quiz) {
+                    try {
+                        const allQuizzes = await fetchQuizzes();
+                        const found = Array.isArray(allQuizzes) ? allQuizzes.find(q => Number(q.tarefa_id) === Number(taskCopy.id) || (q.tarefa && Number(q.tarefa.id) === Number(taskCopy.id))) : null;
+                        if (found) {
+                            console.log('handleModalOpen - fallback found quiz for task:', found.id);
+                            taskCopy.quiz = found;
+                            taskCopy.quizId = found.id;
+                        } else {
+                            console.log('handleModalOpen - fallback did not find quiz for this task');
+                        }
+                    } catch (err) {
+                        console.warn('handleModalOpen - fallback fetchQuizzes failed:', err?.message || err);
+                    }
+                }
+
+                console.log('handleModalOpen - taskCopy.quiz (after fallback):', taskCopy.quiz);
                 setCurrentTask(taskCopy);
             } catch (err) {
                 console.warn('handleModalOpen - falha ao buscar tarefa completa, usando objeto local:', err?.message || err);
