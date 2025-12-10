@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion"; // Adicionado para animações iguais ao Carreira
+import { motion } from "framer-motion"; 
 import { Loader, AlertTriangle, Target, CheckCircle, List, Flag } from "lucide-react"; 
 import MissionCard from "../components/missions/MissionCard";
 import MissionDetails from "../components/missions/MissionDetails";
 
 // Importação da API
-import { fetchMissions } from '../../src/api/apiFunctions'; 
+import { fetchMissions } from '../api/apiFunctions'; 
 
 // ===================================================================
 // FUNÇÃO DE NORMALIZAÇÃO
@@ -18,6 +18,9 @@ function normalizeMission(m) {
     const deadline = m.data_fim ? new Date(m.data_fim).toLocaleDateString('pt-BR') : (m.deadline || '');
     const isActive = (m.ativa === undefined || m.ativa === null) ? true : Boolean(m.ativa);
     
+    // Mapeamento da Imagem (NOVO)
+    const image = m.foto_url || m.imageUrl || null;
+
     let tasks = [];
     const rawTasks = m.tarefas || m.steps || [];
 
@@ -50,8 +53,10 @@ function normalizeMission(m) {
         progress,
         status,
         tasks,
-        category: m.destino || 'Geral',
-        ativa: isActive
+        category: m.destino || 'Geral', // Usando destino como categoria/local
+        ativa: isActive,
+        image, // Passando a imagem para o objeto final
+        isJoined: m.isJoined // Importante para saber se o usuário já participa
     };
 }
 
@@ -72,7 +77,12 @@ export default function Missions() {
         .filter(m => m.ativa === true && m.title); 
       setMissions(normalized);
     } catch (err) {
-      setError(`Falha ao carregar a lista de missões: ${err.message || 'Erro de conexão'}`);
+      // Se for erro 401/403, sugere relogin
+      const msg = err.response?.status === 403 || err.response?.status === 401 
+        ? "Sessão expirada. Por favor, faça login novamente."
+        : err.message || 'Erro de conexão';
+        
+      setError(msg);
       console.error("Erro ao carregar missões:", err);
     } finally {
       setLoading(false);
@@ -99,7 +109,6 @@ export default function Missions() {
     console.log(`Tentativa de concluir a tarefa ID: ${taskId}.`);
   };
 
-  // Renderização de Erro e Loading integrados ao layout
   const renderContent = () => {
     if (loading) {
       return (
@@ -114,7 +123,7 @@ export default function Missions() {
       return (
         <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-8 rounded-2xl flex flex-col items-center gap-3 text-center">
           <AlertTriangle size={32} />
-          <span className="font-semibold text-lg">Ocorreu um erro</span>
+          <span className="font-semibold text-lg">Não foi possível carregar</span>
           <span className="text-sm opacity-80">{error}</span>
           <button onClick={loadMissions} className="mt-4 px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition">
             Tentar Novamente
@@ -141,7 +150,7 @@ export default function Missions() {
 
     return (
       <>
-        {/* ABAS DE NAVEGAÇÃO ESTILIZADAS */}
+        {/* ABAS DE NAVEGAÇÃO */}
         <div className="flex justify-center mb-8">
             <div className="bg-white p-1.5 rounded-xl shadow-sm border border-gray-100 inline-flex">
                 <button 
@@ -203,7 +212,7 @@ export default function Missions() {
   return (
     <div className="min-h-screen bg-gray-50 font-sans text-gray-800">
       
-      {/* --- BANNER SUPERIOR (Igual ao Carreira) --- */}
+      {/* --- BANNER SUPERIOR --- */}
       <div className="h-64 w-full bg-[#394C97] relative">
         <div className="absolute top-4 right-4 text-white/80 text-sm font-medium">
           Central de Operações

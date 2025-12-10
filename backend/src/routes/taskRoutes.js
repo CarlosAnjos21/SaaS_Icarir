@@ -1,16 +1,20 @@
 const express = require('express');
+// Importante: { mergeParams: true } permite acessar :missionId da rota pai
+const router = express.Router({ mergeParams: true });
+const prisma = require('../config/prismaClient');
+const { authenticate } = require('../middlewares/authMiddleware');
+
+// Imports adicionados conforme solicitado
 const taskController = require('../controllers/taskController');
-const checkAdmin = require('../middlewares/adminMiddleware');
-
-// Multer para upload de arquivos
+// Verifique se este middleware existe ou ajuste para o authMiddleware se o checkAdmin estiver lá
+const checkAdmin = require('../middlewares/adminMiddleware'); 
 const multer = require('multer');
-// Middleware de autenticação
-const authMiddleware = require('../middlewares/authMiddleware');
 
-// Configuração do Multer para armazenar arquivos de evidências
+// Configuração do Multer para uploads locais (se necessário futuramente)
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, 'uploads/evidences'); // já criou essa pasta
+    // Certifique-se que esta pasta existe ou use '/tmp'
+    cb(null, 'uploads/evidences'); 
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
@@ -20,10 +24,7 @@ const storage = multer.diskStorage({
 });
 const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } }); // 10MB
 
-
-// IMPORTANTE: { mergeParams: true }
-// Isso permite que este router acesse os parâmetros da rota pai (o :missionId)
-const router = express.Router({ mergeParams: true });
+// --- ROTAS PADRÃO DE TAREFAS (CRUD) ---
 
 /**
  * @route   GET /api/missions/:missionId/tasks
@@ -35,7 +36,6 @@ router.get('/', taskController.getTasksByMissionId);
  * @route   POST /api/missions/:missionId/tasks
  * @desc    (Admin) Criar uma nova tarefa para uma missão
  */
-// Usamos o checkAdmin aqui!
 router.post('/', checkAdmin, taskController.createTaskForMission);
 
 /**
@@ -44,11 +44,67 @@ router.post('/', checkAdmin, taskController.createTaskForMission);
  */
 router.get('/:taskId', taskController.getTaskById);
 
+
+// --- ROTA DE SUBMISSÃO (LÓGICA CUSTOMIZADA PARA SUPABASE) ---
+
 /**
  * @route   POST /api/missions/:missionId/tasks/:taskId/submit
  * @desc    (Usuário) Submeter uma tarefa para validação
  */
-router.post('/:taskId/submit', taskController.submitTask);
+router.post('/:taskId/submit', authenticate, async (req, res) => {
+    const taskId = parseInt(req.params.taskId);
+    const userId = req.user.id;
+    // Recebe fileUrl (do Supabase) ou evidence (link social)
+    const { type, fileUrl, evidence } = req.body;
+
+    try {
+        // Busca a tarefa para saber os pontos
+        const task = await prisma.tarefa.findUnique({ where: { id: taskId } });
+        if (!task) return res.status(404).json({ error: 'Tarefa não encontrada' });
+
+        // Atualiza ou Cria o registro de conclusão
+        // A lógica de "upsert" garante que não duplique se o usuário clicar duas vezes
+        const submission = await prisma.usuarioTarefa.upsert({
+            where: {
+                usuario_id_tarefa_id: {
+                    usuario_id: userId,
+                    tarefa_id: taskId
+                }
+            },
+            update: {
+                concluida: true,
+                pontos_obtidos: task.pontos,
+                evidencias: { type, url: fileUrl || evidence, date: new Date() },
+                data_conclusao: new Date()
+            },
+            create: {
+                usuario_id: userId,
+                tarefa_id: taskId,
+                concluida: true,
+                pontos_obtidos: task.pontos,
+                evidencias: { type, url: fileUrl || evidence, date: new Date() },
+                data_conclusao: new Date()
+            }
+        });
+
+        // Credita pontos no perfil do usuário (Otimista/Automático)
+        await prisma.usuario.update({
+            where: { id: userId },
+            data: { pontos: { increment: task.pontos } }
+        });
+
+        // Simulação de envio de email para tarefas documentais
+        if (type === 'document') {
+            console.log(`[SIMULAÇÃO EMAIL] Enviando documento ${fileUrl} para samuell.alves@aluno.uece.br`);
+        }
+
+        res.json({ success: true, points: task.pontos });
+
+    } catch (error) {
+        console.error("Erro na submissão:", error);
+        res.status(500).json({ error: 'Erro ao processar tarefa' });
+    }
+});
 
 module.exports = router;
 

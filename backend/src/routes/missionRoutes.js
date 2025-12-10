@@ -12,6 +12,7 @@ const taskRoutes = require("./taskRoutes");
 const PARTICIPANT_ROLES = ['admin', 'participante']; 
 
 
+
 // --- ROTAS DE SUB-MÓDULO (Aninhamento) ---
 
 // 2. Aninhar as rotas de tarefas, aplicando autenticação e permissão de acesso
@@ -46,6 +47,21 @@ router.get("/:missionId", authenticate, checkRole(PARTICIPANT_ROLES), missionCon
  * @access  Privado (Participante e Admin)
  */
 router.get("/:missionId/full", authenticate, checkRole(PARTICIPANT_ROLES), missionController.getMissionFullById);
+
+// --- ROTAS DE AÇÃO (INSCRIÇÃO/DESINSCRIÇÃO) ---
+
+/**
+ * @route   POST /api/missions/:missionId/join
+ * @desc    Inscrever o usuário logado em uma missão
+ */
+router.post("/:missionId/join", authenticate, checkRole(['participante']), missionController.joinMission); 
+
+/**
+ * @route   DELETE /api/missions/:missionId/join
+ * @desc    Sair (desvincular) da missão
+ * @note    Nova rota adicionada para suportar o botão "Sair"
+ */
+router.delete("/:missionId/join", authenticate, checkRole(['participante']), missionController.leaveMission);
 
 
 // --- ROTAS DE AÇÃO ---
