@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import AOS from "aos";
 import "aos/dist/aos.css";
 
-import Navbar from "../components/Navbar"; 
+import Navbar from "../components/Navbar";
 import HomeCard from "../components/HomeCard";
 import FeedbackBar from "../components/Feedbacks/FeedbackBar";
 
@@ -157,19 +157,20 @@ export default function Home() {
 
   useEffect(() => {
     // Inicializa animações AOS
-    AOS.init({ duration: 800, once: false });
+    // O 'once: false' permite que a animação ocorra toda vez que o elemento entra na viewport
+    AOS.init({ duration: 800, once: false }); 
     AOS.refresh();
 
     // Injeção do Script do Elfsight (Singleton Pattern)
     const scriptId = "elfsight-platform-script";
-    
+
     // Verifica se o script já existe para evitar duplicação
     if (!document.getElementById(scriptId)) {
-        const script = document.createElement("script");
-        script.src = "https://elfsightcdn.com/platform.js";
-        script.id = scriptId;
-        script.defer = true; // Defer ajuda a garantir que o DOM esteja pronto
-        document.body.appendChild(script);
+      const script = document.createElement("script");
+      script.src = "https://elfsightcdn.com/platform.js";
+      script.id = scriptId;
+      script.defer = true; // Defer ajuda a garantir que o DOM esteja pronto
+      document.body.appendChild(script);
     }
   }, []);
 
@@ -186,25 +187,30 @@ export default function Home() {
       imagem: destinations.find(d => d.city === city)?.image,
       galeria: GALERIA_PADRAO
     };
+
+    const id = destinations.find(d => d.city === city)?.id;
+    if (!id) return;
+
     dadosParaEnviar.cidade = city;
-    navigate('/missao-detalhes', { state: { missionData: dadosParaEnviar } });
+
+    navigate(`/missao/${id}`, { state: { missionData: dadosParaEnviar } });
   };
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800 font-sans">
-      
+
       <Navbar />
 
       {/* --- SEÇÃO INSTAGRAM FEED (Widget Elfsight) --- */}
       <section className="relative bg-gradient-to-b from-[#002B5B] to-gray-50 dark:from-[#001a40] dark:to-[#3a3a3a] pt-20 pb-8 overflow-hidden min-h-[200px]">
         
         <div className="max-w-[1000px] mx-auto px-4 z-10 relative">
-            {/* Widget do Elfsight sem Lazy Load */}
-            <div className="elfsight-app-86adf4a7-150a-4b09-9aea-cb904cc41a4a">
-                <p className="text-center text-white/50 text-sm py-10">
-                    Carregando Instagram... (Se não aparecer, verifique o bloqueio de scripts externos)
-                </p>
-            </div>
+          {/* Widget do Elfsight sem Lazy Load */}
+          <div className="elfsight-app-86adf4a7-150a-4b09-9aea-cb904cc41a4a">
+            <p className="text-center text-white/50 text-sm py-10">
+              Carregando Instagram... (Se não aparecer, verifique o bloqueio de scripts externos)
+            </p>
+          </div>
         </div>
 
         {/* Fundo Decorativo */}
@@ -224,14 +230,16 @@ export default function Home() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 relative z-10">
-          {destinations.map((dest) => (
+          {destinations.map((dest) => ( // Removido o 'index' da desestruturação
             <HomeCard
               key={dest.id}
               city={dest.city}
               image={dest.image}
               onStartMission={() => iniciarMissao(dest.city)}
               loading={false}
-              animation="fade-up"
+              // Mantemos a animação para o efeito de "subir"
+              animation="fade-up" 
+              
             />
           ))}
         </div>
