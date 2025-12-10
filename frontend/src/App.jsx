@@ -5,8 +5,8 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 // Components
 import Navbar from "./components/Navbar";
 import Login from "./components/Login";
-import MissaoDetalhes from "./components/MissaoDetalhes"; 
-import ProtectedRoute from "./components/ProtectedRoute"; // 🛑 IMPORTANTE: Importe o Guardião de Rota
+import MissionDetails from "./components/MissionDetails"; 
+import ProtectedRoute from "./components/ProtectedRoute"; 
 
 // Pages
 import Home from "./pages/Home";
@@ -42,21 +42,21 @@ export default function App() {
           <Route element={<ProtectedRoute />}>
             {/* 🗺️ Rotas de Conteúdo/Gamificação Protegidas */}
             <Route path="/missions" element={<Missions />} />
-            <Route path="/missao/:id" element={<MissaoDetalhes />} />
+            <Route path="/missao/:id" element={<MissionDetails />} />
             <Route path="/ranking" element={<Ranking />} />
             <Route path="/carreira" element={<CareerPanel />} />
             <Route path="/sorteio" element={<Sorteio />} />
 
-            {/* 👤 Rotas de Perfil Protegidas */}
-            <Route path="/profile" element={<Profile />} />
+            {/* 👤 Rotas de Perfil Protegidas */}
+            <Route path="/profile" element={<Profile />} />
 
-            {/* 🔑 Rota de Administração Protegida */}
-            <Route path="/admin" element={<Admin />} />
+            {/* 🔑 Rota de Administração Protegida */}
+            <Route path="/admin" element={<Admin />} />
 
-          </Route>
-          
-        </Routes>
-      </div>
-    </Router>
-  );
+          </Route>
+          
+        </Routes>
+      </div>
+    </Router>
+  );
 }
