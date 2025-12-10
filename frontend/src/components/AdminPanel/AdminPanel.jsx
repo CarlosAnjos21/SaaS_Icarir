@@ -18,6 +18,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import DashboardContent from './DashboardContent'; 
 import UsersContent from './UsersContent'; 
 import MissionsContent from './AdminMissions/MissionsContent';
+import TasksQuizzesContent from './AdminMissions/TasksQuizzesContent';
+import QuizzesContent from './QuizzesContent';
 
 export default function AdminPanel() {
     const [activeTab, setActiveTab] = useState("dashboard");
@@ -28,8 +30,8 @@ export default function AdminPanel() {
         { id: "dashboard", label: "Dashboard", icon: BarChart2, content: <DashboardContent /> }, 
         { id: "missions", label: "Missões Ativas", icon: Zap, content: <MissionsContent /> },
         { id: "users", label: "Gestão de Usuários", icon: Users, content: <UsersContent /> },
-        { id: "tasks", label: "Tarefas", icon: Briefcase, content: <div className="p-8"><div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center"><h2 className="text-2xl font-bold text-gray-300">Em Desenvolvimento</h2></div></div> },
-        { id: "quizzes", label: "Quizzes", icon: HelpCircle, content: <div className="p-8"><div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center"><h2 className="text-2xl font-bold text-gray-300">Em Desenvolvimento</h2></div></div> },
+        { id: "tasks", label: "Tarefas", icon: Briefcase, content: <TasksQuizzesContent /> },
+        { id: "quizzes", label: "Quizzes", icon: HelpCircle, content: <QuizzesContent /> },
         { id: "settings", label: "Configurações", icon: Settings, content: <div className="p-8"><div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center"><h2 className="text-2xl font-bold text-gray-300">Em Desenvolvimento</h2></div></div> },
     ];
     
@@ -66,7 +68,7 @@ export default function AdminPanel() {
                                 exit={{ opacity: 0 }}
                                 className="text-2xl font-extrabold text-[#394C97] tracking-tight whitespace-nowrap"
                             >
-                                Icarir<span className="text-[#FE5900]">. </span>ADM
+                                Icarir<span className="text-[#FE5900] dark:text-[#394C97]">. </span>ADM
                             </motion.h1>
                         )}
                     </AnimatePresence>

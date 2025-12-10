@@ -82,8 +82,8 @@ const MissionsContent = () => {
                                 onClick={() => setInternalTab(tab.id)}
                                 className={`relative overflow-hidden p-4 rounded-xl border transition-all duration-300 text-left flex items-start gap-4 group ${
                                     isActive 
-                                    ? "bg-white border-transparent shadow-lg scale-[1.02] ring-1 ring-blue-100" 
-                                    : "bg-white/80 border-transparent hover:bg-white hover:shadow-md text-gray-500 hover:text-gray-800"
+                                    ? "bg-white dark:bg-[#3a3a3a] border-transparent shadow-lg scale-[1.02] ring-1 ring-blue-100 dark:ring-blue-900" 
+                                    : "bg-white/80 dark:bg-[#505050] border-transparent hover:bg-white dark:hover:bg-[#3a3a3a] hover:shadow-md text-gray-700 dark:text-gray-500 hover:text-gray-800 dark:hover:text-gray-200"
                                 }`}
                             >
                                 {/* Indicador de Ativo */}
@@ -94,14 +94,14 @@ const MissionsContent = () => {
                                     />
                                 )}
 
-                                <div className={`p-2.5 rounded-lg transition-colors ${isActive ? 'bg-blue-50 text-[#394C97]' : 'bg-gray-100 group-hover:bg-gray-200'}`}>
+                                <div className={`p-2.5 rounded-lg transition-colors ${isActive ? 'bg-blue-50 text-[#394C97] dark:bg-orange-900/20 dark:text-[#FE5900]' : 'bg-gray-100 dark:bg-gray-800 group-hover:bg-gray-200 dark:group-hover:bg-gray-700'}`}>
                                     <tab.icon size={20} />
                                 </div>
                                 <div>
-                                    <span className={`block font-bold text-sm ${isActive ? 'text-gray-900' : 'text-gray-600 group-hover:text-gray-900'}`}>
+                                    <span className={`block font-bold text-sm ${isActive ? 'text-gray-900 dark:text-white' : 'text-gray-600 dark:text-gray-400 group-hover:text-gray-900 dark:group-hover:text-gray-200'}`}>
                                         {tab.label}
                                     </span>
-                                    <span className={`text-xs mt-0.5 block ${isActive ? 'text-gray-500' : 'text-gray-400'}`}>
+                                    <span className={`text-xs mt-0.5 block ${isActive ? 'text-gray-500 dark:text-gray-400' : 'text-gray-400 dark:text-gray-500'}`}>
                                         {tab.description}
                                     </span>
                                 </div>

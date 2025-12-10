@@ -82,116 +82,140 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                 <div className="space-y-6">
                     {/* DETALHES DA TAREFA */}
                     <div className="grid grid-cols-2 gap-4">
-                        <input
-                            type="text"
-                            name="titulo"
-                            placeholder="Título da Tarefa"
-                            className="w-full border p-3 rounded-lg"
-                            value={task.titulo || ''}
+                        <div>
+                            <label className="text-xs text-gray-600 font-medium mb-1 block">Título da Tarefa *</label>
+                            <input
+                                type="text"
+                                name="titulo"
+                                placeholder="Ex: Completar perfil"
+                                className="w-full border p-3 rounded-lg caret-black text-gray-900"
+                                value={task.titulo || ''}
+                                onChange={handleChange}
+                                disabled={isLoading}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs text-gray-600 font-medium mb-1 block">Categoria *</label>
+                            <select
+                                name="categoria_id"
+                                className="w-full border p-3 rounded-lg appearance-none caret-black text-gray-900"
+                                value={task.categoria_id || ''}
+                                onChange={handleChange}
+                                disabled={isLoading}
+                            >
+                                <option value="">Selecione...</option>
+                                {categories.map(cat => (
+                                    <option key={cat.id} value={cat.id}>{cat.nome}</option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label className="text-xs text-gray-600 font-medium mb-1 block">Descrição</label>
+                        <textarea
+                            name="descricao"
+                            placeholder="Descreva os detalhes da tarefa..."
+                            rows="3"
+                            className="w-full border p-3 rounded-lg caret-black text-gray-900"
+                            value={task.descricao || ''}
                             onChange={handleChange}
                             disabled={isLoading}
                         />
-                        <select
-                            name="categoria_id"
-                            className="w-full border p-3 rounded-lg appearance-none"
-                            value={task.categoria_id || ''}
-                            onChange={handleChange}
-                            disabled={isLoading}
-                        >
-                            <option value="">Selecione a Categoria*</option>
-                            {/* Renderiza as categorias disponíveis */}
-                            {categories.map(cat => (
-                                <option key={cat.id} value={cat.id}>{cat.nome}</option>
-                            ))}
-                        </select>
                     </div>
-
-                    <textarea
-                        name="descricao"
-                        placeholder="Descrição detalhada da Tarefa"
-                        rows="3"
-                        className="w-full border p-3 rounded-lg"
-                        value={task.descricao || ''}
-                        onChange={handleChange}
-                        disabled={isLoading}
-                    />
 
                     <div className="grid grid-cols-3 gap-4">
-                                        <select
-                                            name="tipo"
-                                            className="w-full border p-3 rounded-lg appearance-none"
-                                            value={task.tipo || ''}
-                                            onChange={handleChange}
-                                            disabled={isLoading}
-                                        >
-                                            <option value="">Tipo da Tarefa (opcional)</option>
-                                            <option value="administrativa">Administrativa</option>
-                                            <option value="conhecimento">Conhecimento</option>
-                                            <option value="engajamento">Engajamento</option>
-                                            <option value="social">Social</option>
-                                            <option value="feedback">Feedback</option>
-                                        </select>
-                        <input
-                            type="number"
-                            name="pontos"
-                            placeholder="Pontos (Ex: 100)"
-                            className="w-full border p-3 rounded-lg"
-                            value={task.pontos || 0}
-                            onChange={handleChange}
-                            disabled={isLoading}
-                        />
-                        <input
-                            type="number"
-                            name="ordem"
-                            placeholder="Ordem de Exibição"
-                            className="w-full border p-3 rounded-lg"
-                            value={task.ordem || 0}
-                            onChange={handleChange}
-                            disabled={isLoading}
-                        />
-                        <select
-                            name="dificuldade"
-                            className="w-full border p-3 rounded-lg appearance-none"
-                            value={task.dificuldade || 'facil'}
-                            onChange={handleChange}
-                            disabled={isLoading}
-                        >
-                            <option value="facil">Fácil</option>
-                            <option value="medio">Médio</option>
-                            <option value="dificil">Difícil</option>
-                        </select>
+                        <div>
+                            <label className="text-xs text-gray-600 font-medium mb-1 block">Tipo (opcional)</label>
+                            <select
+                                name="tipo"
+                                className="w-full border p-3 rounded-lg appearance-none caret-black text-gray-900"
+                                value={task.tipo || ''}
+                                onChange={handleChange}
+                                disabled={isLoading}
+                            >
+                                <option value="">Selecione...</option>
+                                <option value="administrativa">Administrativa</option>
+                                <option value="conhecimento">Conhecimento</option>
+                                <option value="engajamento">Engajamento</option>
+                                <option value="social">Social</option>
+                                <option value="feedback">Feedback</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label className="text-xs text-gray-600 font-medium mb-1 block">Pontos (XP)</label>
+                            <input
+                                type="number"
+                                name="pontos"
+                                placeholder="Ex: 100"
+                                className="w-full border p-3 rounded-lg caret-black text-gray-900"
+                                value={task.pontos ?? ''}
+                                onChange={handleChange}
+                                disabled={isLoading}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs text-gray-600 font-medium mb-1 block">Ordem de Exibição</label>
+                            <input
+                                type="number"
+                                name="ordem"
+                                placeholder="Ex: 1"
+                                className="w-full border p-3 rounded-lg caret-black text-gray-900"
+                                value={task.ordem ?? ''}
+                                onChange={handleChange}
+                                disabled={isLoading}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs text-gray-600 font-medium mb-1 block">Dificuldade</label>
+                            <select
+                                name="dificuldade"
+                                className="w-full border p-3 rounded-lg appearance-none caret-black text-gray-900"
+                                value={task.dificuldade || 'facil'}
+                                onChange={handleChange}
+                                disabled={isLoading}
+                            >
+                                <option value="facil">Fácil</option>
+                                <option value="medio">Médio</option>
+                                <option value="dificil">Difícil</option>
+                            </select>
+                        </div>
                     </div>
                     {/* Instruções adicionais */}
-                    <textarea
-                        name="instrucoes"
-                        placeholder="Instruções (ex.: passos, links, comentários)"
-                        rows="2"
-                        className="w-full border p-3 rounded-lg mt-3"
-                        value={task.instrucoes || ''}
-                        onChange={handleChange}
-                        disabled={isLoading}
-                    />
+                    <div>
+                        <label className="text-xs text-gray-600 font-medium mb-1 block">Instruções (opcional)</label>
+                        <textarea
+                            name="instrucoes"
+                            placeholder="Ex: Acesse o link, preencha o formulário..."
+                            rows="2"
+                            className="w-full border p-3 rounded-lg caret-black text-gray-900"
+                            value={task.instrucoes || ''}
+                            onChange={handleChange}
+                            disabled={isLoading}
+                        />
+                    </div>
 
                     {/* Requisitos: aceita JSON ou lista separada por vírgula */}
-                    <div className="mt-2">
-                        <label className="text-sm text-gray-600">Requisitos (JSON ou lista separada por vírgula)</label>
+                    <div>
+                        <label className="text-xs text-gray-600 font-medium mb-1 block">Requisitos (opcional)</label>
                         <textarea
                             name="requisitos"
-                            placeholder='Ex: ["email_verificado", "perfil_completo"] ou email,perfil'
+                            placeholder='Ex: email_verificado,perfil_completo'
                             rows="2"
-                            className="w-full border p-3 rounded-lg mt-1"
+                            className="w-full border p-3 rounded-lg caret-black text-gray-900"
                             value={typeof task.requisitos === 'string' ? task.requisitos : (task.requisitos ? JSON.stringify(task.requisitos) : '')}
                             onChange={handleChange}
                             disabled={isLoading}
                         />
+                        <p className="text-xs text-gray-500 mt-1">Separe por vírgula ou use JSON</p>
                     </div>
                     {/* Se fornecido, permite escolher missão associada (opcional) */}
                     {missions && missions.length > 0 && (
-                        <div className="mt-2">
-                            <label className="text-sm text-gray-600">Missão (opcional)</label>
+                        <div>
+                            <label className="text-xs text-gray-600 font-medium mb-1 block">Missão Vinculada (opcional)</label>
                             <select
                                 name="missao_id"
-                                className="w-full border p-3 rounded-lg appearance-none mt-1"
+                                className="w-full border p-3 rounded-lg appearance-none caret-black text-gray-900"
                                 value={task.missao_id ?? ''}
                                 onChange={handleChange}
                                 disabled={isLoading}
@@ -206,7 +230,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                     
                     {/* INCLUSÃO DE QUIZ */}
                     <div className="border p-4 rounded-lg bg-blue-50">
-                        <label className="flex items-center gap-3 font-semibold text-blue-800">
+                        <label className="flex items-center gap-3 font-semibold text-[#FE5900]">
                             <input type="checkbox" checked={hasQuiz} onChange={handleToggleQuiz} className="w-4 h-4 text-blue-600" disabled={isLoading}/>
                             Esta Tarefa é um Quiz de Múltipla Escolha?
                         </label>
@@ -217,14 +241,17 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                         <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
                             <h4 className="font-semibold text-gray-800 flex items-center gap-2"><CheckSquare size={18}/> Pergunta e Respostas</h4>
                             
-                            <input
-                                type="text"
-                                placeholder="Enunciado da Pergunta (Pergunta principal do Quiz)"
-                                className="w-full border p-3 rounded-lg"
-                                value={quizData.enunciado || ''}
-                                onChange={(e) => handleQuizChange("enunciado", e.target.value)}
-                                disabled={isLoading}
-                            />
+                            <div>
+                                <label className="text-xs text-gray-600 font-medium mb-1 block">Enunciado da Pergunta</label>
+                                <input
+                                    type="text"
+                                    placeholder="Ex: Qual é a capital da França?"
+                                    className="w-full border p-3 rounded-lg caret-black text-gray-900"
+                                    value={quizData.enunciado || ''}
+                                    onChange={(e) => handleQuizChange("enunciado", e.target.value)}
+                                    disabled={isLoading}
+                                />
+                            </div>
                             
                             <div className="space-y-2">
                                 <p className="text-sm font-medium text-gray-700">Opções de Resposta:</p>
@@ -241,7 +268,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
                                         <input
                                             type="text"
                                             placeholder={`Opção ${i + 1}`}
-                                            className={`flex-1 border p-2 rounded ${quizData.resposta_correta === opt ? 'border-green-400 bg-green-50' : 'border-gray-300'}`}
+                                            className={`flex-1 border p-2 rounded caret-black text-gray-900 ${quizData.resposta_correta === opt ? 'border-green-400 bg-green-50' : 'border-gray-300'}`}
                                             value={opt}
                                             onChange={(e) => handleOptionChange(i, e.target.value)}
                                             disabled={isLoading}

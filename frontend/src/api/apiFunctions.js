@@ -4,6 +4,7 @@ import api from './api'; // Importa a instância configurada
 
 const CARDS_BASE_URL = '/admin/cards';
 const TASKS_ADMIN_BASE_URL = '/admin/tasks'; // Usado para operações CRUD e select simplificado
+const QUIZZES_ADMIN_BASE_URL = '/admin/quizzes';
 
 // --- ESTATÍSTICAS (Dashboard) ---
 export const fetchStats = async () => {
@@ -15,8 +16,8 @@ export const fetchStats = async () => {
 // --- MISSÕES (CRUD) ---
 export const fetchMissions = async () => {
     try {
-        // 🛑 CORREÇÃO: Mudar o endpoint de '/admin/missions' para '/missions'
-        const response = await api.get("/missions"); // Endpoint agora é /api/missions
+        // Buscar do endpoint admin para obter todas as missões com todos os campos (incluindo vagas_disponiveis)
+        const response = await api.get("/admin/missions");
         return response.data;
     } catch (error) {
         // É importante tratar o erro aqui para que o frontend não quebre
@@ -163,10 +164,49 @@ export const deleteCard = async (id) => {
     await api.delete(`${CARDS_BASE_URL}/${id}`);
 };
 
+// --- QUIZZES (CRUD SIMPLIFICADO) ---
+export const fetchQuizzes = async () => {
+    const response = await api.get(QUIZZES_ADMIN_BASE_URL);
+    return response.data;
+};
+
+export const createQuizApi = async (quizData) => {
+    const response = await api.post(QUIZZES_ADMIN_BASE_URL, quizData);
+    // controller retorna { message, quiz }
+    return response.data.quiz || response.data;
+};
+
+export const createQuizQuestion = async (quizId, questionData) => {
+    const response = await api.post(`${QUIZZES_ADMIN_BASE_URL}/${quizId}/questions`, questionData);
+    // controller retorna { message, pergunta }
+    return response.data.pergunta || response.data;
+};
+
+export const updateQuizApi = async (quizId, quizData) => {
+    const response = await api.put(`${QUIZZES_ADMIN_BASE_URL}/${quizId}`, quizData);
+    return response.data.quiz || response.data;
+};
+
+export const deleteQuizApi = async (quizId) => {
+    const response = await api.delete(`${QUIZZES_ADMIN_BASE_URL}/${quizId}`);
+    return response.data;
+};
+
+export const updateQuizQuestion = async (quizId, questionId, questionData) => {
+    const response = await api.put(`${QUIZZES_ADMIN_BASE_URL}/${quizId}/questions/${questionId}`, questionData);
+    return response.data.pergunta || response.data;
+};
+
+export const deleteQuizQuestion = async (quizId, questionId) => {
+    const response = await api.delete(`${QUIZZES_ADMIN_BASE_URL}/${quizId}/questions/${questionId}`);
+    return response.data;
+};
+
 
 // --- FUNÇÕES AUXILIARES ---
 export const fetchTasksForSelect = async () => {
-    // Endpoint para buscar lista simplificada de tarefas para SELECTs em modais
-    const response = await api.get(`${TASKS_ADMIN_BASE_URL}/select`);
-    return response.data;
+    // Usa a lista padrão e retorna id/titulo para selects
+    const response = await api.get(TASKS_ADMIN_BASE_URL);
+    const tasks = response.data || [];
+    return tasks.map(t => ({ id: t.id, titulo: t.titulo || t.descricao || `Tarefa ${t.id}` }));
 };

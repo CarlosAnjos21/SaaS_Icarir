@@ -10,9 +10,14 @@ import { fetchMissions, createMission, updateMission, deleteMissionApi, createTa
 import MissionModal from './MissionModal';
 import MissionCard from './MissionCard';
 
+const INITIAL_QUIZ_STATE = {
+    question: "",
+    options: ["", "", "", ""],
+    correctIndex: 0,
+};
 
 // Estado inicial para o formulário de missão
-    // Inclui tanto chaves esperadas pelo backend (pt_BR) quanto aliases usados no modal (inglês)
+// Inclui tanto chaves esperadas pelo backend (pt_BR) quanto aliases usados pelo modal (inglês)
 const INITIAL_MISSION_STATE = {
     // Portuguese/back-end keys
     titulo: "",
@@ -35,6 +40,30 @@ const INITIAL_MISSION_STATE = {
     steps: [{ description: "", points: 0 }],
     quiz: null,
 };
+
+const createEmptyMission = () => ({
+    ...INITIAL_MISSION_STATE,
+    steps: [{ description: "", points: 0 }],
+    quiz: null,
+});
+
+// Converte quiz vindo do backend (ou já no formato da UI) para a estrutura usada pelo formulário
+function normalizeQuizToUI(quiz) {
+    if (!quiz) return null;
+    if (quiz.question || quiz.options) {
+        const opts = Array.isArray(quiz.options) && quiz.options.length ? quiz.options : INITIAL_QUIZ_STATE.options;
+        const idx = (typeof quiz.correctIndex === 'number' && quiz.correctIndex >= 0 && quiz.correctIndex < opts.length) ? quiz.correctIndex : 0;
+        return { question: quiz.question || '', options: opts, correctIndex: idx };
+    }
+    const firstQuestion = Array.isArray(quiz.perguntas) ? quiz.perguntas[0] : null;
+    const opts = Array.isArray(firstQuestion?.opcoes) && firstQuestion.opcoes.length ? firstQuestion.opcoes : INITIAL_QUIZ_STATE.options;
+    const idx = firstQuestion?.resposta_correta ? opts.findIndex(opt => opt === firstQuestion.resposta_correta) : -1;
+    return {
+        question: firstQuestion?.enunciado || firstQuestion?.titulo || '',
+        options: opts,
+        correctIndex: idx >= 0 ? idx : 0,
+    };
+}
 
 // Normaliza o objeto de missão vindo da API para o formato usado pelos componentes
 function normalizeMission(m) {
@@ -66,6 +95,7 @@ function normalizeMission(m) {
         // aliases para UI
         title: m.titulo || m.title || '',
         city: m.destino || m.city || '',
+        descricao: m.descricao || '',
         // points: soma das tarefas se disponível, caso contrário tentar campos fallback
         points: totalPoints || Number(m.points || m.pontos || 0),
         // preço e vagas separados
@@ -73,7 +103,7 @@ function normalizeMission(m) {
         vagas_disponiveis: m.vagas_disponiveis != null ? m.vagas_disponiveis : null,
         expirationDate: m.data_fim ? String(m.data_fim).slice(0,10) : (m.expirationDate || ''),
         steps: steps.length ? steps : (m.steps || []),
-        quiz: m.quiz || null,
+        quiz: normalizeQuizToUI(m.quiz),
         // preserva a flag 'ativa' vinda do backend (soft-delete usa `ativa: false`)
         ativa: (m.ativa === undefined || m.ativa === null) ? true : Boolean(m.ativa),
         // keep original payload for reference
@@ -139,7 +169,7 @@ const MissionListAndCRUD = () => {
     const [showModal, setShowModal] = useState(false);
     const [isEditing, setIsEditing] = useState(false);
     const [editingId, setEditingId] = useState(null);
-    const [newMission, setNewMission] = useState(INITIAL_MISSION_STATE);
+    const [newMission, setNewMission] = useState(createEmptyMission);
 
     // FUNÇÃO DE CARREGAMENTO (READ - GET)
     const loadMissions = useCallback(async () => {
@@ -172,20 +202,21 @@ const MissionListAndCRUD = () => {
             // Normaliza o objeto vindo da API para incluir aliases usados pelo modal
             const m = JSON.parse(JSON.stringify(missionToEdit));
             const normalized = {
-                ...INITIAL_MISSION_STATE,
+                ...createEmptyMission(),
                 ...m,
                 // aliases
                 title: m.titulo || m.title || "",
                 city: m.destino || m.city || "",
+                descricao: m.descricao || "",
                 points: m.pontos || m.points || 0,
                 expirationDate: m.data_fim ? String(m.data_fim).slice(0,10) : (m.expirationDate || ""),
-                imageUrl: m.foto_url || m.imageUrl || "",
+                quiz: normalizeQuizToUI(m.quiz),
             };
             setNewMission(normalized);
         } else {
             setIsEditing(false);
             setEditingId(null);
-            setNewMission(INITIAL_MISSION_STATE);
+            setNewMission(createEmptyMission());
         }
         setShowModal(true);
         setError(null);
@@ -194,7 +225,7 @@ const MissionListAndCRUD = () => {
     const handleModalClose = () => {
         setShowModal(false);
         setIsEditing(false);
-        setNewMission(INITIAL_MISSION_STATE);
+        setNewMission(createEmptyMission());
     };
 
     // --- Helpers para Steps / Quiz usados pelo modal ---
@@ -207,7 +238,10 @@ const MissionListAndCRUD = () => {
     };
 
     const handleToggleQuiz = () => {
-        setNewMission((prev) => ({ ...prev, quiz: prev.quiz ? null : { titulo: '', perguntas: [] } }));
+        setNewMission((prev) => ({
+            ...prev,
+            quiz: prev.quiz ? null : { ...INITIAL_QUIZ_STATE },
+        }));
     };
 
 
@@ -342,7 +376,7 @@ const MissionListAndCRUD = () => {
             <div className="flex justify-end mb-8">
                 <button
                     onClick={() => handleModalOpen()}
-                    className="bg-[#FE5900] text-white px-6 py-3 rounded-xl shadow-lg hover:bg-[#d94d00] transition flex items-center gap-2 font-semibold"
+                    className="bg-[#FE5900] dark:bg-[#394C97] text-white px-6 py-3 rounded-xl shadow-lg hover:bg-[#d94d00] dark:hover:bg-[#2d3a75] transition flex items-center gap-2 font-semibold"
                 >
                     <Plus size={20} />
                     Criar Nova Missão

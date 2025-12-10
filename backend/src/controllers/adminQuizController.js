@@ -23,10 +23,8 @@ const createQuiz = async (req, res) => {
       data: {
         titulo,
         descricao: descricao || '',
-        ativa: ativo ?? true,
-        tarefa: {
-          connect: { id: Number(tarefa_id) }
-        }
+        ativo: ativo ?? true,
+        tarefa_id: Number(tarefa_id),
       },
     });
 
@@ -103,37 +101,68 @@ const updateQuiz = async (req, res) => {
   const quizId = parseInt(req.params.quizId, 10);
   const { titulo, descricao, ativo, tarefa_id } = req.body;
 
+  console.log('=== updateQuiz chamado ===');
+  console.log('quizId:', quizId);
+  console.log('req.body:', req.body);
+
   if (isNaN(quizId)) {
     return res.status(400).json({ error: 'ID de quiz inválido.' });
   }
 
   try {
-    const data = {
-      titulo,
-      descricao,
-      ativa: ativo,
-    };
+    // Busca o quiz atual para verificar tarefa_id
+    const quizAtual = await prisma.quiz.findUnique({
+      where: { id: quizId },
+    });
 
-    if (tarefa_id) {
-      data.tarefa = { connect: { id: Number(tarefa_id) } };
+    console.log('quizAtual encontrado:', quizAtual);
+
+    if (!quizAtual) {
+      return res.status(404).json({ error: 'Quiz não encontrado para atualizar.' });
     }
+
+    const data = {};
+    
+    if (titulo !== undefined) data.titulo = titulo;
+    if (descricao !== undefined) data.descricao = descricao;
+    if (ativo !== undefined) data.ativo = ativo;
+    
+    // Só atualiza tarefa_id se for diferente da atual (devido à constraint unique)
+    if (tarefa_id !== undefined && Number(tarefa_id) !== quizAtual.tarefa_id) {
+      data.tarefa_id = Number(tarefa_id);
+    }
+
+    console.log('data a atualizar:', data);
 
     const quizAtualizado = await prisma.quiz.update({
       where: { id: quizId },
       data,
+      include: { perguntas: true },
     });
+
+    console.log('Quiz atualizado com sucesso');
 
     res.json({
       message: 'Quiz atualizado com sucesso!',
       quiz: quizAtualizado,
     });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      return res.status(404).json({ error: 'Quiz não encontrado para atualizar.' });
+    console.error('ERRO DETALHADO ao atualizar quiz:', error);
+    console.error('Tipo de erro:', error.constructor.name);
+    console.error('Mensagem:', error.message);
+    console.error('Stack:', error.stack);
+    
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') {
+        return res.status(404).json({ error: 'Quiz não encontrado para atualizar.' });
+      }
+      if (error.code === 'P2002') {
+        return res.status(400).json({ error: 'Esta tarefa já está vinculada a outro quiz.' });
+      }
     }
 
     console.error('Erro ao atualizar quiz:', error);
-    res.status(500).json({ error: 'Erro interno ao atualizar quiz.' });
+    res.status(500).json({ error: 'Erro interno ao atualizar quiz.', details: error.message });
   }
 };
 
@@ -180,13 +209,17 @@ const createQuestionForQuiz = async (req, res) => {
     return res.status(400).json({ error: 'A pergunta precisa de enunciado e pelo menos duas alternativas.' });
   }
 
+  if (!resposta_correta || !alternativas.includes(resposta_correta)) {
+    return res.status(400).json({ error: 'A resposta correta deve estar entre as alternativas.' });
+  }
+
   try {
-    const novaPergunta = await prisma.perguntas.create({
+    const novaPergunta = await prisma.perguntaQuiz.create({
       data: {
         enunciado,
-        alternativas,
+        opcoes: alternativas,
         resposta_correta,
-        quiz_id: quizId,
+        quiz: { connect: { id: quizId } },
       },
     });
 
@@ -213,7 +246,7 @@ const getQuestionsForQuiz = async (req, res) => {
   }
 
   try {
-    const perguntas = await prisma.perguntas.findMany({
+    const perguntas = await prisma.perguntaQuiz.findMany({
       where: { quiz_id: quizId },
       orderBy: { id: 'asc' },
     });
@@ -238,10 +271,18 @@ const updateQuestion = async (req, res) => {
     return res.status(400).json({ error: 'ID de pergunta inválido.' });
   }
 
+  if (!enunciado || !Array.isArray(alternativas) || alternativas.length < 2) {
+    return res.status(400).json({ error: 'A pergunta precisa de enunciado e pelo menos duas alternativas.' });
+  }
+
+  if (!resposta_correta || !alternativas.includes(resposta_correta)) {
+    return res.status(400).json({ error: 'A resposta correta deve estar entre as alternativas.' });
+  }
+
   try {
-    const perguntaAtualizada = await prisma.perguntas.update({
+    const perguntaAtualizada = await prisma.perguntaQuiz.update({
       where: { id: questionId },
-      data: { enunciado, alternativas, resposta_correta },
+      data: { enunciado, opcoes: alternativas, resposta_correta },
     });
 
     res.json({
@@ -271,7 +312,7 @@ const deleteQuestion = async (req, res) => {
   }
 
   try {
-    await prisma.perguntas.delete({ where: { id: questionId } });
+    await prisma.perguntaQuiz.delete({ where: { id: questionId } });
     res.json({ message: 'Pergunta deletada com sucesso!' });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {

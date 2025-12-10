@@ -33,39 +33,61 @@ const MissionModal = ({ newMission, setNewMission, handleAddStep, handleRemoveSt
                 <div className="space-y-6">
                     {/* INFORMAÇÕES BÁSICAS */}
                     <h3 className="text-lg font-semibold border-b pb-2 text-gray-700 flex items-center gap-2"><Settings size={18}/> Detalhes Principais</h3>
-                    <input
-                        type="text"
-                        placeholder="Nome da Missão (Ex: O Segredo da Torre Eiffel)"
-                        className="w-full border border-gray-300 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                        value={newMission.title}
-                        onChange={(e) => setNewMission({ ...newMission, title: e.target.value })}
-                        disabled={isLoading}
-                    />
-                    <div className="grid grid-cols-3 gap-4">
+                    <div>
+                        <label className="text-xs text-gray-600 font-medium mb-1 block">Nome da Missão *</label>
                         <input
                             type="text"
-                            placeholder="Cidade (Ex: Paris)"
-                            className="border border-gray-300 p-3 rounded-lg"
-                            value={newMission.city}
-                            onChange={(e) => setNewMission({ ...newMission, city: e.target.value })}
+                            placeholder="Ex: O Segredo da Torre Eiffel"
+                            className="w-full border border-gray-300 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                            value={newMission.title}
+                            onChange={(e) => setNewMission({ ...newMission, title: e.target.value })}
                             disabled={isLoading}
                         />
-                        <input
-                            type="number"
-                            placeholder="Pontos Totais"
-                            className="border border-gray-300 p-3 rounded-lg"
-                            value={newMission.points}
-                            onChange={(e) => setNewMission({ ...newMission, points: Number(e.target.value) })}
+                    </div>
+                    <div>
+                        <label className="text-xs text-gray-600 font-medium mb-1 block">Descrição da Missão</label>
+                        <textarea
+                            placeholder="Ex: Descubra os segredos históricos da Torre Eiffel e complete as tarefas culturais..."
+                            className="w-full border border-gray-300 p-3 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                            rows="3"
+                            value={newMission.descricao || ''}
+                            onChange={(e) => setNewMission({ ...newMission, descricao: e.target.value })}
                             disabled={isLoading}
                         />
-                        <input
-                            type="date"
-                            placeholder="Data de Expiração"
-                            className="border border-gray-300 p-3 rounded-lg"
-                            value={newMission.expirationDate}
-                            onChange={(e) => setNewMission({ ...newMission, expirationDate: e.target.value })}
-                            disabled={isLoading}
-                        />
+                    </div>
+                    <div className="grid grid-cols-3 gap-4">
+                        <div>
+                            <label className="text-xs text-gray-600 font-medium mb-1 block">Cidade/Destino</label>
+                            <input
+                                type="text"
+                                placeholder="Ex: Paris"
+                                className="w-full border border-gray-300 p-3 rounded-lg"
+                                value={newMission.city}
+                                onChange={(e) => setNewMission({ ...newMission, city: e.target.value })}
+                                disabled={isLoading}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs text-gray-600 font-medium mb-1 block">Pontos Totais</label>
+                            <input
+                                type="number"
+                                placeholder="Ex: 500"
+                                className="w-full border border-gray-300 p-3 rounded-lg"
+                                value={newMission.points}
+                                onChange={(e) => setNewMission({ ...newMission, points: Number(e.target.value) })}
+                                disabled={isLoading}
+                            />
+                        </div>
+                        <div>
+                            <label className="text-xs text-gray-600 font-medium mb-1 block">Data de Término *</label>
+                            <input
+                                type="date"
+                                className="w-full border border-gray-300 p-3 rounded-lg"
+                                value={newMission.expirationDate}
+                                onChange={(e) => setNewMission({ ...newMission, expirationDate: e.target.value })}
+                                disabled={isLoading}
+                            />
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
                         <div className="flex flex-col">
@@ -149,7 +171,7 @@ const MissionModal = ({ newMission, setNewMission, handleAddStep, handleRemoveSt
 
                     {/* QUIZ */}
                     <div className="border p-4 rounded-lg bg-blue-50">
-                        <label className="flex items-center gap-3 font-semibold text-blue-800">
+                        <label className="flex items-center gap-3 font-semibold text-[#FE5900]">
                             <input type="checkbox" checked={!!newMission.quiz} onChange={handleToggleQuiz} className="w-4 h-4 text-blue-600" disabled={isLoading}/>
                             Incluir Etapa de Quiz
                         </label>

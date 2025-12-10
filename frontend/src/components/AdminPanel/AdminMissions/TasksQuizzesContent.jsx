@@ -198,8 +198,8 @@ const TasksQuizzesContent = () => {
                 
                 {/* Header de Ações */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                    <div className="bg-white/80 backdrop-blur-sm px-4 py-2 rounded-xl border border-white/50 text-sm text-gray-600 font-medium shadow-sm">
-                        Total de Atividades: <span className="text-[#394C97] font-bold">{tasks.length}</span>
+                    <div className="bg-[#FE5900] dark:bg-[#394C97] px-4 py-2 rounded-xl text-sm text-white font-medium shadow-lg">
+                        Total de Atividades: <span className="font-bold">{tasks.length}</span>
                     </div>
 
                     <motion.button
@@ -290,7 +290,7 @@ const TasksQuizzesContent = () => {
                                             </div>
                                         </div>
                                         
-                                        <div className="flex items-center gap-2 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                                        <div className="flex items-center gap-2 transition-opacity">
                                             <button 
                                                 onClick={() => handleModalOpen(task)} 
                                                 disabled={isSaving} 
