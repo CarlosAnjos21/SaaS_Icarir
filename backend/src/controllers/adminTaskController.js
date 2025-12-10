@@ -8,7 +8,29 @@ const getAllTasks = async (req, res) => {
   try {
     const tasks = await prisma.tarefa.findMany({
       orderBy: { data_criacao: 'desc' },
+      include: {
+        categoria: true,
+        quiz: {
+          include: {
+            perguntas: true,
+          },
+        },
+      },
     });
+
+    // Se por algum motivo a relação não foi preenchida (ex: quizzes foram criados através
+    // do painel de quizzes e apenas setaram quiz.tarefa_id), buscamos manualmente por tarefa_id
+    for (let i = 0; i < tasks.length; i++) {
+      const t = tasks[i];
+      if (!t.quiz) {
+        const q = await prisma.quiz.findFirst({ where: { tarefa_id: t.id }, include: { perguntas: true } });
+        if (q) {
+          t.quiz = q;
+          t.quizId = q.id;
+        }
+      }
+    }
+
     res.json(tasks);
   } catch (error) {
     console.error('Erro ao listar tarefas (admin):', error);
@@ -24,8 +46,27 @@ const getTaskById = async (req, res) => {
     const taskId = parseInt(req.params.taskId, 10);
     if (isNaN(taskId)) return res.status(400).json({ error: 'ID inválido.' });
 
-    const task = await prisma.tarefa.findUnique({ where: { id: taskId } });
+    let task = await prisma.tarefa.findUnique({
+      where: { id: taskId },
+      include: {
+        categoria: true,
+        quiz: {
+          include: {
+            perguntas: true,
+          },
+        },
+      },
+    });
     if (!task) return res.status(404).json({ error: 'Tarefa não encontrada.' });
+
+    // Caso a relação direta 'quiz' não esteja preenchida, tentar localizar pelo campo quiz.tarefa_id
+    if (!task.quiz) {
+      const q = await prisma.quiz.findFirst({ where: { tarefa_id: task.id }, include: { perguntas: true } });
+      if (q) {
+        task.quiz = q;
+        task.quizId = q.id;
+      }
+    }
 
     res.json(task);
   } catch (error) {
@@ -53,6 +94,7 @@ const createTask = async (req, res) => {
       requisitos,
       tarefa_anterior_id,
       ativa,
+      quiz,
     } = req.body;
 
     if (!titulo || pontos === undefined) {
@@ -83,6 +125,37 @@ const createTask = async (req, res) => {
     };
 
     const newTask = await prisma.tarefa.create({ data: dataToCreate });
+
+    // Se houver quiz no payload, criar o quiz e suas perguntas
+    if (quiz && quiz.titulo && Array.isArray(quiz.perguntas) && quiz.perguntas.length > 0) {
+      const newQuiz = await prisma.quiz.create({
+        data: {
+          titulo: quiz.titulo,
+          descricao: quiz.descricao || '',
+          ativo: quiz.ativo ?? true,
+          tarefa_id: newTask.id,
+        },
+      });
+
+      // Criar as perguntas do quiz
+      for (let i = 0; i < quiz.perguntas.length; i++) {
+        const p = quiz.perguntas[i];
+        if (p.enunciado && p.opcoes && p.resposta_correta) {
+          await prisma.perguntaQuiz.create({
+            data: {
+              quiz_id: newQuiz.id,
+              enunciado: p.enunciado,
+              tipo: 'multipla_escolha',
+              opcoes: p.opcoes,
+              resposta_correta: p.resposta_correta,
+              ordem: i,
+            },
+          });
+        }
+      }
+
+      console.log('adminTaskController.createTask - quiz created:', newQuiz.id);
+    }
 
     console.log('adminTaskController.createTask - saved task:', newTask);
     res.status(201).json({ message: 'Tarefa criada com sucesso (admin).', task: newTask });
@@ -117,6 +190,7 @@ const updateTask = async (req, res) => {
       requisitos,
       tarefa_anterior_id,
       ativa,
+      quiz,
     } = req.body;
 
     const data = {};
@@ -148,6 +222,77 @@ const updateTask = async (req, res) => {
     if (ativa !== undefined) data.ativa = ativa;
 
     const updated = await prisma.tarefa.update({ where: { id: taskId }, data });
+
+    // Processar quiz se presente
+    if (quiz !== undefined) {
+      if (quiz === null) {
+        // Remover quiz se foi deletado
+        const existingQuiz = await prisma.quiz.findFirst({ where: { tarefa_id: taskId } });
+        if (existingQuiz) {
+          await prisma.quiz.delete({ where: { id: existingQuiz.id } });
+        }
+      } else if (quiz.titulo && Array.isArray(quiz.perguntas) && quiz.perguntas.length > 0) {
+        // Verificar se já existe quiz para essa tarefa
+        const existingQuiz = await prisma.quiz.findFirst({ where: { tarefa_id: taskId } });
+        
+        if (existingQuiz) {
+          // Atualizar quiz existente
+          await prisma.quiz.update({
+            where: { id: existingQuiz.id },
+            data: {
+              titulo: quiz.titulo,
+              descricao: quiz.descricao || '',
+              ativo: quiz.ativo ?? true,
+            },
+          });
+
+          // Deletar perguntas antigas e criar novas
+          await prisma.perguntaQuiz.deleteMany({ where: { quiz_id: existingQuiz.id } });
+          for (let i = 0; i < quiz.perguntas.length; i++) {
+            const p = quiz.perguntas[i];
+            if (p.enunciado && p.opcoes && p.resposta_correta) {
+              await prisma.perguntaQuiz.create({
+                data: {
+                  quiz_id: existingQuiz.id,
+                  enunciado: p.enunciado,
+                  tipo: 'multipla_escolha',
+                  opcoes: p.opcoes,
+                  resposta_correta: p.resposta_correta,
+                  ordem: i,
+                },
+              });
+            }
+          }
+        } else {
+          // Criar novo quiz
+          const newQuiz = await prisma.quiz.create({
+            data: {
+              titulo: quiz.titulo,
+              descricao: quiz.descricao || '',
+              ativo: quiz.ativo ?? true,
+              tarefa_id: taskId,
+            },
+          });
+
+          for (let i = 0; i < quiz.perguntas.length; i++) {
+            const p = quiz.perguntas[i];
+            if (p.enunciado && p.opcoes && p.resposta_correta) {
+              await prisma.perguntaQuiz.create({
+                data: {
+                  quiz_id: newQuiz.id,
+                  enunciado: p.enunciado,
+                  tipo: 'multipla_escolha',
+                  opcoes: p.opcoes,
+                  resposta_correta: p.resposta_correta,
+                  ordem: i,
+                },
+              });
+            }
+          }
+        }
+      }
+    }
+
     console.log('adminTaskController.updateTask - saved task:', updated);
     res.json({ message: 'Tarefa atualizada com sucesso (admin).', task: updated });
   } catch (error) {

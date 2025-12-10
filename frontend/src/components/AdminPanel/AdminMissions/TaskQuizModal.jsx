@@ -1,7 +1,7 @@
 // src/components/AdminPanel/AdminMissions/TaskQuizModal.jsx
 
 import React, { useState, useEffect } from 'react';
-import { X, CheckSquare, Plus, Loader } from 'lucide-react';
+import { X, CheckSquare, Plus, Loader, Trash2 } from 'lucide-react';
 
 const INITIAL_QUIZ_QUESTION_STATE = {
     enunciado: "",
@@ -12,9 +12,38 @@ const INITIAL_QUIZ_QUESTION_STATE = {
 // Componente recebe 'task' (os dados da Tarefa), 'setTask' (o setter), categorias, e handlers
 const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLoading, categories = [], missions = [] }) => {
     
-    // Simplificando: o quiz é um objeto que contém o array de perguntas (apenas 1 por enquanto)
-    const [quizData, setQuizData] = useState(task.quiz?.perguntas?.[0] || INITIAL_QUIZ_QUESTION_STATE);
-    const [hasQuiz, setHasQuiz] = useState(!!task.quiz);
+    // Suporta múltiplas perguntas
+    const [quizPerguntas, setQuizPerguntas] = useState(() => {
+        if (Array.isArray(task?.quiz?.perguntas) && task.quiz.perguntas.length > 0) {
+            return task.quiz.perguntas;
+        }
+        return [{ ...INITIAL_QUIZ_QUESTION_STATE }];
+    });
+
+    // Se a tarefa já tem quiz ao carregar, marca como true automaticamente
+    const [hasQuiz, setHasQuiz] = useState(() => !!(task?.quiz && Array.isArray(task.quiz.perguntas) && task.quiz.perguntas.length > 0));
+
+    // UseEffect para sincronizar quando a tarefa muda (ao editar)
+    // Observamos a versão serializada do quiz para detectar mudanças profundas na estrutura
+    useEffect(() => {
+        try {
+            const serialized = JSON.stringify(task?.quiz || null);
+            if (task?.quiz && Array.isArray(task.quiz.perguntas) && task.quiz.perguntas.length > 0) {
+                setQuizPerguntas(task.quiz.perguntas);
+                setHasQuiz(true);
+                console.log('TaskQuizModal - sincronizado quiz:', task.quiz.perguntas);
+            } else {
+                setQuizPerguntas([{ ...INITIAL_QUIZ_QUESTION_STATE }]);
+                setHasQuiz(false);
+            }
+            // também logamos a versão serializada para ajudar no debug de referências
+            console.log('TaskQuizModal - task.quiz (serialized):', serialized);
+        } catch (err) {
+            console.warn('TaskQuizModal - falha ao serializar task.quiz para sincronização', err);
+            setQuizPerguntas([{ ...INITIAL_QUIZ_QUESTION_STATE }]);
+            setHasQuiz(false);
+        }
+    }, [task.id, JSON.stringify(task?.quiz || null)]); // Sincroniza quando a tarefa muda (deep watch)
     
     // Trata mudanças nos campos simples (título, pontos, etc.)
     const handleChange = (e) => {
@@ -25,16 +54,36 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
         }));
     };
 
-    // Trata mudanças nos campos do Quiz
-    const handleQuizChange = (field, value) => {
-        setQuizData(prev => ({ ...prev, [field]: value }));
+    // Adiciona nova pergunta
+    const handleAddQuestion = () => {
+        setQuizPerguntas(prev => [...prev, { ...INITIAL_QUIZ_QUESTION_STATE }]);
     };
 
-    // Trata mudanças nas opções de resposta do Quiz
-    const handleOptionChange = (index, value) => {
-        const updatedOptions = [...quizData.opcoes];
-        updatedOptions[index] = value;
-        handleQuizChange("opcoes", updatedOptions);
+    // Remove pergunta
+    const handleRemoveQuestion = (qIndex) => {
+        if (quizPerguntas.length > 1) {
+            setQuizPerguntas(prev => prev.filter((_, i) => i !== qIndex));
+        }
+    };
+
+    // Trata mudanças nos campos da pergunta
+    const handleQuizChange = (qIndex, field, value) => {
+        setQuizPerguntas(prev => {
+            const perguntas = [...prev];
+            perguntas[qIndex] = { ...perguntas[qIndex], [field]: value };
+            return perguntas;
+        });
+    };
+
+    // Trata mudanças nas opções de resposta
+    const handleOptionChange = (qIndex, optIndex, value) => {
+        setQuizPerguntas(prev => {
+            const perguntas = [...prev];
+            const updatedOptions = [...perguntas[qIndex].opcoes];
+            updatedOptions[optIndex] = value;
+            perguntas[qIndex] = { ...perguntas[qIndex], opcoes: updatedOptions };
+            return perguntas;
+        });
     };
 
     // Alterna a inclusão do Quiz
@@ -42,7 +91,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
         const shouldHaveQuiz = !hasQuiz;
         setHasQuiz(shouldHaveQuiz);
         if (shouldHaveQuiz) {
-            setQuizData(INITIAL_QUIZ_QUESTION_STATE);
+            setQuizPerguntas([{ ...INITIAL_QUIZ_QUESTION_STATE }]);
         }
     };
     
@@ -52,10 +101,9 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
             // Monta o objeto que o backend espera (Tarefa com Quiz aninhado)
             setTask(prev => ({
                 ...prev,
-                // não altera `tipo` (deve seguir enum do backend); apenas anexa o quiz
                 quiz: { 
                     titulo: `Quiz da Tarefa: ${prev.titulo || 'Novo'}`,
-                    perguntas: [quizData]
+                    perguntas: quizPerguntas
                 }
             }));
         } else {
@@ -65,7 +113,7 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
             }));
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [quizData, hasQuiz, setTask, task.titulo]); // Dependências controladas
+    }, [quizPerguntas, hasQuiz, setTask, task.titulo]); // Dependências controladas
 
 
     return (
@@ -238,45 +286,76 @@ const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLo
 
                     {/* FORMULÁRIO DO QUIZ (Se hasQuiz for true) */}
                     {hasQuiz && (
-                        <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
-                            <h4 className="font-semibold text-gray-800 flex items-center gap-2"><CheckSquare size={18}/> Pergunta e Respostas</h4>
-                            
-                            <div>
-                                <label className="text-xs text-gray-600 font-medium mb-1 block">Enunciado da Pergunta</label>
-                                <input
-                                    type="text"
-                                    placeholder="Ex: Qual é a capital da França?"
-                                    className="w-full border p-3 rounded-lg caret-black text-gray-900"
-                                    value={quizData.enunciado || ''}
-                                    onChange={(e) => handleQuizChange("enunciado", e.target.value)}
+                        <div className="space-y-4">
+                            <div className="flex justify-between items-center">
+                                <h4 className="font-semibold text-gray-800 flex items-center gap-2"><CheckSquare size={18}/> Perguntas do Quiz</h4>
+                                <button
+                                    type="button"
+                                    onClick={handleAddQuestion}
+                                    className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1"
                                     disabled={isLoading}
-                                />
+                                >
+                                    <Plus size={14} /> Adicionar Pergunta
+                                </button>
                             </div>
-                            
-                            <div className="space-y-2">
-                                <p className="text-sm font-medium text-gray-700">Opções de Resposta:</p>
-                                {quizData.opcoes.map((opt, i) => (
-                                    <div key={i} className="flex items-center gap-3">
-                                        <input
-                                            type="radio"
-                                            name="correct-option"
-                                            checked={quizData.resposta_correta === opt} 
-                                            onChange={() => handleQuizChange("resposta_correta", opt)}
-                                            className="w-4 h-4 text-green-600"
-                                            disabled={isLoading}
-                                        />
+
+                            {quizPerguntas.map((q, qIndex) => (
+                                <div key={qIndex} className="p-4 border rounded-lg bg-gray-50 space-y-3">
+                                    <div className="flex justify-between items-center">
+                                        <h5 className="font-semibold text-gray-700">Pergunta {qIndex + 1}</h5>
+                                        {quizPerguntas.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleRemoveQuestion(qIndex)}
+                                                className="text-red-500 hover:text-red-700 p-1"
+                                                disabled={isLoading}
+                                                title="Remover pergunta"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        )}
+                                    </div>
+                                    
+                                    <div>
+                                        <label className="text-xs text-gray-600 font-medium mb-1 block">Enunciado da Pergunta</label>
                                         <input
                                             type="text"
-                                            placeholder={`Opção ${i + 1}`}
-                                            className={`flex-1 border p-2 rounded caret-black text-gray-900 ${quizData.resposta_correta === opt ? 'border-green-400 bg-green-50' : 'border-gray-300'}`}
-                                            value={opt}
-                                            onChange={(e) => handleOptionChange(i, e.target.value)}
+                                            placeholder="Ex: Qual é a capital da França?"
+                                            className="w-full border p-3 rounded-lg caret-black text-gray-900"
+                                            value={q.enunciado || ''}
+                                            onChange={(e) => handleQuizChange(qIndex, "enunciado", e.target.value)}
                                             disabled={isLoading}
                                         />
                                     </div>
-                                ))}
-                            </div>
-                            <div className='text-xs text-gray-500 mt-2'>* Selecione o rádio (círculo) para marcar a resposta correta.</div>
+                                    
+                                    <div className="space-y-2">
+                                        <p className="text-sm font-medium text-gray-700">Opções de Resposta:</p>
+                                        {q.opcoes.map((opt, optIndex) => (
+                                            <div key={optIndex} className="flex items-center gap-3">
+                                                <input
+                                                    type="radio"
+                                                    name={`correct-option-${qIndex}`}
+                                                    checked={q.resposta_correta === opt} 
+                                                    onChange={() => handleQuizChange(qIndex, "resposta_correta", opt)}
+                                                    className="w-4 h-4 text-green-600"
+                                                    disabled={isLoading}
+                                                />
+                                                <input
+                                                    type="text"
+                                                    placeholder={`Opção ${optIndex + 1}`}
+                                                    className={`flex-1 border p-2 rounded caret-black text-gray-900 ${
+                                                        q.resposta_correta === opt ? 'border-green-400 bg-green-50' : 'border-gray-300'
+                                                    }`}
+                                                    value={opt}
+                                                    onChange={(e) => handleOptionChange(qIndex, optIndex, e.target.value)}
+                                                    disabled={isLoading}
+                                                />
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className='text-xs text-gray-500 mt-2'>* Selecione o rádio (círculo) para marcar a resposta correta.</div>
+                                </div>
+                            ))}
                         </div>
                     )}
                 </div>

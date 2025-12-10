@@ -1,11 +1,12 @@
 // src/components/AdminPanel/AdminMissions/MissionCard.jsx
 
 import React from 'react';
-import { Edit, Trash2, Calendar, MapPin, Briefcase } from 'lucide-react';
+import { Edit, Trash2, Calendar, MapPin, Briefcase, CheckSquare } from 'lucide-react';
 
 const MissionCard = ({ mission, onEdit, onDelete }) => {
     // Debug: verificar se descricao está chegando
     console.log('MissionCard - mission object:', mission);
+    console.log('MissionCard - vagas_disponiveis:', mission.vagas_disponiveis, 'tipo:', typeof mission.vagas_disponiveis);
     
     // Função para inverter a data (de YYYY-MM-DD para DD-MM-YYYY)
     const formatDateReverse = (dateString) => {
@@ -27,7 +28,11 @@ const MissionCard = ({ mission, onEdit, onDelete }) => {
                 <p className="flex items-center gap-1"><Calendar size={16} /> Expira: {formatDateReverse(mission.expirationDate)}</p>
                 <p className="font-semibold text-green-600">{mission.points} Pontos</p>
                 <p className="flex items-center gap-1">{(mission.preco !== undefined && mission.preco !== null) ? `R$ ${Number(mission.preco).toFixed(2)}` : 'R$ —'}</p>
-                <p className="flex items-center gap-1">{(mission.vagas_disponiveis !== undefined && mission.vagas_disponiveis !== null) ? `${mission.vagas_disponiveis} vagas` : '— vagas'}</p>
+                <p className="flex items-center gap-1">
+                    {(mission.vagas_disponiveis !== undefined && mission.vagas_disponiveis !== null) 
+                        ? `${mission.vagas_disponiveis} vagas` 
+                        : 'Vagas: —'}
+                </p>
             </div>
 
             {mission.descricao && mission.descricao.trim() && (
@@ -53,11 +58,22 @@ const MissionCard = ({ mission, onEdit, onDelete }) => {
             )}
         </div>
         
-        <div className="flex gap-2 min-w-[120px] justify-end">
-            <button onClick={onEdit} className="text-blue-600 hover:text-blue-800 p-2 rounded-full transition hover:bg-blue-50">
+        <div className="flex gap-2 min-w-[150px] justify-end">
+            <button
+                onClick={() => onEdit(mission, 'details')}
+                className="text-blue-600 hover:text-blue-800 p-2 rounded-full transition hover:bg-blue-50"
+                title="Editar missão"
+            >
                 <Edit size={20} />
             </button>
-            <button onClick={onDelete} className="text-red-500 hover:text-red-700 p-2 rounded-full transition hover:bg-red-50">
+            <button 
+                onClick={() => onEdit(mission, 'tasks')}
+                className="text-orange-600 hover:text-orange-800 p-2 rounded-full transition hover:bg-orange-50" 
+                title="Gerenciar tarefas"
+            >
+                <CheckSquare size={20} />
+            </button>
+            <button onClick={onDelete} className="text-red-500 hover:text-red-700 p-2 rounded-full transition hover:bg-red-50" title="Deletar missão">
                 <Trash2 size={20} />
             </button>
         </div>

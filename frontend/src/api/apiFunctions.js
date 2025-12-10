@@ -16,12 +16,22 @@ export const fetchStats = async () => {
 // --- MISSÕES (CRUD) ---
 export const fetchMissions = async () => {
     try {
-        // Buscar do endpoint admin para obter todas as missões com todos os campos (incluindo vagas_disponiveis)
+        // Endpoint público para apps cliente (participante)
+        const response = await api.get("/missions");
+        return response.data;
+    } catch (error) {
+        console.error("Erro ao carregar missões:", error);
+        throw error;
+    }
+};
+
+// Versão administrativa (retorna tarefas/quizzes completos)
+export const fetchMissionsAdmin = async () => {
+    try {
         const response = await api.get("/admin/missions");
         return response.data;
     } catch (error) {
-        // É importante tratar o erro aqui para que o frontend não quebre
-        console.error("Erro ao carregar missões:", error);
+        console.error("Erro ao carregar missões (admin):", error);
         throw error;
     }
 };
@@ -94,6 +104,11 @@ export const deleteCategory = async (id) => {
 export const fetchTasks = async () => {
     // Endpoint para listar todas as tarefas no painel admin
     const response = await api.get(TASKS_ADMIN_BASE_URL);
+    return response.data;
+};
+
+export const fetchTaskById = async (id) => {
+    const response = await api.get(`${TASKS_ADMIN_BASE_URL}/${id}`);
     return response.data;
 };
 

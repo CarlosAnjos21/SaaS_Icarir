@@ -5,16 +5,20 @@ import { Plus, Loader, AlertTriangle, CheckSquare, Tag, X, Edit, Trash2, HelpCir
 import { motion, AnimatePresence } from 'framer-motion';
 import { fetchQuizzes, fetchTasksForSelect, createQuizApi, createQuizQuestion, updateQuizApi, deleteQuizApi, updateQuizQuestion } from '../../api/apiFunctions';
 
+const INITIAL_QUESTION = {
+    enunciado: '',
+    alternativas: ['', '', '', ''],
+    correctIndex: 0,
+    questionId: null,
+};
+
 const INITIAL_FORM = {
     titulo: '',
     descricao: '',
     tarefa_id: '',
-    enunciado: '',
-    alternativas: ['', '', '', ''],
-    correctIndex: 0,
+    perguntas: [{ ...INITIAL_QUESTION }],
     ativo: true,
     quizId: null,
-    questionId: null,
 };
 
 export default function QuizzesContent() {
@@ -69,36 +73,36 @@ export default function QuizzesContent() {
     };
 
     const hydrateFromQuiz = (quiz) => {
-        const firstQuestion = Array.isArray(quiz.perguntas) ? quiz.perguntas[0] : null;
-        
-        // O backend salva em 'opcoes' (campo JSON no banco)
-        let alternativas = ['', '', '', ''];
-        if (firstQuestion?.opcoes) {
-            // Se opcoes for JSON string, parseia; se já for array, usa direto
-            alternativas = typeof firstQuestion.opcoes === 'string' 
-                ? JSON.parse(firstQuestion.opcoes)
-                : firstQuestion.opcoes;
-        }
-        
-        // Garante que sempre tenha pelo menos 4 alternativas para o form
-        while (alternativas.length < 4) {
-            alternativas.push('');
-        }
-        
-        const correctIndex = firstQuestion?.resposta_correta
-            ? alternativas.findIndex(a => a === firstQuestion.resposta_correta)
-            : 0;
+        const perguntas = Array.isArray(quiz.perguntas) && quiz.perguntas.length > 0
+            ? quiz.perguntas.map(p => {
+                let alternativas = ['', '', '', ''];
+                if (p?.opcoes) {
+                    alternativas = typeof p.opcoes === 'string' 
+                        ? JSON.parse(p.opcoes)
+                        : p.opcoes;
+                }
+                while (alternativas.length < 4) {
+                    alternativas.push('');
+                }
+                const correctIndex = p?.resposta_correta
+                    ? alternativas.findIndex(a => a === p.resposta_correta)
+                    : 0;
+                return {
+                    enunciado: p?.enunciado || '',
+                    alternativas,
+                    correctIndex: correctIndex >= 0 ? correctIndex : 0,
+                    questionId: p?.id || null,
+                };
+            })
+            : [{ ...INITIAL_QUESTION }];
         
         setForm({
             titulo: quiz.titulo || '',
             descricao: quiz.descricao || '',
             tarefa_id: quiz.tarefa_id || quiz.tarefa?.id || '',
-            enunciado: firstQuestion?.enunciado || '',
-            alternativas,
-            correctIndex: correctIndex >= 0 ? correctIndex : 0,
+            perguntas,
             ativo: quiz.ativa ?? true,
             quizId: quiz.id,
-            questionId: firstQuestion?.id || null,
         });
     };
 
@@ -122,34 +126,76 @@ export default function QuizzesContent() {
         }
     };
 
-    const handleOptionChange = (index, value) => {
+    const handleAddQuestion = () => {
+        setForm(prev => ({ ...prev, perguntas: [...prev.perguntas, { ...INITIAL_QUESTION }] }));
+    };
+
+    const handleRemoveQuestion = (qIndex) => {
+        if (form.perguntas.length > 1) {
+            setForm(prev => ({ ...prev, perguntas: prev.perguntas.filter((_, i) => i !== qIndex) }));
+        }
+    };
+
+    const handleQuestionChange = (qIndex, field, value) => {
         setForm(prev => {
-            const alternativas = [...prev.alternativas];
-            alternativas[index] = value;
-            return { ...prev, alternativas };
+            const perguntas = [...prev.perguntas];
+            perguntas[qIndex] = { ...perguntas[qIndex], [field]: value };
+            return { ...prev, perguntas };
         });
     };
 
-    const handleAddOption = () => {
-        setForm(prev => prev.alternativas.length >= 6 ? prev : { ...prev, alternativas: [...prev.alternativas, ''] });
+    const handleOptionChange = (qIndex, optIndex, value) => {
+        setForm(prev => {
+            const perguntas = [...prev.perguntas];
+            const alternativas = [...perguntas[qIndex].alternativas];
+            alternativas[optIndex] = value;
+            perguntas[qIndex] = { ...perguntas[qIndex], alternativas };
+            return { ...prev, perguntas };
+        });
     };
 
-    const handleRemoveOption = (index) => {
+    const handleAddOption = (qIndex) => {
         setForm(prev => {
-            const alternativas = prev.alternativas.filter((_, i) => i !== index);
-            const correctedIndex = Math.min(Math.max(0, prev.correctIndex - (prev.correctIndex > index ? 1 : 0)), Math.max(0, alternativas.length - 1));
-            return { ...prev, alternativas, correctIndex: correctedIndex };
+            if (prev.perguntas[qIndex].alternativas.length >= 6) return prev;
+            const perguntas = [...prev.perguntas];
+            perguntas[qIndex] = {
+                ...perguntas[qIndex],
+                alternativas: [...perguntas[qIndex].alternativas, '']
+            };
+            return { ...prev, perguntas };
+        });
+    };
+
+    const handleRemoveOption = (qIndex, optIndex) => {
+        setForm(prev => {
+            const perguntas = [...prev.perguntas];
+            const question = perguntas[qIndex];
+            const alternativas = question.alternativas.filter((_, i) => i !== optIndex);
+            const correctedIndex = Math.min(
+                Math.max(0, question.correctIndex - (question.correctIndex > optIndex ? 1 : 0)),
+                Math.max(0, alternativas.length - 1)
+            );
+            perguntas[qIndex] = { ...question, alternativas, correctIndex: correctedIndex };
+            return { ...prev, perguntas };
         });
     };
 
     const validate = () => {
         if (!form.titulo?.trim()) return 'Preencha o título do quiz.';
         if (!form.tarefa_id) return 'Selecione a tarefa vinculada.';
-        if (!form.enunciado?.trim()) return 'Informe o enunciado da pergunta.';
-        const filled = form.alternativas.map(a => a?.trim()).filter(Boolean);
-        if (filled.length < 2) return 'Informe pelo menos duas alternativas.';
-        if (form.correctIndex == null || form.correctIndex < 0 || form.correctIndex >= form.alternativas.length) return 'Selecione a resposta correta.';
-        if (!form.alternativas[form.correctIndex]?.trim()) return 'A alternativa marcada como correta não pode estar vazia.';
+        
+        for (let i = 0; i < form.perguntas.length; i++) {
+            const q = form.perguntas[i];
+            if (!q.enunciado?.trim()) return `Pergunta ${i + 1}: Informe o enunciado.`;
+            const filled = q.alternativas.map(a => a?.trim()).filter(Boolean);
+            if (filled.length < 2) return `Pergunta ${i + 1}: Informe pelo menos duas alternativas.`;
+            if (q.correctIndex == null || q.correctIndex < 0 || q.correctIndex >= q.alternativas.length) {
+                return `Pergunta ${i + 1}: Selecione a resposta correta.`;
+            }
+            if (!q.alternativas[q.correctIndex]?.trim()) {
+                return `Pergunta ${i + 1}: A alternativa marcada como correta não pode estar vazia.`;
+            }
+        }
         return null;
     };
 
@@ -168,28 +214,37 @@ export default function QuizzesContent() {
                 ativo: form.ativo,
             };
 
+            let quizId;
             if (isEditing && form.quizId) {
                 await updateQuizApi(form.quizId, quizPayload);
-                if (form.questionId) {
-                    await updateQuizQuestion(form.quizId, form.questionId, {
-                        enunciado: form.enunciado,
-                        alternativas: form.alternativas,
-                        resposta_correta: form.alternativas[form.correctIndex],
-                    });
-                } else {
-                    await createQuizQuestion(form.quizId, {
-                        enunciado: form.enunciado,
-                        alternativas: form.alternativas,
-                        resposta_correta: form.alternativas[form.correctIndex],
-                    });
+                quizId = form.quizId;
+                // Atualiza/cria cada pergunta
+                for (const q of form.perguntas) {
+                    if (q.questionId) {
+                        await updateQuizQuestion(quizId, q.questionId, {
+                            enunciado: q.enunciado,
+                            alternativas: q.alternativas,
+                            resposta_correta: q.alternativas[q.correctIndex],
+                        });
+                    } else {
+                        await createQuizQuestion(quizId, {
+                            enunciado: q.enunciado,
+                            alternativas: q.alternativas,
+                            resposta_correta: q.alternativas[q.correctIndex],
+                        });
+                    }
                 }
             } else {
                 const createdQuiz = await createQuizApi(quizPayload);
-                await createQuizQuestion(createdQuiz.id, {
-                    enunciado: form.enunciado,
-                    alternativas: form.alternativas,
-                    resposta_correta: form.alternativas[form.correctIndex],
-                });
+                quizId = createdQuiz.id;
+                // Cria todas as perguntas
+                for (const q of form.perguntas) {
+                    await createQuizQuestion(quizId, {
+                        enunciado: q.enunciado,
+                        alternativas: q.alternativas,
+                        resposta_correta: q.alternativas[q.correctIndex],
+                    });
+                }
             }
             await loadData();
             handleClose();
@@ -362,59 +417,91 @@ export default function QuizzesContent() {
                                 )}
                             </div>
 
-                            <div className="border p-4 rounded-lg bg-gray-50 space-y-3">
-                                <h4 className="font-semibold text-gray-800 flex items-center gap-2"><CheckSquare size={16}/> Pergunta</h4>
-                                <input
-                                    type="text"
-                                    placeholder="Enunciado"
-                                    className="w-full border p-3 rounded-lg"
-                                    value={form.enunciado}
-                                    onChange={(e) => setForm(prev => ({ ...prev, enunciado: e.target.value }))}
-                                    disabled={isSaving}
-                                />
+                            <div className="space-y-4">
+                                <div className="flex justify-between items-center">
+                                    <h4 className="font-semibold text-gray-800 flex items-center gap-2"><CheckSquare size={16}/> Perguntas</h4>
+                                    <button
+                                        type="button"
+                                        onClick={handleAddQuestion}
+                                        className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1"
+                                        disabled={isSaving}
+                                    >
+                                        <Plus size={14} /> Adicionar Pergunta
+                                    </button>
+                                </div>
 
-                                <div className="space-y-2">
-                                    {form.alternativas.map((opt, i) => (
-                                        <div key={i} className="flex items-center gap-3">
-                                            <input
-                                                type="radio"
-                                                name="correct-option"
-                                                checked={form.correctIndex === i}
-                                                onChange={() => setForm(prev => ({ ...prev, correctIndex: i }))}
-                                                className="w-4 h-4 text-green-600"
-                                                disabled={isSaving}
-                                            />
-                                            <input
-                                                type="text"
-                                                placeholder={`Opção ${i + 1}`}
-                                                className={`flex-1 border p-2 rounded ${form.correctIndex === i ? 'border-green-400 bg-green-50' : 'border-gray-300'}`}
-                                                value={opt}
-                                                onChange={(e) => handleOptionChange(i, e.target.value)}
-                                                disabled={isSaving}
-                                            />
-                                            {form.alternativas.length > 2 && (
+                                {form.perguntas.map((q, qIndex) => (
+                                    <div key={qIndex} className="border p-4 rounded-lg bg-gray-50 space-y-3">
+                                        <div className="flex justify-between items-center">
+                                            <h5 className="font-semibold text-gray-700">Pergunta {qIndex + 1}</h5>
+                                            {form.perguntas.length > 1 && (
                                                 <button
                                                     type="button"
-                                                    onClick={() => handleRemoveOption(i)}
+                                                    onClick={() => handleRemoveQuestion(qIndex)}
                                                     className="text-red-500 hover:text-red-700 p-1"
                                                     disabled={isSaving}
+                                                    title="Remover pergunta"
                                                 >
-                                                    <X size={16} />
+                                                    <Trash2 size={16} />
                                                 </button>
                                             )}
                                         </div>
-                                    ))}
-                                </div>
-                                {form.alternativas.length < 6 && (
-                                    <button
-                                        type="button"
-                                        onClick={handleAddOption}
-                                        className="text-sm text-green-600 hover:text-green-800 font-semibold flex items-center gap-1"
-                                        disabled={isSaving}
-                                    >
-                                        <Plus size={14} /> Adicionar opção
-                                    </button>
-                                )}
+                                        
+                                        <input
+                                            type="text"
+                                            placeholder="Enunciado da pergunta"
+                                            className="w-full border p-3 rounded-lg"
+                                            value={q.enunciado}
+                                            onChange={(e) => handleQuestionChange(qIndex, 'enunciado', e.target.value)}
+                                            disabled={isSaving}
+                                        />
+
+                                        <div className="space-y-2">
+                                            {q.alternativas.map((opt, optIndex) => (
+                                                <div key={optIndex} className="flex items-center gap-3">
+                                                    <input
+                                                        type="radio"
+                                                        name={`correct-option-${qIndex}`}
+                                                        checked={q.correctIndex === optIndex}
+                                                        onChange={() => handleQuestionChange(qIndex, 'correctIndex', optIndex)}
+                                                        className="w-4 h-4 text-green-600"
+                                                        disabled={isSaving}
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder={`Opção ${optIndex + 1}`}
+                                                        className={`flex-1 border p-2 rounded ${
+                                                            q.correctIndex === optIndex ? 'border-green-400 bg-green-50' : 'border-gray-300'
+                                                        }`}
+                                                        value={opt}
+                                                        onChange={(e) => handleOptionChange(qIndex, optIndex, e.target.value)}
+                                                        disabled={isSaving}
+                                                    />
+                                                    {q.alternativas.length > 2 && (
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => handleRemoveOption(qIndex, optIndex)}
+                                                            className="text-red-500 hover:text-red-700 p-1"
+                                                            disabled={isSaving}
+                                                        >
+                                                            <X size={16} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        {q.alternativas.length < 6 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => handleAddOption(qIndex)}
+                                                className="text-sm text-green-600 hover:text-green-800 font-semibold flex items-center gap-1"
+                                                disabled={isSaving}
+                                            >
+                                                <Plus size={14} /> Adicionar opção
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
