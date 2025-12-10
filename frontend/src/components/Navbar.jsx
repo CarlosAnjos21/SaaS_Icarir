@@ -19,7 +19,11 @@ export default function Navbar() {
     const [menuOpen, setMenuOpen] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [scrolledEnough, setScrolledEnough] = useState(false);
-    const [user, setUser] = useState(null); 
+    const [user, setUser] = useState(null);
+    const [isDarkMode, setIsDarkMode] = useState(() => {
+        const saved = localStorage.getItem("theme");
+        return saved ? saved === "dark" : false;
+    });
     const dropdownRef = useRef(null);
 
     const [isAuthenticated, setIsAuthenticated] = useState(
@@ -28,6 +32,22 @@ export default function Navbar() {
 
     const location = useLocation();
     const isHome = location.pathname === "/";
+
+    // Aplicar tema ao documento
+    useEffect(() => {
+        if (isDarkMode) {
+            document.documentElement.classList.add("dark");
+            document.body.style.backgroundColor = "#2a2a2a";
+        } else {
+            document.documentElement.classList.remove("dark");
+            document.body.style.backgroundColor = "#ffffff";
+        }
+        localStorage.setItem("theme", isDarkMode ? "dark" : "light");
+    }, [isDarkMode]);
+
+    const toggleTheme = () => {
+        setIsDarkMode(!isDarkMode);
+    };
 
     useEffect(() => {
         const handleScroll = () => setScrolledEnough(window.scrollY > 400);
@@ -161,6 +181,25 @@ export default function Navbar() {
                     </svg>
                     <span>Instagram</span>
                 </a>
+
+                {/* Toggle Tema Dark/Light */}
+                <button
+                    onClick={toggleTheme}
+                    className="flex items-center gap-2 text-sm hover:text-orange transition hidden md:flex p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+                    title={isDarkMode ? "Modo Claro" : "Modo Escuro"}
+                >
+                    {isDarkMode ? (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                            {/* Ícone de Sol */}
+                            <path d="M12 2v6m0 8v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M2 12h6m8 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none"/>
+                        </svg>
+                    ) : (
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="currentColor" viewBox="0 0 24 24">
+                            {/* Ícone de Lua */}
+                            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" fill="currentColor"/>
+                        </svg>
+                    )}
+                </button>
 
                 {/* Mobile burger */}
                 <div className="md:hidden">

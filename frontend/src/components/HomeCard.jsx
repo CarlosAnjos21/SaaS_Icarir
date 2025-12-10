@@ -52,7 +52,7 @@ export default function HomeCard({
         <h3 className="text-2xl font-bold text-orange mb-1 group-hover:text-[#394C97] transition-colors">
           {city}
         </h3>
-        <p className="text-sm text-dark">
+        <p className="text-sm text-dark dark:text-white">
           Complete missions to unlock discounts to {city}!
         </p>
 
