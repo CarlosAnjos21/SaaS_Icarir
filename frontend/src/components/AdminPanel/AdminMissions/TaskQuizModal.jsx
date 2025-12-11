@@ -1,439 +1,317 @@
-// src/components/AdminPanel/AdminMissions/TaskQuizModal.jsx
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { X, Save, Plus, Trash2, HelpCircle, CheckSquare, List } from 'lucide-react';
 
-import React, { useState, useEffect } from 'react';
-import { X, CheckSquare, Plus, Loader, Trash2 } from 'lucide-react';
-
-const INITIAL_QUIZ_QUESTION_STATE = {
-    enunciado: "",
-    opcoes: ["", "", "", ""],
-    resposta_correta: "", 
-};
-
-// Componente recebe 'task' (os dados da Tarefa), 'setTask' (o setter), categorias, e handlers
-const TaskQuizModal = ({ task, setTask, handleSave, handleClose, isEditing, isLoading, categories = [], missions = [] }) => {
+const TaskQuizModal = ({ 
+    task, 
+    setTask, 
+    handleSave, 
+    handleClose, 
+    isEditing, 
+    isLoading, 
+    categories, 
+    missions 
+}) => {
     
-    // Suporta múltiplas perguntas
-    const [quizPerguntas, setQuizPerguntas] = useState(() => {
-        if (Array.isArray(task?.quiz?.perguntas) && task.quiz.perguntas.length > 0) {
-            return task.quiz.perguntas;
-        }
-        return [{ ...INITIAL_QUIZ_QUESTION_STATE }];
-    });
+    // --- MANIPULAÇÃO GERAL ---
+    const handleChange = (field, value) => {
+        setTask(prev => ({ ...prev, [field]: value }));
+    };
 
-    // Se a tarefa já tem quiz ao carregar, marca como true automaticamente
-    const [hasQuiz, setHasQuiz] = useState(() => !!(task?.quiz && Array.isArray(task.quiz.perguntas) && task.quiz.perguntas.length > 0));
-
-    // UseEffect para sincronizar quando a tarefa muda (ao editar)
-    // Observamos a versão serializada do quiz para detectar mudanças profundas na estrutura
-    useEffect(() => {
-        try {
-            const serialized = JSON.stringify(task?.quiz || null);
-            if (task?.quiz && Array.isArray(task.quiz.perguntas) && task.quiz.perguntas.length > 0) {
-                setQuizPerguntas(task.quiz.perguntas);
-                setHasQuiz(true);
-                console.log('TaskQuizModal - sincronizado quiz:', task.quiz.perguntas);
-            } else {
-                setQuizPerguntas([{ ...INITIAL_QUIZ_QUESTION_STATE }]);
-                setHasQuiz(false);
+    // --- LÓGICA DE QUIZ ---
+    const handleAddQuestion = () => {
+        const newQuestion = {
+            enunciado: "",
+            tipo: "multipla_escolha",
+            opcoes: ["", "", "", ""],
+            resposta_correta: ""
+        };
+        
+        const currentQuiz = task.quiz || { perguntas: [] };
+        const currentQuestions = currentQuiz.perguntas || currentQuiz.questions || [];
+        
+        setTask(prev => ({
+            ...prev,
+            quiz: {
+                ...currentQuiz,
+                perguntas: [...currentQuestions, newQuestion]
             }
-            // também logamos a versão serializada para ajudar no debug de referências
-            console.log('TaskQuizModal - task.quiz (serialized):', serialized);
-        } catch (err) {
-            console.warn('TaskQuizModal - falha ao serializar task.quiz para sincronização', err);
-            setQuizPerguntas([{ ...INITIAL_QUIZ_QUESTION_STATE }]);
-            setHasQuiz(false);
-        }
-    }, [task.id, JSON.stringify(task?.quiz || null)]); // Sincroniza quando a tarefa muda (deep watch)
-
-    // Preservar/editar descrição do quiz
-    const [quizDescricao, setQuizDescricao] = useState(() => task?.quiz?.descricao || '');
-
-    // Sincroniza quizDescricao quando a tarefa muda
-    useEffect(() => {
-        try {
-            setQuizDescricao(task?.quiz?.descricao || '');
-        } catch (err) {
-            setQuizDescricao('');
-        }
-    }, [task.id, JSON.stringify(task?.quiz || null)]);
-    
-    // Trata mudanças nos campos simples (título, pontos, etc.)
-    const handleChange = (e) => {
-        const { name, value, type, checked } = e.target;
-        setTask(prev => ({ 
-            ...prev, 
-            [name]: type === 'number' ? Number(value) : (type === 'checkbox' ? checked : value)
         }));
     };
 
-    // Adiciona nova pergunta
-    const handleAddQuestion = () => {
-        setQuizPerguntas(prev => [...prev, { ...INITIAL_QUIZ_QUESTION_STATE }]);
+    const handleRemoveQuestion = (index) => {
+        const currentQuiz = task.quiz || { perguntas: [] };
+        const currentQuestions = currentQuiz.perguntas || currentQuiz.questions || [];
+        
+        const updatedQuestions = currentQuestions.filter((_, i) => i !== index);
+        
+        setTask(prev => ({
+            ...prev,
+            quiz: { ...currentQuiz, perguntas: updatedQuestions }
+        }));
     };
 
-    // Remove pergunta
-    const handleRemoveQuestion = (qIndex) => {
-        if (quizPerguntas.length > 1) {
-            setQuizPerguntas(prev => prev.filter((_, i) => i !== qIndex));
+    const handleQuestionChange = (index, field, value) => {
+        const currentQuiz = task.quiz || { perguntas: [] };
+        // Garante que é um array
+        const currentQuestions = [...(currentQuiz.perguntas || currentQuiz.questions || [])];
+        
+        // Atualiza a pergunta específica
+        currentQuestions[index] = { ...currentQuestions[index], [field]: value };
+        
+        setTask(prev => ({
+            ...prev,
+            quiz: { ...currentQuiz, perguntas: currentQuestions }
+        }));
+    };
+
+    const handleOptionChange = (qIndex, oIndex, value) => {
+        const currentQuiz = task.quiz || { perguntas: [] };
+        const currentQuestions = [...(currentQuiz.perguntas || currentQuiz.questions || [])];
+        
+        // Copia as opções da pergunta específica
+        const currentOptions = [...(currentQuestions[qIndex].opcoes || ["", "", "", ""])];
+        currentOptions[oIndex] = value;
+        currentQuestions[qIndex].opcoes = currentOptions;
+
+        setTask(prev => ({
+            ...prev,
+            quiz: { ...currentQuiz, perguntas: currentQuestions }
+        }));
+    };
+
+    // Renderiza inputs de quiz se necessário
+    const renderQuizFields = () => {
+        const currentQuiz = task.quiz || { perguntas: [] };
+        const questions = currentQuiz.perguntas || currentQuiz.questions || [];
+
+        return (
+            <div className="space-y-6 mt-4">
+                <div className="flex justify-between items-center border-b pb-2">
+                    <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                        <List size={16} /> Perguntas do Quiz
+                    </h3>
+                    <button 
+                        type="button"
+                        onClick={handleAddQuestion}
+                        className="text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-bold flex items-center gap-1 transition-colors"
+                    >
+                        <Plus size={12} /> Adicionar Pergunta
+                    </button>
+                </div>
+
+                {questions.length === 0 ? (
+                    <div className="text-center p-6 bg-gray-50 rounded-xl border border-dashed border-gray-300">
+                        <p className="text-sm text-gray-500">Nenhuma pergunta adicionada.</p>
+                    </div>
+                ) : (
+                    questions.map((q, qIndex) => (
+                        <div key={qIndex} className="bg-gray-50 p-4 rounded-xl border border-gray-200 relative group">
+                            <button 
+                                type="button"
+                                onClick={() => handleRemoveQuestion(qIndex)}
+                                className="absolute top-2 right-2 p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                                title="Remover pergunta"
+                            >
+                                <Trash2 size={14} />
+                            </button>
+
+                            <div className="space-y-3 pr-8">
+                                <div>
+                                    <label className="block text-xs font-bold text-gray-500 mb-1">Enunciado</label>
+                                    <input 
+                                        type="text" 
+                                        value={q.enunciado || ""}
+                                        onChange={(e) => handleQuestionChange(qIndex, 'enunciado', e.target.value)}
+                                        className="w-full p-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 outline-none"
+                                        placeholder="Ex: Qual a capital do Brasil?"
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {(q.opcoes || ["", "", "", ""]).map((opt, oIndex) => (
+                                        <div key={oIndex} className="flex items-center gap-2">
+                                            <div className="w-6 h-6 rounded-full bg-white border flex items-center justify-center text-xs font-bold text-gray-400 shrink-0">
+                                                {String.fromCharCode(65 + oIndex)}
+                                            </div>
+                                            <input 
+                                                type="text" 
+                                                value={opt || ""}
+                                                onChange={(e) => handleOptionChange(qIndex, oIndex, e.target.value)}
+                                                className={`w-full p-2 text-sm border rounded-lg outline-none focus:ring-1 focus:ring-indigo-500 ${q.resposta_correta === opt && opt !== "" ? 'border-green-500 bg-green-50' : 'border-gray-300'}`}
+                                                placeholder={`Opção ${oIndex + 1}`}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => handleQuestionChange(qIndex, 'resposta_correta', opt)}
+                                                className={`p-1.5 rounded-md transition-colors shrink-0 ${q.resposta_correta === opt && opt !== "" ? 'text-green-600 bg-green-100' : 'text-gray-300 hover:text-gray-500'}`}
+                                                title="Marcar como correta"
+                                            >
+                                                <CheckSquare size={16} />
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                                
+                                <div className="mt-2">
+                                    <p className="text-xs text-gray-400">
+                                        Resposta Correta: <span className="font-bold text-green-600">{q.resposta_correta || "Não selecionada"}</span>
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+        );
+    };
+
+    // Handler para fechar ao clicar no fundo (Backdrop)
+    const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget) {
+            handleClose();
         }
     };
-
-    // Trata mudanças nos campos da pergunta
-    const handleQuizChange = (qIndex, field, value) => {
-        setQuizPerguntas(prev => {
-            const perguntas = [...prev];
-            perguntas[qIndex] = { ...perguntas[qIndex], [field]: value };
-            return perguntas;
-        });
-    };
-
-    // Trata mudanças nas opções de resposta
-    const handleOptionChange = (qIndex, optIndex, value) => {
-        setQuizPerguntas(prev => {
-            const perguntas = [...prev];
-            const updatedOptions = [...perguntas[qIndex].opcoes];
-            updatedOptions[optIndex] = value;
-            perguntas[qIndex] = { ...perguntas[qIndex], opcoes: updatedOptions };
-            return perguntas;
-        });
-    };
-
-    // Alterna a inclusão do Quiz
-    const handleToggleQuiz = () => {
-        const shouldHaveQuiz = !hasQuiz;
-        setHasQuiz(shouldHaveQuiz);
-        if (shouldHaveQuiz) {
-            setQuizPerguntas([{ ...INITIAL_QUIZ_QUESTION_STATE }]);
-        }
-    };
-    
-    // Efeito para sincronizar os dados complexos (Quiz) com o estado da Tarefa antes de salvar
-    useEffect(() => {
-        if (hasQuiz) {
-            // Monta o objeto que o backend espera (Tarefa com Quiz aninhado)
-            setTask(prev => ({
-                ...prev,
-                quiz: { 
-                    titulo: prev.quiz?.titulo || `Quiz da Tarefa: ${prev.titulo || 'Novo'}`,
-                    descricao: quizDescricao || prev.quiz?.descricao || '',
-                    perguntas: quizPerguntas
-                }
-            }));
-        } else {
-            setTask(prev => ({
-                ...prev,
-                quiz: null
-            }));
-        }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [quizPerguntas, hasQuiz, setTask, task.titulo, quizDescricao]); // Dependências controladas
-
 
     return (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-white p-8 rounded-xl w-full max-w-3xl shadow-2xl relative max-h-[90vh] overflow-y-auto">
-                <h2 className="text-2xl font-bold mb-6 text-[#394C97]">
-                    {isEditing ? "Editar Tarefa" : "Criar Nova Tarefa"}
-                </h2>
+        <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+            onClick={handleBackdropClick}
+        >
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh]"
+                onClick={(e) => e.stopPropagation()} // Impede que cliques dentro do modal fechem ele
+            >
+                {/* Header */}
+                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 rounded-t-2xl">
+                    <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                        {isEditing ? <div className="w-2 h-6 bg-blue-500 rounded-full"/> : <div className="w-2 h-6 bg-green-500 rounded-full"/>}
+                        {isEditing ? 'Editar Tarefa' : 'Nova Tarefa'}
+                    </h2>
+                    <button 
+                        type="button"
+                        onClick={handleClose}
+                        className="p-2 hover:bg-gray-200 rounded-full transition-colors text-gray-500"
+                    >
+                        <X size={20} />
+                    </button>
+                </div>
 
-                <button onClick={handleClose} disabled={isLoading} className="absolute top-4 right-4 text-gray-400 hover:text-gray-700 disabled:opacity-50">
-                    <X size={24} />
-                </button>
-
-                <div className="space-y-6">
-                    {/* DETALHES DA TAREFA */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="text-xs text-gray-600 font-medium mb-1 block">Título da Tarefa *</label>
-                            <input
+                {/* Body Scrollable */}
+                <div className="p-6 overflow-y-auto custom-scrollbar flex-1">
+                    
+                    {/* Campos Principais */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div className="col-span-2">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Título da Tarefa</label>
+                            <input 
                                 type="text"
-                                name="titulo"
-                                placeholder="Ex: Completar perfil"
-                                className="w-full border p-3 rounded-lg caret-black text-gray-900"
-                                value={task.titulo || ''}
-                                onChange={handleChange}
-                                disabled={isLoading}
+                                value={task.titulo}
+                                onChange={(e) => handleChange('titulo', e.target.value)}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#394C97] outline-none font-bold text-gray-700"
+                                placeholder="Ex: Ler o documento de Compliance"
                             />
                         </div>
-                        <div>
-                            <label className="text-xs text-gray-600 font-medium mb-1 block">Categoria *</label>
-                            <select
-                                name="categoria_id"
-                                className="w-full border p-3 rounded-lg appearance-none caret-black text-gray-900"
-                                value={task.categoria_id || ''}
-                                onChange={handleChange}
-                                disabled={isLoading}
-                            >
-                                <option value="">Selecione...</option>
-                                {categories.map(cat => (
-                                    <option key={cat.id} value={cat.id}>{cat.nome}</option>
-                                ))}
-                            </select>
-                        </div>
-                    </div>
 
-                    <div>
-                        <label className="text-xs text-gray-600 font-medium mb-1 block">Descrição</label>
-                        <textarea
-                            name="descricao"
-                            placeholder="Descreva os detalhes da tarefa..."
-                            rows="3"
-                            className="w-full border p-3 rounded-lg caret-black text-gray-900"
-                            value={task.descricao || ''}
-                            onChange={handleChange}
-                            disabled={isLoading}
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-3 gap-4">
-                        <div>
-                            <label className="text-xs text-gray-600 font-medium mb-1 block">Tipo (opcional)</label>
-                            <select
-                                name="tipo"
-                                className="w-full border p-3 rounded-lg appearance-none caret-black text-gray-900"
-                                value={task.tipo || ''}
-                                onChange={handleChange}
-                                disabled={isLoading}
-                            >
-                                <option value="">Selecione...</option>
-                                <option value="administrativa">Administrativa</option>
-                                <option value="conhecimento">Conhecimento</option>
-                                <option value="engajamento">Engajamento</option>
-                                <option value="social">Social</option>
-                                <option value="feedback">Feedback</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label className="text-xs text-gray-600 font-medium mb-1 block">Pontos (XP)</label>
-                            <input
-                                type="number"
-                                name="pontos"
-                                placeholder="Ex: 100"
-                                className="w-full border p-3 rounded-lg caret-black text-gray-900"
-                                value={task.pontos ?? ''}
-                                onChange={handleChange}
-                                disabled={isLoading}
+                        <div className="col-span-2">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Descrição</label>
+                            <textarea 
+                                value={task.descricao}
+                                onChange={(e) => handleChange('descricao', e.target.value)}
+                                className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#394C97] outline-none text-sm min-h-[80px]"
+                                placeholder="Descreva o que o usuário deve fazer..."
                             />
                         </div>
-                        <div>
-                            <label className="text-xs text-gray-600 font-medium mb-1 block">Ordem de Exibição</label>
-                            <input
-                                type="number"
-                                name="ordem"
-                                placeholder="Ex: 1"
-                                className="w-full border p-3 rounded-lg caret-black text-gray-900"
-                                value={task.ordem ?? ''}
-                                onChange={handleChange}
-                                disabled={isLoading}
-                            />
-                        </div>
-                        <div>
-                            <label className="text-xs text-gray-600 font-medium mb-1 block">Dificuldade</label>
-                            <select
-                                name="dificuldade"
-                                className="w-full border p-3 rounded-lg appearance-none caret-black text-gray-900"
-                                value={task.dificuldade || 'facil'}
-                                onChange={handleChange}
-                                disabled={isLoading}
-                            >
-                                <option value="facil">Fácil</option>
-                                <option value="medio">Médio</option>
-                                <option value="dificil">Difícil</option>
-                            </select>
-                        </div>
-                    </div>
-                    {/* Instruções adicionais */}
-                    <div>
-                        <label className="text-xs text-gray-600 font-medium mb-1 block">Instruções (opcional)</label>
-                        <textarea
-                            name="instrucoes"
-                            placeholder="Ex: Acesse o link, preencha o formulário..."
-                            rows="2"
-                            className="w-full border p-3 rounded-lg caret-black text-gray-900"
-                            value={task.instrucoes || ''}
-                            onChange={handleChange}
-                            disabled={isLoading}
-                        />
-                    </div>
 
-                    {/* Requisitos: aceita JSON ou lista separada por vírgula */}
-                    <div>
-                        <label className="text-xs text-gray-600 font-medium mb-1 block">Requisitos (opcional)</label>
-                        <textarea
-                            name="requisitos"
-                            placeholder='Ex: email_verificado,perfil_completo'
-                            rows="2"
-                            className="w-full border p-3 rounded-lg caret-black text-gray-900"
-                            value={typeof task.requisitos === 'string' ? task.requisitos : (task.requisitos ? JSON.stringify(task.requisitos) : '')}
-                            onChange={handleChange}
-                            disabled={isLoading}
-                        />
-                        <p className="text-xs text-gray-500 mt-1">Separe por vírgula ou use JSON</p>
-                    </div>
-                    {/* Se fornecido, permite escolher missão associada (opcional) */}
-                    {missions && missions.length > 0 && (
                         <div>
-                            <label className="text-xs text-gray-600 font-medium mb-1 block">Missão Vinculada (opcional)</label>
-                            <select
-                                name="missao_id"
-                                className="w-full border p-3 rounded-lg appearance-none caret-black text-gray-900"
-                                value={task.missao_id ?? ''}
-                                onChange={handleChange}
-                                disabled={isLoading}
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Missão Vinculada</label>
+                            <select 
+                                value={task.missao_id || task.mission_id || ""}
+                                onChange={(e) => handleChange('missao_id', Number(e.target.value))}
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#394C97] outline-none text-sm"
                             >
-                                <option value="">Nenhuma</option>
+                                <option value="">Selecione a Missão...</option>
                                 {missions.map(m => (
                                     <option key={m.id} value={m.id}>{m.titulo}</option>
                                 ))}
                             </select>
                         </div>
-                    )}
-                    
-                    {/* INCLUSÃO DE QUIZ */}
-                    <div className="border p-4 rounded-lg bg-blue-50">
-                        <label className="flex items-center gap-3 font-semibold text-[#FE5900]">
-                            <input type="checkbox" checked={hasQuiz} onChange={handleToggleQuiz} className="w-4 h-4 text-blue-600" disabled={isLoading}/>
-                            Esta Tarefa é um Quiz de Múltipla Escolha?
-                        </label>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Categoria (Opcional)</label>
+                            <select 
+                                value={task.categoria_id || ""}
+                                onChange={(e) => handleChange('categoria_id', Number(e.target.value))}
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#394C97] outline-none text-sm"
+                            >
+                                <option value="">Sem Categoria</option>
+                                {categories.map(c => (
+                                    <option key={c.id} value={c.id}>{c.nome}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Pontos (XP)</label>
+                            <input 
+                                type="number"
+                                value={task.pontos}
+                                onChange={(e) => handleChange('pontos', Number(e.target.value))}
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#394C97] outline-none text-sm"
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Tarefa</label>
+                            <select 
+                                value={task.tipo}
+                                onChange={(e) => handleChange('tipo', e.target.value)}
+                                className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-[#394C97] outline-none text-sm"
+                            >
+                                <option value="padrao">Padrão (Checkbox)</option>
+                                <option value="administrativa">Administrativa (Upload)</option>
+                                <option value="social">Social (Link)</option>
+                                <option value="conhecimento">Conhecimento (Quiz)</option>
+                            </select>
+                        </div>
                     </div>
 
-                    {/* FORMULÁRIO DO QUIZ (Se hasQuiz for true) */}
-                    {hasQuiz && (
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center">
-                                <h4 className="font-semibold text-gray-800 flex items-center gap-2"><CheckSquare size={18}/> Perguntas do Quiz</h4>
-                                <button
-                                    type="button"
-                                    onClick={handleAddQuestion}
-                                    className="text-sm bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 flex items-center gap-1"
-                                    disabled={isLoading}
-                                >
-                                    <Plus size={14} /> Adicionar Pergunta
-                                </button>
-                            </div>
-
-                            {/* Descrição do Quiz (opcional) */}
-                            <div>
-                                <label className="text-xs text-gray-600 font-medium mb-1 block">Descrição do Quiz (opcional)</label>
-                                <textarea
-                                    rows={2}
-                                    className="w-full border p-3 rounded-lg caret-black text-gray-900"
-                                    placeholder="Breve contexto do quiz..."
-                                    value={quizDescricao}
-                                    onChange={(e) => setQuizDescricao(e.target.value)}
-                                    disabled={isLoading}
-                                />
-                            </div>
-
-                            {quizPerguntas.map((q, qIndex) => (
-                                <div key={qIndex} className="p-4 border rounded-lg bg-gray-50 space-y-3">
-                                    <div className="flex justify-between items-center">
-                                        <h5 className="font-semibold text-gray-700">Pergunta {qIndex + 1}</h5>
-                                        {quizPerguntas.length > 1 && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleRemoveQuestion(qIndex)}
-                                                className="text-red-500 hover:text-red-700 p-1"
-                                                disabled={isLoading}
-                                                title="Remover pergunta"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        )}
-                                    </div>
-                                    
-                                    <div>
-                                        <label className="text-xs text-gray-600 font-medium mb-1 block">Enunciado da Pergunta</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Ex: Qual é a capital da França?"
-                                            className="w-full border p-3 rounded-lg caret-black text-gray-900"
-                                            value={q.enunciado || ''}
-                                            onChange={(e) => handleQuizChange(qIndex, "enunciado", e.target.value)}
-                                            disabled={isLoading}
-                                        />
-                                    </div>
-                                    
-                                    <div className="space-y-2">
-                                        <p className="text-sm font-medium text-gray-700">Opções de Resposta:</p>
-                                        {q.opcoes.map((opt, optIndex) => (
-                                            <div key={optIndex} className="flex items-center gap-3">
-                                                <input
-                                                    type="radio"
-                                                    name={`correct-option-${qIndex}`}
-                                                    checked={q.resposta_correta === opt} 
-                                                    onChange={() => handleQuizChange(qIndex, "resposta_correta", opt)}
-                                                    className="w-4 h-4 text-green-600"
-                                                    disabled={isLoading}
-                                                />
-                                                <input
-                                                    type="text"
-                                                    placeholder={`Opção ${optIndex + 1}`}
-                                                    className={`flex-1 border p-2 rounded caret-black text-gray-900 ${
-                                                        q.resposta_correta === opt ? 'border-green-400 bg-green-50' : 'border-gray-300'
-                                                    }`}
-                                                    value={opt}
-                                                    onChange={(e) => handleOptionChange(qIndex, optIndex, e.target.value)}
-                                                    disabled={isLoading}
-                                                />
-                                            </div>
-                                        ))}
-                                    </div>
-                                    <div className='text-xs text-gray-500 mt-2'>* Selecione o rádio (círculo) para marcar a resposta correta.</div>
-                                </div>
-                            ))}
+                    {/* Área de Quiz Condicional */}
+                    {(task.tipo === 'conhecimento' || (task.quiz && Object.keys(task.quiz).length > 0 && (task.quiz.perguntas?.length > 0 || task.quiz.questions?.length > 0))) && (
+                        <div className="bg-indigo-50/50 p-6 rounded-2xl border border-indigo-100">
+                             <div className="flex items-center gap-2 mb-4 text-indigo-800">
+                                <HelpCircle size={20} />
+                                <h3 className="font-bold">Configuração do Quiz</h3>
+                             </div>
+                             {renderQuizFields()}
                         </div>
                     )}
+
                 </div>
 
-                {/* Ações do Modal */}
-                <div className="mt-8 flex justify-end gap-4 border-t pt-4">
-                    <button
+                {/* Footer */}
+                <div className="px-6 py-4 border-t border-gray-100 flex justify-end gap-3 bg-gray-50 rounded-b-2xl">
+                    <button 
+                        type="button"
                         onClick={handleClose}
+                        className="px-5 py-2.5 text-sm font-bold text-gray-500 hover:bg-gray-200 rounded-xl transition-colors"
                         disabled={isLoading}
-                        className="text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-100 transition disabled:opacity-50"
                     >
                         Cancelar
                     </button>
                     <button 
-                        onClick={() => {
-                            // preparar tarefa antes de salvar: normalizar `requisitos` (tentar JSON; se falhar, csv -> array)
-                            const prepareTaskForSave = (t) => {
-                                const copy = { ...t };
-                                // Normalize tipo to match backend enum values (lowercase, trimmed)
-                                if (copy.tipo !== undefined && copy.tipo !== null && copy.tipo !== '') {
-                                    try {
-                                        copy.tipo = String(copy.tipo).toLowerCase().trim();
-                                    } catch (e) {
-                                        copy.tipo = copy.tipo;
-                                    }
-                                } else {
-                                    copy.tipo = null;
-                                }
-                                // Normalize requisitos
-                                if (copy.requisitos === undefined || copy.requisitos === null || copy.requisitos === '') {
-                                    copy.requisitos = null;
-                                } else if (typeof copy.requisitos === 'string') {
-                                    const text = copy.requisitos.trim();
-                                    try {
-                                        copy.requisitos = JSON.parse(text);
-                                    } catch (e) {
-                                        // não é JSON -> separar por vírgula em um array de strings já trimado
-                                        copy.requisitos = text.split(',').map(s => s.trim()).filter(Boolean);
-                                    }
-                                }
-                                return copy;
-                            };
-                            handleSave(prepareTaskForSave(task));
-                        }} 
+                        type="button"
+                        onClick={handleSave}
+                        className="px-6 py-2.5 text-sm font-bold text-white bg-[#FE5900] hover:bg-[#e04f00] rounded-xl shadow-lg shadow-orange-200 transition-all flex items-center gap-2"
                         disabled={isLoading}
-                        className="bg-[#394C97] text-white px-6 py-2 rounded-lg font-semibold hover:bg-[#2f3f7a] shadow-md transition disabled:opacity-50 flex items-center gap-2"
                     >
-                        {isLoading ? <Loader size={20} className="animate-spin" /> : null}
-                        {isEditing ? "Salvar Alterações" : "Criar Tarefa"}
+                        {isLoading ? <span className="animate-spin">⌛</span> : <Save size={18} />}
+                        {isEditing ? 'Salvar Alterações' : 'Criar Tarefa'}
                     </button>
                 </div>
-            </div>
+            </motion.div>
         </div>
     );
 };
