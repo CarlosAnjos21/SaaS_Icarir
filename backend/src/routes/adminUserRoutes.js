@@ -14,12 +14,12 @@ router.route('/')
 
 /**
  * @route   GET /api/admin/users/:id
- * @route   PATCH /api/admin/users/:id
+ * @route   PUT /api/admin/users/:id
  * @route   DELETE /api/admin/users/:id
  */
 router.route('/:id')
   .get(adminUserController.getUserById)
-  .patch(adminUserController.updateUser)
+  .put(adminUserController.updateUser) // CORREÇÃO: Alterado de .patch para .put para casar com o frontend
   .delete(adminUserController.deleteUser);
 
 module.exports = router;

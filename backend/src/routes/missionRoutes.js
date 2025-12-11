@@ -8,10 +8,8 @@ const { authenticate, checkRole } = require("../middlewares/authMiddleware");
 // 1. Importar as rotas de tarefas
 const taskRoutes = require("./taskRoutes"); 
 
-// Definição dos Roles permitidos para visualização
+// Definição dos Roles permitidos para visualização (usado apenas nas rotas privadas agora)
 const PARTICIPANT_ROLES = ['admin', 'participante']; 
-
-
 
 // --- ROTAS DE SUB-MÓDULO (Aninhamento) ---
 
@@ -25,21 +23,21 @@ router.use(
 );
 
 
-// --- ROTAS DE VISUALIZAÇÃO DE MISSÕES (Acesso: Participante e Admin) ---
+// --- ROTAS DE VISUALIZAÇÃO DE MISSÕES ---
 
 /**
  * @route   GET /api/missions
  * @desc    Listar todas as missões ativas
- * @access  Privado (Participante e Admin)
+ * @access  Público (Alterado para exibir na Home)
  */
-router.get("/", authenticate, checkRole(PARTICIPANT_ROLES), missionController.getAllActiveMissions);
+router.get("/", missionController.getAllActiveMissions);
 
 /**
  * @route   GET /api/missions/:missionId
  * @desc    Buscar detalhes de uma missão específica
- * @access  Privado (Participante e Admin)
+ * @access  Público (Alterado para exibir detalhes básicos)
  */
-router.get("/:missionId", authenticate, checkRole(PARTICIPANT_ROLES), missionController.getMissionById);
+router.get("/:missionId", missionController.getMissionById);
 
 /**
  * @route   GET /api/missions/:missionId/full
@@ -48,23 +46,8 @@ router.get("/:missionId", authenticate, checkRole(PARTICIPANT_ROLES), missionCon
  */
 router.get("/:missionId/full", authenticate, checkRole(PARTICIPANT_ROLES), missionController.getMissionFullById);
 
+
 // --- ROTAS DE AÇÃO (INSCRIÇÃO/DESINSCRIÇÃO) ---
-
-/**
- * @route   POST /api/missions/:missionId/join
- * @desc    Inscrever o usuário logado em uma missão
- */
-router.post("/:missionId/join", authenticate, checkRole(['participante']), missionController.joinMission); 
-
-/**
- * @route   DELETE /api/missions/:missionId/join
- * @desc    Sair (desvincular) da missão
- * @note    Nova rota adicionada para suportar o botão "Sair"
- */
-router.delete("/:missionId/join", authenticate, checkRole(['participante']), missionController.leaveMission);
-
-
-// --- ROTAS DE AÇÃO ---
 
 /**
  * @route   POST /api/missions/:missionId/join
@@ -73,6 +56,11 @@ router.delete("/:missionId/join", authenticate, checkRole(['participante']), mis
  */
 router.post("/:missionId/join", authenticate, checkRole(['participante']), missionController.joinMission); 
 
-// 🛑 Rota /by-destination/:city REMOVIDA
+/**
+ * @route   DELETE /api/missions/:missionId/join
+ * @desc    Sair (desvincular) da missão
+ * @access  Privado (Apenas Participante)
+ */
+router.delete("/:missionId/join", authenticate, checkRole(['participante']), missionController.leaveMission);
 
 module.exports = router;

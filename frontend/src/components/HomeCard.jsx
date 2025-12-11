@@ -1,75 +1,58 @@
-import { useNavigate } from "react-router-dom";
-// Removidas as linhas desnecessárias de import e useEffect do AOS
-// import AOS from "aos"; 
-// import "aos/dist/aos.css";
+import React from 'react';
+import { MapPin, ArrowRight } from 'lucide-react';
 
 export default function HomeCard({
   city,
   image,
-  onStartMission,
-  loading,
+  onStartMission, // Na Home, esta função apenas redireciona para os detalhes
+  title,
   animation = "fade-up",
-  aosDelay = 0, // Agora esta prop será usada!
+  aosDelay = 0,
 }) {
-  const navigate = useNavigate();
-
-  // Removido: O AOS só precisa ser inicializado no componente Home.jsx
-  /* useEffect(() => {
-    AOS.init({
-      duration: 800, easing: "ease-out-cubic",
-      once: true,
-      offset: 100,
-    });
-    AOS.refresh();
-  }, []);
-  */
-
   return (
     <div
       data-aos={animation}
-      data-aos-delay={aosDelay} // <<< CORREÇÃO PRINCIPAL: Aplica o delay!
-      // ADICIONADO 'group': Permite controlar o efeito da imagem quando passamos o mouse no card
-      // ADICIONADO 'hover:-translate-y-2': Faz o card subir levemente
-      className="group relative cursor-pointer bg-white rounded-xl shadow-md transition-all duration-300 ease-in-out hover:shadow-2xl hover:-translate-y-2 overflow-hidden"
-
-      // Clique no Card -> Vai para Detalhes
-      onClick={() => onStartMission(city)}
+      data-aos-delay={aosDelay}
+      onClick={onStartMission}
+      className="group relative cursor-pointer bg-white dark:bg-[#2f2f2f] rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 ease-in-out hover:-translate-y-1 overflow-hidden flex flex-col h-full border border-gray-100 dark:border-gray-700"
     >
-      {/* Container da Imagem com overflow-hidden para o zoom não sair para fora */}
-      <div className="h-[240px] w-full overflow-hidden relative">
-        <img
-          src={image}
-          alt={city}
-          // EFEITO DE ZOOM AQUI: group-hover:scale-110 aumenta a imagem suavemente
-          className="w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
-        />
+      {/* Container da Imagem */}
+      <div className="h-48 w-full overflow-hidden relative">
+        {image ? (
+           <img
+            src={image}
+            alt={city}
+            className="w-full h-full object-cover transition-transform duration-700 ease-in-out group-hover:scale-110"
+          />
+        ) : (
+           <div className="w-full h-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-400">
+             <MapPin size={32} />
+           </div>
+        )}
+       
+        {/* Gradiente Overlay para legibilidade */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-60"></div>
 
-        {/* (Opcional) Overlay escuro suave ao passar o mouse para destacar o texto abaixo */}
-        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors duration-300"></div>
+        {/* Badge de Localização sobre a imagem */}
+        <div className="absolute bottom-3 left-3 flex items-center gap-1 text-white text-xs font-bold bg-black/30 backdrop-blur-md px-2 py-1 rounded-lg border border-white/20 shadow-sm">
+            <MapPin size={12} className="text-[#FE5900]" /> {city}
+        </div>
       </div>
 
-      <div className="p-5">
-        <h3 className="text-2xl font-bold text-orange mb-1 group-hover:text-[#394C97] transition-colors">
-          {city}
+      {/* Conteúdo Informativo */}
+      <div className="p-5 flex flex-col flex-1">
+        <h3 className="text-lg font-bold text-gray-800 dark:text-white mb-2 line-clamp-2 group-hover:text-[#394C97] dark:group-hover:text-[#FE5900] transition-colors">
+          {title || city}
         </h3>
-        <p className="text-sm text-dark dark:text-white">
-          Complete missions to unlock discounts to {city}!
+        
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-4 line-clamp-2 flex-1">
+          Explore os detalhes desta oportunidade e prepare-se para expandir seus horizontes.
         </p>
 
-        <button
-          // Clique no Botão -> Vai para Lista de Missões
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate("/missions");
-          }}
-          disabled={loading}
-          className={`mt-4 px-4 py-2 rounded text-white font-medium shadow-sm transition-all duration-300 transform ${loading
-              ? "bg-gray-400 cursor-not-allowed"
-              : "bg-[#394C97] hover:bg-[#FE5900] hover:scale-105 active:scale-95"
-            }`}
-        >
-          {loading ? "Iniciando..." : "Iniciar Missão"}
-        </button>
+        {/* Call to Action passivo (Link) */}
+        <div className="mt-auto flex items-center text-sm font-bold text-[#394C97] dark:text-[#FE5900] group-hover:underline">
+          Ver detalhes <ArrowRight size={16} className="ml-1 transition-transform group-hover:translate-x-1" />
+        </div>
       </div>
     </div>
   );

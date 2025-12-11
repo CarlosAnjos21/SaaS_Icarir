@@ -1,39 +1,63 @@
 const express = require('express');
 const router = express.Router();
-const adminMissionController = require('../controllers/adminMissionController');
 
-// NOTA: Não precisamos do authMiddleware ou adminMiddleware aqui,
-// pois eles já serão aplicados no 'adminRoutes.js' (o router pai).
+// Controller de ADMIN (CRUD da missão)
+const adminMissionController = require('../controllers/adminMissionController');
+// Controller GERAL (Gestão de participantes e lógica de negócio)
+const missionController = require('../controllers/missionController');
+
+// --- ROTAS DE CRUD DE MISSÃO (ADMIN) ---
 
 /**
  * @route   POST /api/admin/missions
- * @desc    (Admin) Criar uma nova missão
+ * @desc    Criar missão
  */
 router.post('/', adminMissionController.createMission);
 
 /**
  * @route   GET /api/admin/missions
- * @desc    (Admin) Listar TODAS as missões
+ * @desc    Listar missões
  */
 router.get('/', adminMissionController.getAllMissions);
 
 /**
  * @route   GET /api/admin/missions/:missionId
- * @desc    (Admin) Buscar detalhes de uma missão
+ * @desc    Detalhes da missão
  */
 router.get('/:missionId', adminMissionController.getMissionById);
 
 /**
  * @route   PUT /api/admin/missions/:missionId
- * @desc    (Admin) Atualizar uma missão
+ * @desc    Atualizar missão
  */
 router.put('/:missionId', adminMissionController.updateMission);
 
 /**
  * @route   DELETE /api/admin/missions/:missionId
- * @desc    (Admin) Desativar (soft delete) uma missão
+ * @desc    Soft delete da missão
  */
 router.delete('/:missionId', adminMissionController.softDeleteMission);
+
+
+// --- ROTAS DE PARTICIPANTES (ESSENCIAIS PARA O MODAL) ---
+
+/**
+ * @route   GET /api/admin/missions/:missionId/participants
+ * @desc    Listar participantes da missão
+ */
+router.get('/:missionId/participants', missionController.getMissionParticipants);
+
+/**
+ * @route   POST /api/admin/missions/:missionId/participants
+ * @desc    Vincular participante manualmente
+ */
+router.post('/:missionId/participants', missionController.addParticipantToMission);
+
+/**
+ * @route   DELETE /api/admin/missions/:missionId/participants/:userId
+ * @desc    Remover participante
+ */
+router.delete('/:missionId/participants/:userId', missionController.removeParticipantFromMission);
 
 
 module.exports = router;
