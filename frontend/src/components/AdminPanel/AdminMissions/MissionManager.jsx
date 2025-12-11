@@ -42,7 +42,6 @@ const INITIAL_MISSION_STATE = {
     ativa: true,
     missao_anterior_id: null,
     foto_url: "",
-    // Aliases UI (Usados no Modal)
     title: "",
     city: "",
     points: 0,
@@ -58,7 +57,6 @@ const createEmptyMission = () => ({
     quiz: null,
 });
 
-// Normalização do Quiz
 function normalizeQuizToUI(quiz) {
     if (!quiz) return null;
     if (quiz.question || quiz.options) {
@@ -76,7 +74,6 @@ function normalizeQuizToUI(quiz) {
     };
 }
 
-// Normalização da Missão (Banco -> UI)
 function normalizeMission(m) {
     if (!m) return { ...INITIAL_MISSION_STATE, _raw: m };
 
@@ -88,13 +85,10 @@ function normalizeMission(m) {
     }
 
     const totalPoints = steps.reduce((sum, s) => sum + (Number(s.points) || 0), 0);
-
-    // Mapeamento da Imagem: Tenta todas as opções
     const imgUrl = m.foto_url || m.imageUrl || "";
 
     return {
         id: m.id,
-        // Aliases UI <- Dados Banco
         title: m.titulo || m.title || '',
         city: m.destino || m.city || '',
         descricao: m.descricao || '',
@@ -105,13 +99,12 @@ function normalizeMission(m) {
         steps: steps.length ? steps : (m.steps || []),
         quiz: normalizeQuizToUI(m.quiz),
         ativa: (m.ativa === undefined || m.ativa === null) ? true : Boolean(m.ativa),
-        imageUrl: imgUrl, 
-        foto_url: imgUrl, 
+        imageUrl: imgUrl,
+        foto_url: imgUrl,
         _raw: m,
     };
 }
 
-// Sincronização de Tarefas (UI -> Banco)
 async function syncTasksForMission(missionId, steps) {
     if (!Array.isArray(steps)) return [];
     const results = [];
@@ -140,7 +133,7 @@ async function syncTasksForMission(missionId, steps) {
     return results.map(t => ({ id: t.id, description: t.titulo || t.descricao || '', points: t.pontos }));
 }
 
-const MissionListAndCRUD = () => {
+const MissionManager = () => {
     const [missions, setMissions] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -153,7 +146,6 @@ const MissionListAndCRUD = () => {
     const [editingId, setEditingId] = useState(null);
     const [newMission, setNewMission] = useState(createEmptyMission);
     
-    // Modal de Participantes
     const [showParticipantsModal, setShowParticipantsModal] = useState(false);
     const [currentManageMission, setCurrentManageMission] = useState(null);
 
@@ -181,18 +173,14 @@ const MissionListAndCRUD = () => {
         if (missionToEdit) {
             setIsEditing(true);
             setEditingId(missionToEdit.id);
-            // Normaliza para garantir que imageUrl e outros aliases estejam preenchidos para o form
             const m = JSON.parse(JSON.stringify(missionToEdit));
             setNewMission({
                 ...createEmptyMission(),
                 ...m,
-                // Mapeamento explícito para garantir edição correta
                 title: m.titulo || m.title || "",
                 city: m.destino || m.city || "",
                 descricao: m.descricao || "",
                 points: m.points || 0,
-                preco: m.preco != null ? Number(m.preco) : 0,
-                vagas_disponiveis: m.vagas_disponiveis != null ? Number(m.vagas_disponiveis) : 0,
                 expirationDate: m.data_fim ? String(m.data_fim).slice(0,10) : (m.expirationDate || ""),
                 imageUrl: m.foto_url || m.imageUrl || "", 
                 quiz: normalizeQuizToUI(m.quiz),
@@ -232,7 +220,6 @@ const MissionListAndCRUD = () => {
     };
 
     const handleSaveMission = async () => {
-        // Validação
         if (!(newMission.titulo || newMission.title) || !(newMission.destino || newMission.city)) {
             alert("Preencha Título e Destino.");
             return;
@@ -249,7 +236,6 @@ const MissionListAndCRUD = () => {
 
         setIsSaving(true);
         try {
-            // Mapeamento UI -> Banco de Dados
             const payload = {
                 titulo: newMission.titulo || newMission.title,
                 descricao: newMission.descricao || "",
@@ -260,7 +246,6 @@ const MissionListAndCRUD = () => {
                 vagas_disponiveis: newMission.vagas_disponiveis != null ? newMission.vagas_disponiveis : 0,
                 ativa: true,
                 missao_anterior_id: null,
-                // Garante que a foto seja enviada (pode vir do upload ou edição)
                 foto_url: newMission.imageUrl || newMission.foto_url || "", 
             };
 
@@ -268,7 +253,6 @@ const MissionListAndCRUD = () => {
                 const updated = await updateMission(editingId, payload);
                 const norm = normalizeMission(updated);
                 
-                // Lógica de sincronização de tarefas
                 const originalMission = missions.find(m => m.id === editingId);
                 const originalStepIds = (originalMission?.steps || []).filter(s => s.id).map(s => s.id);
                 const currentStepIds = (newMission.steps || []).filter(s => s.id).map(s => s.id);
@@ -416,4 +400,4 @@ const MissionListAndCRUD = () => {
     );
 };
 
-export default MissionListAndCRUD;
+export default MissionManager;

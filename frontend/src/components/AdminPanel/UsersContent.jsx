@@ -14,6 +14,7 @@ import {
     UserCircle, 
     RefreshCw 
 } from 'lucide-react';
+// Importação das funções de API robustas
 import { fetchUsers, createUser, updateUser, deleteUserApi } from '../../api/apiFunctions'; 
 import UserModal from './UserModal'; 
 
@@ -111,6 +112,7 @@ const UsersContent = () => {
     const [searchTerm, setSearchTerm] = useState("");
     const [activeCategory, setActiveCategory] = useState('participante');
 
+    // Ref para evitar vazamento de memória e erros em desmontagem
     const isMounted = useRef(true);
 
     useEffect(() => {
@@ -122,24 +124,24 @@ const UsersContent = () => {
         setLoading(true);
         setError(null);
         
-        // Timeout de segurança: 10 segundos
-        const timeoutPromise = new Promise((_, reject) => 
-            setTimeout(() => reject(new Error("O servidor demorou para responder.")), 10000)
-        );
-
         try {
-            const data = await Promise.race([fetchUsers(), timeoutPromise]);
+            // CORREÇÃO: Usar fetchUsers() para garantir a rota correta e tratamento de resposta
+            const data = await fetchUsers();
             
             if (isMounted.current) {
-                const validUsers = Array.isArray(data) ? data.map(user => ({
+                // Tratamento robusto para garantir array
+                const usersList = Array.isArray(data) ? data : (data?.data || []);
+                
+                const validUsers = usersList.map(user => ({
                     ...user,
                     data_criacao: user.data_criacao || user.dataCriacao,
-                })) : [];
+                }));
                 setUsers(validUsers);
             }
         } catch (err) {
             if (isMounted.current) {
                 console.error("Erro no loadUsers:", err);
+                // Ignora erro 401 visualmente se for apenas questão de refresh token
                 if (err.response?.status !== 401) {
                     setError(`Erro: ${err.message || 'Falha na conexão'}`);
                 }

@@ -1,6 +1,6 @@
 // Importa o Prisma Client
 const prisma = require("../config/prismaClient");
-const { Prisma } = require("@prisma/client"); // Para tratamento de erros específicos do Prisma
+const { Prisma } = require("@prisma/client");
 const bcrypt = require("bcryptjs");
 
 /**
@@ -23,8 +23,7 @@ const getAllUsers = async (req, res) => {
   }
 
   try {
-    // Usuario Singular
-  const users = await prisma.usuario.findMany({
+    const users = await prisma.usuario.findMany({
       where,
       select: {
         id: true,
@@ -35,6 +34,7 @@ const getAllUsers = async (req, res) => {
         ativo: true,
         pontos: true,
         foto_url: true,
+        data_criacao: true, // Importante para a tabela do frontend
       },
       orderBy: { nome: "asc" },
     });
@@ -52,7 +52,7 @@ const getAllUsers = async (req, res) => {
  * @access  Admin
  */
 const createUser = async (req, res) => {
-  const { nome, email, senha, empresa, role, ativo } = req.body;
+  const { nome, email, senha, empresa, role, ativo, pontos } = req.body;
 
   if (!nome || !email || !senha) {
     return res
@@ -60,12 +60,11 @@ const createUser = async (req, res) => {
       .json({ error: "Nome, email e senha são obrigatórios." });
   }
 
-  // Role values come from Prisma enum Role: participante | admin | validador
   const allowedRoles = ["participante", "admin", "validador"];
   const finalRole = allowedRoles.includes(role) ? role : "participante";
 
   try {
-  const existingUser = await prisma.usuario.findUnique({ where: { email } });
+    const existingUser = await prisma.usuario.findUnique({ where: { email } });
     if (existingUser) {
       return res.status(409).json({ error: "Este e-mail já está cadastrado." });
     }
@@ -73,8 +72,7 @@ const createUser = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const senhaHash = await bcrypt.hash(senha, salt);
 
-    // 3️⃣ Cria o novo usuário
-  const newUser = await prisma.usuario.create({
+    const newUser = await prisma.usuario.create({
       data: {
         nome,
         email,
@@ -82,6 +80,7 @@ const createUser = async (req, res) => {
         empresa: empresa || null,
         role: finalRole,
         ativo: ativo ?? true,
+        pontos: pontos ? parseInt(pontos) : 0,
       },
       select: {
         id: true,
@@ -90,6 +89,7 @@ const createUser = async (req, res) => {
         empresa: true,
         role: true,
         ativo: true,
+        pontos: true,
       },
     });
 
@@ -119,7 +119,7 @@ const getUserById = async (req, res) => {
     if (isNaN(id))
       return res.status(400).json({ error: "ID de usuário inválido." });
 
-  const user = await prisma.usuario.findUnique({
+    const user = await prisma.usuario.findUnique({
       where: { id },
       select: {
         id: true,
@@ -143,8 +143,8 @@ const getUserById = async (req, res) => {
 };
 
 /**
- * @route   PATCH /api/admin/users/:id
- * @desc    (Admin) Atualizar dados de um usuário (mudar role, status, etc.)
+ * @route   PUT /api/admin/users/:id
+ * @desc    (Admin) Atualizar dados de um usuário
  * @access  Admin
  */
 const updateUser = async (req, res) => {
@@ -153,24 +153,31 @@ const updateUser = async (req, res) => {
     if (isNaN(id))
       return res.status(400).json({ error: "ID de usuário inválido." });
 
-    const { nome, email, foto_url, role, ativo, pontos, empresa } = req.body;
+    const { nome, email, foto_url, role, ativo, pontos, empresa, senha } = req.body;
 
-  // Role values come from Prisma enum Role: participante | admin | validador
-  const allowedRoles = ["participante", "admin", "validador"];
-  const finalRole = allowedRoles.includes(role) ? role : undefined;
+    const allowedRoles = ["participante", "admin", "validador"];
+    // Se o role não for enviado ou for inválido, não atualiza esse campo (undefined)
+    const finalRole = allowedRoles.includes(role) ? role : undefined;
 
-  const updatedUser = await prisma.usuario.update({
-      where: { id },
-      data: {
+    const dataToUpdate = {
         nome,
         email,
         foto_url,
         role: finalRole,
         ativo,
-        pontos,
+        pontos: pontos !== undefined ? parseInt(pontos) : undefined,
         empresa,
         data_atualizacao: new Date(),
-      },
+    };
+
+    if (senha && senha.trim() !== "") {
+        const salt = await bcrypt.genSalt(10);
+        dataToUpdate.senha = await bcrypt.hash(senha, salt);
+    }
+
+    const updatedUser = await prisma.usuario.update({
+      where: { id },
+      data: dataToUpdate,
       select: {
         id: true,
         nome: true,
@@ -213,13 +220,20 @@ const deleteUser = async (req, res) => {
     if (isNaN(id))
       return res.status(400).json({ error: "ID de usuário inválido." });
 
-  const deletedUser = await prisma.usuario.update({
+    // Estamos usando Soft Delete (apenas desativar) ou Hard Delete?
+    // Se for Hard Delete (excluir do banco):
+    await prisma.usuario.delete({ where: { id } });
+    
+    // Se for Soft Delete (desativar), use o código comentado abaixo:
+    /*
+    const deletedUser = await prisma.usuario.update({
       where: { id },
       data: { ativo: false, data_atualizacao: new Date() },
       select: { id: true, ativo: true },
     });
+    */
 
-    res.json({ message: "Usuário desativado com sucesso!", user: deletedUser });
+    res.json({ message: "Usuário removido com sucesso!" });
   } catch (error) {
     if (
       error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -233,6 +247,7 @@ const deleteUser = async (req, res) => {
     res.status(500).json({ error: "Erro interno do servidor." });
   }
 };
+
 module.exports = {
   getAllUsers,
   createUser,
