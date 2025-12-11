@@ -14,7 +14,7 @@ const adminQuizRoutes = require("./adminQuizRoutes");
 const adminCardsRoutes = require("./adminCardsRoutes");
 const adminUserRoutes = require("./adminUserRoutes");
 const adminEnrollmentsRoutes = require("./adminEnrollmentsRoutes");
-// const adminTaskRoutes = require('./adminTaskRoutes'); // Se tiver um arquivo específico, descomente
+const adminTaskRoutes = require('./adminTaskRoutes');
 
 // --- PROTEÇÃO GLOBAL ---
 // Aplicar estas regras a TODAS as rotas e sub-rotas que vêm a seguir
@@ -52,6 +52,7 @@ router.use("/users", adminUserRoutes);
 router.use("/quizzes", adminQuizRoutes);
 router.use("/awards", adminAwardsRoutes);
 router.use("/cards", adminCardsRoutes);
+router.use('/tasks', adminTaskRoutes);
 // router.use('/tasks', adminTaskRoutes); // Descomente se criar rotas específicas de tarefas admin
 
 module.exports = router;

@@ -11,10 +11,10 @@ const adminTaskController = require('../controllers/adminTaskController');
 router.get('/', adminTaskController.getAllTasks);
 
 /**
- * GET /api/admin/tasks/:taskId
+ * GET /api/admin/tasks/:id
  * Busca uma tarefa pelo ID (admin)
  */
-router.get('/:taskId', adminTaskController.getTaskById);
+router.get('/:id', adminTaskController.getTaskById);
 
 /**
  * POST /api/admin/tasks
@@ -23,15 +23,15 @@ router.get('/:taskId', adminTaskController.getTaskById);
 router.post('/', adminTaskController.createTask);
 
 /**
- * PUT /api/admin/tasks/:taskId
+ * PUT /api/admin/tasks/:id
  * (Admin) Atualiza uma tarefa
  */
-router.put('/:taskId', adminTaskController.updateTask);
+router.put('/:id', adminTaskController.updateTask);
 
 /**
- * DELETE /api/admin/tasks/:taskId
+ * DELETE /api/admin/tasks/:id
  * (Admin) Desativa uma tarefa (soft delete)
  */
-router.delete('/:taskId', adminTaskController.deleteTask);
+router.delete('/:id', adminTaskController.deleteTask);
 
 module.exports = router;
