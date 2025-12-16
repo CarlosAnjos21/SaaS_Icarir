@@ -90,7 +90,10 @@ router.post('/:taskId/submit', authenticate, async (req, res) => {
         // Credita pontos no perfil do usuário (Otimista/Automático)
         await prisma.usuario.update({
             where: { id: userId },
-            data: { pontos: { increment: task.pontos } }
+            data: { 
+                pontos: { increment: task.pontos },
+                pontos_totais: { increment: task.pontos }
+            }
         });
 
         // Simulação de envio de email para tarefas documentais
