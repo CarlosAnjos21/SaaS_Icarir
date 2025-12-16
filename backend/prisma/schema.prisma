@@ -254,14 +254,14 @@ model UsuarioTarefa {
 
 model Quiz {
   id           Int      @id @default(autoincrement())
-  tarefaId     Int      @unique
+  tarefa_id    Int      @unique
   titulo       String
   descricao    String?
   ativo        Boolean  @default(true)
   data_criacao DateTime @default(now())
 
   // Relations
-  tarefa    Tarefa   @relation(fields: [tarefaId], references: [id])
+  tarefa    Tarefa         @relation(fields: [tarefa_id], references: [id])
   perguntas PerguntaQuiz[]
 
   @@map("quizzes")
