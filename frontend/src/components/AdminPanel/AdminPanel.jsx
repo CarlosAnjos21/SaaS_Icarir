@@ -3,10 +3,10 @@ import { useNavigate } from "react-router-dom"; // Import necessário para redir
 import { 
     BarChart2, 
     Users, 
-    Settings, 
+    // Settings, // Removido
     Zap, 
     Briefcase, 
-    HelpCircle, 
+    // HelpCircle, // Removido
     Menu, 
     X,
     LogOut,
@@ -19,20 +19,21 @@ import DashboardContent from './DashboardContent';
 import UsersContent from './UsersContent'; 
 import MissionsContent from './AdminMissions/MissionsContent';
 import TasksQuizzesContent from './AdminMissions/TasksQuizzesContent';
-import QuizzesContent from './QuizzesContent';
+// import QuizzesContent from './QuizzesContent'; // Removido se não for usado
 
 export default function AdminPanel() {
     const [activeTab, setActiveTab] = useState("dashboard");
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const navigate = useNavigate(); // Hook de navegação
 
+    // ⚠️ Removidos: 'quizzes' e 'settings'
     const tabs = [
         { id: "dashboard", label: "Dashboard", icon: BarChart2, content: <DashboardContent /> }, 
         { id: "missions", label: "Missões Ativas", icon: Zap, content: <MissionsContent /> },
         { id: "users", label: "Gestão de Usuários", icon: Users, content: <UsersContent /> },
         { id: "tasks", label: "Tarefas", icon: Briefcase, content: <TasksQuizzesContent /> },
-        { id: "quizzes", label: "Quizzes", icon: HelpCircle, content: <QuizzesContent /> },
-        { id: "settings", label: "Configurações", icon: Settings, content: <div className="p-8"><div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center"><h2 className="text-2xl font-bold text-gray-300">Em Desenvolvimento</h2></div></div> },
+        // { id: "quizzes", label: "Quizzes", icon: HelpCircle, content: <QuizzesContent /> }, // Removido
+        // { id: "settings", label: "Configurações", icon: Settings, content: <div className="p-8"><div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 text-center"><h2 className="text-2xl font-bold text-gray-300">Em Desenvolvimento</h2></div></div> }, // Removido
     ];
     
     const currentTab = tabs.find(tab => tab.id === activeTab);
@@ -40,7 +41,6 @@ export default function AdminPanel() {
     // Função de Logout
     const handleLogout = () => {
         // Limpa o token e dados do usuário do localStorage
-        // Ajuste a chave 'token' se você usa outro nome (ex: 'authToken', 'supabase.auth.token', etc)
         localStorage.removeItem('token'); 
         localStorage.removeItem('user');
         
