@@ -1,13 +1,14 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import {
     MagnifyingGlassIcon,
-    BellIcon,
     UserCircleIcon,
     ArrowRightOnRectangleIcon,
     UserIcon,
     Bars3Icon,
     XMarkIcon,
-    LockClosedIcon
+    LockClosedIcon,
+    SunIcon, // Ícone de Sol do Heroicons (mais limpo)
+    MoonIcon // Ícone de Lua do Heroicons (para padronizar)
 } from "@heroicons/react/24/outline";
 import { useState, useEffect, useRef } from "react";
 import logoIcarir from "../assets/símbolo-icarir.png"; // ✅ Import real
@@ -213,30 +214,24 @@ export default function Navbar() {
                 </a>
 
 
-{/* Toggle Tema Dark/Light */}
-<button
-    onClick={toggleTheme}
-    className="
+                {/* Toggle Tema Dark/Light (Corrigido para usar SunIcon/MoonIcon) */}
+                <button
+                    onClick={toggleTheme}
+                    className="
         hidden md:flex items-center gap-2 p-2 rounded-lg
         text-sm transition-all duration-200
         hover:text-orange-500 active:scale-95
     "
-    title={isDarkMode ? 'Modo Claro' : 'Modo Escuro'}
->
-    {isDarkMode ? (
-        // Ícone Sol
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 2v6m0 8v6M4.22 4.22l4.24 4.24m5.08 5.08l4.24 4.24M2 12h6m8 0h6M4.22 19.78l4.24-4.24m5.08-5.08l4.24-4.24"
-                stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" fill="none" />
-        </svg>
-    ) : (
-        // Ícone Lua
-        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="currentColor"
-            viewBox="0 0 24 24">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-        </svg>
-    )}
-</button>
+                    title={isDarkMode ? 'Modo Claro' : 'Modo Escuro'}
+                >
+                    {isDarkMode ? (
+                        // Ícone Sol (Novo: Mais limpo e profissional)
+                        <SunIcon className="h-6 w-6" />
+                    ) : (
+                        // Ícone Lua (Padronizado)
+                        <MoonIcon className="h-6 w-6" />
+                    )}
+                </button>
 
 
                 {/* Mobile burger */}
@@ -250,7 +245,7 @@ export default function Navbar() {
                 </div>
 
                 <MagnifyingGlassIcon className="h-6 w-6 hover:text-orange cursor-pointer" />
-                <BellIcon className="h-6 w-6 hover:text-orange cursor-pointer" />
+                {/* Ícone BellIcon Removido */}
 
                 {/* **ÁREA DO USUÁRIO** */}
                 <div className="relative" ref={dropdownRef}>
@@ -268,8 +263,8 @@ export default function Navbar() {
                                 />
                             ) : (
                                 <div className={`h-9 w-9 rounded-full flex items-center justify-center border-2 font-bold text-xs ${isTransparent
-                                    ? "bg-white/20 border-white text-white"
-                                    : "bg-[#394C97] border-[#394C97] text-white"
+                                        ? "bg-white/20 border-white text-white"
+                                        : "bg-[#394C97] border-[#394C97] text-white"
                                     }`}>
                                     {getInitials(user?.nome)}
                                 </div>
