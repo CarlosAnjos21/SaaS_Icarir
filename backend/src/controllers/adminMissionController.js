@@ -150,7 +150,7 @@ const updateMission = async (req, res) => {
     vagas_disponiveis,
     ativa,
     missao_anterior_id,
-    foto_url // <--- ADICIONADO AQUI
+    foto_url 
   } = req.body;
 
   console.log('updateMission - payload recebido:', req.body);
@@ -161,7 +161,7 @@ const updateMission = async (req, res) => {
   if (titulo !== undefined) dataToUpdate.titulo = titulo;
   if (descricao !== undefined) dataToUpdate.descricao = descricao;
   if (destino !== undefined) dataToUpdate.destino = destino;
-  if (foto_url !== undefined) dataToUpdate.foto_url = foto_url; // <--- ADICIONADO AQUI
+  if (foto_url !== undefined) dataToUpdate.foto_url = foto_url; 
 
   if (data_inicio !== undefined) {
     const di = new Date(data_inicio);

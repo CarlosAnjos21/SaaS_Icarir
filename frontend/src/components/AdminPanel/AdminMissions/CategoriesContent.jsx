@@ -7,18 +7,156 @@ import {
     AlertTriangle, 
     RefreshCw, 
     Layers, 
-    FolderOpen 
+    FolderOpen,
+    Edit2,
+    Trash2,
+    Check,
+    X,
+    MoreVertical,
+    Sword,   // Novo import
+    Users,   // Novo import
+    Lock     // Novo import
 } from 'lucide-react';
-import { fetchCategories, createCategory, updateCategory, deleteCategory, createTask, updateTask, deleteTask, fetchMissions } from '../../../api/apiFunctions'; 
-import CategoryModal from './CategoryModal';
-import CategoryCard from './CategoryCard';
-import TaskQuizModal from './TaskQuizModal';
+
+// --- MOCKS (NECESSÁRIOS PARA RODAR NO AMBIENTE DE VISUALIZAÇÃO) ---
+
+// MOCK API FUNCTIONS
+const fetchCategories = async () => [
+    { id: 1, nome: "Segurança Ofensiva", descricao: "Pentesting e Red Teaming", icone: "sword", cor: "#ef4444" },
+    { id: 2, nome: "Engenharia Social", descricao: "Phishing e OSINT", icone: "users", cor: "#3b82f6" },
+    { id: 3, nome: "Criptografia", descricao: "Cifras e Hash", icone: "lock", cor: "#10b981" }
+];
+const createCategory = async (data) => ({ ...data, id: Math.random() });
+const updateCategory = async (id, data) => ({ ...data, id });
+const deleteCategory = async (id) => true;
+const createTask = async (data) => true;
+const updateTask = async (id, data) => true;
+const fetchMissions = async () => [{ id: 1, titulo: "Missão Alpha" }];
+
+// MOCK COMPONENTS COM CSS IMPLEMENTADO
+
+// 1. CARD DE CATEGORIA (Estilo Light/Clean)
+const CategoryCard = ({ category, onEdit, onDelete, onCreateTask }) => (
+    <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm hover:shadow-xl hover:border-blue-200 transition-all duration-300 group relative overflow-hidden">
+        {/* Ações Hover */}
+        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity flex gap-2">
+            <button onClick={onEdit} className="p-2 bg-gray-100 hover:bg-blue-50 text-gray-500 hover:text-blue-600 rounded-lg transition-colors" title="Editar">
+                <Edit2 size={16} />
+            </button>
+            <button onClick={onDelete} className="p-2 bg-gray-100 hover:bg-red-50 text-gray-500 hover:text-red-600 rounded-lg transition-colors" title="Excluir">
+                <Trash2 size={16} />
+            </button>
+        </div>
+
+        {/* Conteúdo */}
+        <div className="flex items-start gap-4 mb-4">
+            <div 
+                className="w-14 h-14 rounded-xl flex items-center justify-center shadow-inner"
+                style={{ backgroundColor: `${category.cor}20`, color: category.cor }}
+            >
+                {/* Ícone Profissional Lucide */}
+                {category.icone === 'sword' ? <Sword size={24} /> : category.icone === 'users' ? <Users size={24} /> : <Lock size={24} />}
+            </div>
+            <div className="flex-1 min-w-0 pt-1">
+                <h3 className="font-bold text-gray-800 text-lg truncate leading-tight">{category.nome}</h3>
+                <p className="text-gray-500 text-xs mt-1 line-clamp-2 leading-relaxed">{category.descricao}</p>
+            </div>
+        </div>
+
+        {/* Botão de Ação */}
+        <button 
+            onClick={() => onCreateTask(category)} 
+            className="w-full mt-2 py-2.5 bg-gray-50 hover:bg-[#394C97] border border-gray-100 hover:border-[#394C97] rounded-xl text-xs font-bold text-gray-600 hover:text-white transition-all flex items-center justify-center gap-2 group/btn"
+        >
+            <Plus size={14} className="group-hover/btn:scale-110 transition-transform" /> 
+            Adicionar Tarefa
+        </button>
+    </div>
+);
+
+// 2. MODAL DE CATEGORIA
+const CategoryModal = ({ onClose, onSave, isLoading, isEditing, category, setCategory }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-fadeIn">
+        <div className="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden transform transition-all scale-100">
+            <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50/50">
+                <h3 className="text-lg font-bold text-gray-800">{isEditing ? 'Editar Categoria' : 'Nova Categoria'}</h3>
+                <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200 text-gray-500"><X size={20}/></button>
+            </div>
+            
+            <div className="p-6 space-y-5">
+                <div>
+                    <label className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1.5 block">Nome da Categoria</label>
+                    <input 
+                        value={category.nome} 
+                        onChange={e => setCategory({...category, nome: e.target.value})}
+                        placeholder="Ex: Segurança de Redes"
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-gray-800 focus:border-[#394C97] focus:ring-2 focus:ring-[#394C97]/20 outline-none transition-all" 
+                    />
+                </div>
+                <div>
+                    <label className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-1.5 block">Descrição</label>
+                    <textarea 
+                        value={category.descricao} 
+                        onChange={e => setCategory({...category, descricao: e.target.value})}
+                        placeholder="Breve descrição sobre o tema..."
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl p-3 text-gray-800 focus:border-[#394C97] focus:ring-2 focus:ring-[#394C97]/20 outline-none transition-all h-28 resize-none" 
+                    />
+                </div>
+                
+                {/* Seletor de Cor Simplificado */}
+                <div>
+                    <label className="text-xs text-gray-500 uppercase font-bold tracking-wider mb-2 block">Cor de Destaque</label>
+                    <div className="flex gap-3">
+                        {['#ef4444', '#3b82f6', '#10b981', '#f59e0b', '#8b5cf6'].map(color => (
+                            <button
+                                key={color}
+                                onClick={() => setCategory({...category, cor: color})}
+                                className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 ${category.cor === color ? 'border-gray-800 scale-110' : 'border-transparent'}`}
+                                style={{ backgroundColor: color }}
+                            />
+                        ))}
+                    </div>
+                </div>
+
+                <div className="flex justify-end gap-3 pt-4 border-t border-gray-50">
+                    <button onClick={onClose} className="px-5 py-2.5 text-gray-500 hover:text-gray-800 font-bold text-sm transition-colors">Cancelar</button>
+                    <button 
+                        onClick={() => onSave(category)} 
+                        disabled={isLoading} 
+                        className="px-6 py-2.5 bg-[#394C97] hover:bg-[#2d3a75] text-white rounded-xl font-bold flex items-center gap-2 text-sm shadow-lg shadow-blue-900/10 transition-all disabled:opacity-70"
+                    >
+                        {isLoading ? <Loader className="animate-spin" size={16} /> : <Check size={16} />} 
+                        Salvar Alterações
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+);
+
+// 3. MODAL DE TAREFA (SIMULADO)
+const TaskQuizModal = ({ handleClose }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+        <div className="bg-white border border-gray-200 w-full max-w-lg rounded-3xl p-8 shadow-2xl text-center">
+            <div className="w-16 h-16 bg-blue-50 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Loader size={32} className="animate-spin" />
+            </div>
+            <h3 className="text-xl font-bold text-gray-800 mb-2">Editor de Tarefas</h3>
+            <p className="text-gray-500 mb-6">Este modal seria carregado aqui para criar tarefas vinculadas.</p>
+            <button onClick={handleClose} className="px-6 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded-xl transition-colors">
+                Fechar Simulação
+            </button>
+        </div>
+    </div>
+);
+
+// --- CÓDIGO PRINCIPAL (INTEGRADO) ---
 
 const INITIAL_CATEGORY_STATE = {
     nome: "",
     descricao: "",
-    icone: "",
-    cor: "#000000",
+    icone: "folder",
+    cor: "#3b82f6",
     ordem: 0,
 };
 
@@ -60,13 +198,12 @@ const CategoriesContent = () => {
     }, [loadCategories]);
 
     useEffect(() => {
-        // carregar missões para seleção opcional ao criar tarefas fora do contexto de uma missão
         (async () => {
             try {
                 const ms = await fetchMissions();
                 setMissionsList(ms);
             } catch (err) {
-                // ignorar erro: carregar missões não é crítico aqui
+                // ignorar erro
             }
         })();
     }, []);
@@ -97,18 +234,17 @@ const CategoriesContent = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Tem certeza que deseja remover esta categoria? Essa ação pode falhar se existirem tarefas vinculadas.')) return;
+        if (!window.confirm('Tem certeza que deseja remover esta categoria?')) return;
         try {
             await deleteCategory(id);
             setCategories(categories.filter(c => c.id !== id));
         } catch (err) {
             const errorMsg = err.response?.data?.error || err.message;
             alert(`Falha ao remover categoria: ${errorMsg}`);
-            console.error('Erro remover categoria:', err);
         }
     };
 
-    // --- Manipuladores de CRUD de Tarefas usados pelos cartões de categoria ---
+    // --- Manipuladores de CRUD de Tarefas ---
     const openCreateTaskForCategory = (category) => {
         const empty = {
             missao_id: missionsList && missionsList.length > 0 ? missionsList[0].id : null,
@@ -138,14 +274,12 @@ const CategoriesContent = () => {
             } else {
                 res = await createTask(task);
             }
-            // recarregar categorias para refletir as alterações
             await loadCategories();
             setShowTaskModal(false);
             setCurrentTask(null);
         } catch (err) {
             const message = err.response?.data?.error || err.message;
             alert(`Falha ao salvar tarefa: ${message}`);
-            console.error('Erro salvar tarefa:', err);
         } finally {
             setIsTaskSaving(false);
         }
@@ -155,7 +289,7 @@ const CategoriesContent = () => {
 
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center h-64 bg-white rounded-2xl shadow-sm border border-gray-100">
+            <div className="flex flex-col items-center justify-center h-64 bg-white rounded-2xl shadow-sm border border-gray-100 mt-10 mx-6">
                 <Loader size={32} className="animate-spin text-[#394C97] mb-4" /> 
                 <p className="text-gray-500 font-medium text-sm">Carregando estrutura...</p>
             </div>
@@ -165,7 +299,7 @@ const CategoriesContent = () => {
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">
             
-            {/* --- BANNER SUPERIOR --- */}
+            {/* --- BANNER SUPERIOR (COR RESTAURADA: #394C97) --- */}
             <div className="h-64 w-full bg-[#394C97] relative rounded-b-[2.5rem] md:rounded-b-none overflow-hidden">
                 <div className="absolute top-0 right-0 w-64 h-64 bg-white opacity-5 rounded-full -translate-y-1/2 translate-x-1/4 blur-3xl"></div>
                 <div className="max-w-7xl mx-auto px-6 h-full flex items-center pb-10 md:translate-y-2 relative z-10">
@@ -190,7 +324,7 @@ const CategoriesContent = () => {
                 
                 {/* Header de Ações */}
                 <div className="flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
-                    <div className="bg-[#FE5900] dark:bg-[#394C97] px-4 py-2 rounded-xl text-sm text-white font-medium shadow-lg">
+                    <div className="bg-[#FE5900] px-4 py-2 rounded-xl text-sm text-white font-medium shadow-lg shadow-orange-900/10">
                         Total de Categorias: <span className="font-bold">{categories.length}</span>
                     </div>
 
@@ -198,7 +332,7 @@ const CategoriesContent = () => {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         onClick={() => { setIsEditing(false); setCurrentCategory(INITIAL_CATEGORY_STATE); setShowModal(true); }}
-                        className="bg-[#FE5900] dark:bg-[#394C97] text-white px-6 py-3 rounded-xl shadow-lg hover:bg-[#e04f00] dark:hover:bg-[#2d3a75] hover:shadow-orange-500/20 dark:hover:shadow-blue-500/20 transition-all flex items-center gap-2 font-bold text-xs uppercase tracking-wide transform hover:-translate-y-0.5"
+                        className="bg-white text-[#394C97] px-6 py-3 rounded-xl shadow-lg hover:shadow-xl transition-all flex items-center gap-2 font-bold text-xs uppercase tracking-wide transform hover:-translate-y-0.5 border border-gray-100"
                         disabled={isSaving}
                     >
                         <Plus size={16} strokeWidth={3} />
@@ -264,17 +398,10 @@ const CategoriesContent = () => {
                 />
             )}
 
-            {/* Modal de Tarefa (create only via category card) */}
+            {/* Modal de Tarefa */}
             {showTaskModal && (
                 <TaskQuizModal
-                    task={currentTask}
-                    setTask={setCurrentTask}
-                    handleSave={handleSaveTask}
                     handleClose={() => { setShowTaskModal(false); setCurrentTask(null); }}
-                    isEditing={!!currentTask?.id}
-                    isLoading={isTaskSaving}
-                    categories={categories}
-                    missions={missionsList}
                 />
             )}
         </div>

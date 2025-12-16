@@ -67,40 +67,30 @@ const getQuizzesByTask = async (req, res) => {
       return res.status(400).json({ error: 'ID da tarefa inválido.' });
     }
 
-    const quizzes = await prisma.quiz.findMany({
+    const quiz = await prisma.quiz.findFirst({
       where: { tarefa_id: taskId, ativo: true },
-      select: {
-        id: true,
-        titulo: true,
-        descricao: true,
+      include: {
         perguntas: {
-          select: {
-            id: true,
-            enunciado: true,
-            tipo: true,
-            ordem: true,
-            opcoes: true
-          },
           orderBy: { ordem: 'asc' }
         }
       }
     });
 
-    // Remover campo `isCorrect` das opções antes de enviar
-    const sanitized = quizzes.map(q => {
-      const perguntas = q.perguntas.map(p => {
-        const opcoes = p.opcoes.map(opt => {
-          const { isCorrect, ...rest } = opt;
-          return rest;
-        });
-        return { ...p, opcoes };
-      });
-      return { ...q, perguntas };
+    if (!quiz) {
+      return res.status(404).json({ error: 'Nenhum quiz encontrado para esta tarefa.' });
+    }
+
+    const perguntas = quiz.perguntas.map(p => {
+      const opcoes = Array.isArray(p.opcoes)
+        ? p.opcoes.map(({ isCorrect, ...rest }) => rest)
+        : [];
+      return { ...p, opcoes };
     });
 
-    res.json(sanitized);
+    res.json({ ...quiz, perguntas });
+
   } catch (error) {
-    console.error('Erro ao listar quizzes por tarefa:', error);
+    console.error('Erro ao buscar quiz por tarefa:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };

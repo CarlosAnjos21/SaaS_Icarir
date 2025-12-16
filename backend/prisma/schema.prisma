@@ -88,6 +88,7 @@ model Usuario {
   empresa          String?
   role             Role     @default(participante)
   pontos           Int      @default(0)
+  pontos_totais    Int      @default(0)
   foto_url         String?
   ativo            Boolean  @default(true)
   data_criacao     DateTime @default(now())
@@ -130,6 +131,7 @@ model Missao {
   titulo             String
   descricao          String?
   destino            String?
+  foto_url           String?
   data_inicio        DateTime? @db.Date
   data_fim           DateTime? @db.Date
   preco              Decimal?  @db.Decimal(10, 2)
@@ -167,6 +169,7 @@ model Tarefa {
   id                 Int         @id @default(autoincrement())
   missao_id          Int
   categoria_id       Int?
+  quiz               Quiz?
   titulo             String
   descricao          String?
   instrucoes         String?
@@ -189,8 +192,7 @@ model Tarefa {
   quiz            Quiz?            @relation(fields: [quizId], references: [id])
   cards           Card[]
   logs            LogsPontos[]
-  quizId          Int?
-
+  
   @@map("tarefas")
 }
 
@@ -253,7 +255,8 @@ model UsuarioTarefa {
 
 model Quiz {
   id           Int      @id @default(autoincrement())
-  tarefa_id    Int      @unique
+  tarefaid     Int      @unique
+  tarefa       Tarefa   @relation(fields: [tarefaId], references: [id])
   titulo       String
   descricao    String?
   ativo        Boolean  @default(true)
