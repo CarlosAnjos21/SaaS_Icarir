@@ -1,16 +1,15 @@
-// Importa o Prisma Client de forma segura
-const prismaModule = require("../config/prismaClient");
-const prisma = prismaModule.prisma || prismaModule.default || prismaModule;
+// Importa o Prisma Client
+const prisma = require('../config/prismaClient');
 const { Prisma } = require('@prisma/client'); 
 
 /**
  * @route   GET /api/missions
- * @desc    Listar todas as missões ativas (Com status de inscrição do usuário)
+ * @desc    Listar todas as missões ativas
  * @access  Privado (requer token)
  */
 const getAllActiveMissions = async (req, res) => {
   try {
-    const userId = req.user?.id; // Pega o ID do usuário logado
+    const userId = req.user?.id; 
 
     const missoes = await prisma.missao.findMany({
       where: { ativa: true },
@@ -19,16 +18,16 @@ const getAllActiveMissions = async (req, res) => {
         titulo: true,
         descricao: true,
         destino: true,
+        foto_url: true, 
         data_inicio: true,
         data_fim: true,
         preco: true,
         vagas_disponiveis: true,
-        foto_url: true 
       },
       orderBy: { data_inicio: 'asc' }
     });
 
-    // Busca quais dessas missões o usuário já está inscrito
+    // Busca inscrições do usuário
     let joinedMissionIds = [];
     if (userId) {
         const inscricoes = await prisma.usuarioMissao.findMany({
@@ -38,11 +37,11 @@ const getAllActiveMissions = async (req, res) => {
         joinedMissionIds = inscricoes.map(i => i.missao_id);
     }
     
-    // Formata e adiciona a flag 'isJoined'
+    // Formata retorno
     const formatted = missoes.map(m => ({
         ...m,
         preco: m.preco ? Number(m.preco) : 0,
-        isJoined: joinedMissionIds.includes(m.id) // True se o ID estiver na lista de inscrições
+        isJoined: joinedMissionIds.includes(m.id)
     }));
 
     res.json(formatted);
@@ -54,8 +53,8 @@ const getAllActiveMissions = async (req, res) => {
 
 /**
  * @route   GET /api/missions/:missionId
- * @desc    Buscar detalhes de uma missão específica
- * @access  Privado (requer token)
+ * @desc    Buscar detalhes básicos de uma missão
+ * @access  Privado
  */
 const getMissionById = async (req, res) => {
   try {
@@ -77,7 +76,7 @@ const getMissionById = async (req, res) => {
 
 /**
  * @route   GET /api/missions/:missionId/full
- * @desc    Dados completos da missão + Contexto do Usuário (Inscrição, Progresso)
+ * @desc    Dados completos: Missão + Tarefas (com Quiz) + Contexto Usuário
  * @access  Privado
  */
 const getMissionFullById = async (req, res) => {
@@ -87,7 +86,7 @@ const getMissionFullById = async (req, res) => {
 
     if (isNaN(missionId)) return res.status(400).json({ error: 'ID inválido.' });
 
-    // 1. Busca dados da missão e tarefas
+    // 1. Busca dados da missão e tarefas COM O QUIZ INCLUÍDO
     const missao = await prisma.missao.findUnique({
       where: { id: missionId },
       include: {
@@ -96,7 +95,14 @@ const getMissionFullById = async (req, res) => {
           orderBy: { ordem: 'asc' },
           include: {
             categoria: true,
-            quiz: { select: { id: true, titulo: true } } 
+            // 🔥 O FIO RECONECTADO: Força o Prisma a buscar o Quiz e Perguntas
+            quiz: {
+              include: {
+                perguntas: {
+                  orderBy: { ordem: 'asc' }
+                }
+              }
+            } 
           }
         },
         _count: { select: { usuarios: true, tarefas: true } }
@@ -105,7 +111,21 @@ const getMissionFullById = async (req, res) => {
 
     if (!missao) return res.status(404).json({ error: 'Missão não encontrada.' });
 
-    // 2. Busca contexto do usuário (Verificação rigorosa)
+    // 🔥 CORREÇÃO DE DADOS: Garante que o JSON de 'requisitos' seja um objeto real, não string
+    if (missao.tarefas) {
+        missao.tarefas = missao.tarefas.map(t => {
+            if (t.requisitos && typeof t.requisitos === 'string') {
+                try {
+                    t.requisitos = JSON.parse(t.requisitos);
+                } catch (e) {
+                    console.error(`Falha ao parsear requisitos da tarefa ${t.id}`, e);
+                }
+            }
+            return t;
+        });
+    }
+
+    // 2. Busca contexto do usuário (Inscrição)
     const inscricao = await prisma.usuarioMissao.findUnique({
       where: {
         usuario_id_missao_id: {
@@ -117,7 +137,6 @@ const getMissionFullById = async (req, res) => {
 
     let progressoUsuario = [];
     if (inscricao) {
-      // Se inscrito, busca o status de cada tarefa
       progressoUsuario = await prisma.usuarioTarefa.findMany({
         where: {
           usuario_id: userId,
@@ -163,11 +182,11 @@ const getMissionFullById = async (req, res) => {
 
     const myPoints = progressoUsuario.reduce((acc, curr) => acc + (curr.pontos_obtidos || 0), 0);
     
-    // 4. Monta resposta estruturada
+    // 4. Monta resposta final
     const response = {
       ...missao,
       preco: missao.preco ? Number(missao.preco) : 0,
-      isJoined: !!inscricao, // Boolean seguro
+      isJoined: !!inscricao,
       participationStatus: inscricao ? inscricao.status_participacao : null,
       userProgress: {
         totalPoints: myPoints,
@@ -238,26 +257,34 @@ const leaveMission = async (req, res) => {
   if (isNaN(missionId)) return res.status(400).json({ error: 'ID inválido.' });
 
   try {
-    // Verifica se a inscrição existe
     const exists = await prisma.usuarioMissao.findUnique({
-        where: { usuario_id_missao_id: { usuario_id: userId, missao_id: missionId } }
+      where: { usuario_id_missao_id: { usuario_id: userId, missao_id: missionId } }
     });
 
     if (!exists) {
         return res.status(404).json({ error: 'Você não está inscrito nesta missão.' });
     }
 
-    // Remove a inscrição
-    await prisma.usuarioMissao.delete({
-        where: { usuario_id_missao_id: { usuario_id: userId, missao_id: missionId } }
-    });
+    // ⚠️ CORREÇÃO: Usamos uma transação para garantir que ambas as operações sejam atômicas
+    await prisma.$transaction([
+        // 1. Remove a inscrição
+        prisma.usuarioMissao.delete({
+            where: { usuario_id_missao_id: { usuario_id: userId, missao_id: missionId } }
+        }),
+        
+        // 2. Zera o progresso das tarefas do usuário nesta missão
+        prisma.usuarioTarefa.deleteMany({
+            where: { 
+                usuario_id: userId, 
+                // Filtra as tarefas que pertencem a esta missão
+                tarefa: { 
+                    missao_id: missionId 
+                } 
+            }
+        })
+    ]);
 
-    // Opcional: Se quiser limpar o progresso das tarefas ao sair, descomente abaixo
-    // await prisma.usuarioTarefa.deleteMany({
-    //    where: { usuario_id: userId, tarefa: { missao_id: missionId } }
-    // });
-
-    res.json({ message: 'Inscrição cancelada com sucesso.' });
+    res.json({ message: 'Inscrição cancelada com sucesso. Seu progresso na missão foi zerado.' });
 
   } catch (error) {
     console.error('Erro ao sair da missão:', error);
@@ -265,7 +292,7 @@ const leaveMission = async (req, res) => {
   }
 };
 
-// Funções administrativas (mantidas)
+// Funções administrativas
 const getMissionParticipants = async (req, res) => {
     const missionId = parseInt(req.params.missionId, 10);
     if (isNaN(missionId)) return res.status(400).json({ error: 'ID inválido.' });
@@ -350,7 +377,7 @@ module.exports = {
   getMissionById,
   getMissionFullById,
   joinMission,
-  leaveMission, // Nova função exportada
+  leaveMission,
   getMissionParticipants,
   addParticipantToMission,
   removeParticipantFromMission

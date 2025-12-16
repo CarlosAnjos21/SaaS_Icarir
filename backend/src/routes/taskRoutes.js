@@ -106,6 +106,15 @@ router.post('/:taskId/submit', authenticate, async (req, res) => {
     }
 });
 
+router.post(
+    '/:taskId/quiz',
+    authenticate,
+    checkAdmin,
+    taskController.createQuizForTask
+  );
+
+router.put('/:taskId', checkAdmin, taskController.updateTask);
+
 module.exports = router;
 
 /**

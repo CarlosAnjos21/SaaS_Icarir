@@ -1,452 +1,408 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
-    X, UploadCloud, CheckCircle, AlertCircle, Loader, Camera, FileText, Send, Link as LinkIcon, ListChecks, HelpCircle
+    X, Save, Plus, Trash2, HelpCircle, CheckSquare, List, 
+    FileText, Camera, LayoutList, Link 
 } from 'lucide-react';
 
-// --- DEFINIÇÃO DE API LOCAL (Com Autenticação) ---
-// Tenta pegar o token de locais comuns
-const getToken = () => localStorage.getItem('token') || localStorage.getItem('user_token') || '';
-
-// EXPORTADO: Agora outros componentes (como MissionDetails) podem usar esta mesma definição
-export const api = {
-    post: async (endpoint, data) => {
-        const baseUrl = 'http://localhost:3001/api'; 
-        const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
-        
-        const token = getToken();
-
-        const response = await fetch(url, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                // CRUCIAL: Envia o token se existir para validar a pontuação no backend
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            },
-            body: JSON.stringify(data),
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `Erro na requisição: ${response.status}`);
-        }
-
-        return { data: await response.json() };
-    }
-};
-
-const TaskDetailsModal = ({ task, status, onClose, onComplete }) => {
-    const [file, setFile] = useState(null);
-    const [socialLink, setSocialLink] = useState("");
+const TaskQuizModal = ({ 
+    task, 
+    setTask, 
+    handleSave, 
+    handleClose, 
+    isEditing, 
+    isLoading, 
+    categories, 
+    missions 
+}) => {
     
-    // Estados para o Quiz
-    const [quizAnswers, setQuizAnswers] = useState({}); 
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
+    // --- MANIPULAÇÃO GERAL ---
+    const handleChange = (field, value) => {
+        setTask(prev => ({ ...prev, [field]: value }));
+    };
 
-    // Verifica se já foi concluída
-    const isCompleted = status?.concluida;
-
-    // --- TRATAMENTO ROBUSTO DO QUIZ ---
-    const questions = useMemo(() => {
-        if (!task.quiz) return [];
+    // --- LÓGICA DE QUIZ ---
+    const handleAddQuestion = () => {
+        const newQuestion = {
+            enunciado: "",
+            tipo: "multipla_escolha",
+            opcoes: ["", "", "", ""],
+            resposta_correta: ""
+        };
         
-        let data = task.quiz;
+        const currentQuiz = task.quiz || { perguntas: [] };
+        // Tenta usar a estrutura existente, mas padroniza para 'perguntas'
+        const currentQuestions = currentQuiz.perguntas || currentQuiz.questions || [];
         
-        // 1. Tenta parse se for string (comum em alguns bancos de dados)
-        if (typeof data === 'string') {
-            try {
-                data = JSON.parse(data);
-            } catch (e) {
-                console.error("Erro ao fazer parse do quiz:", e);
-                return [];
+        setTask(prev => ({
+            ...prev,
+            quiz: {
+                ...currentQuiz,
+                perguntas: [...currentQuestions, newQuestion]
             }
-        }
+        }));
+    };
 
-        // 2. Tenta extrair o array de perguntas de várias estruturas possíveis
-        // Estrutura { perguntas: [] } ou { questions: [] } ou o próprio array []
-        const extractedQuestions = data.perguntas || data.questions || (Array.isArray(data) ? data : []);
+    const handleRemoveQuestion = (index) => {
+        const currentQuiz = task.quiz || { perguntas: [] };
+        const currentQuestions = currentQuiz.perguntas || currentQuiz.questions || [];
+        const updatedQuestions = currentQuestions.filter((_, i) => i !== index);
         
-        return Array.isArray(extractedQuestions) ? extractedQuestions : [];
-    }, [task.quiz]);
-
-    const handleFileChange = (e) => {
-        const selectedFile = e.target.files[0];
-        if (selectedFile) {
-            // Limite de 25MB para envio por E-mail (SMTP)
-            if (selectedFile.size > 25 * 1024 * 1024) { 
-                setError("O arquivo excede o limite de 25MB (Limite do servidor de e-mail).");
-                return;
-            }
-            setFile(selectedFile);
-            setError(null);
-        }
+        setTask(prev => ({
+            ...prev,
+            quiz: { ...currentQuiz, perguntas: updatedQuestions }
+        }));
     };
 
-    // --- SUBMISSÃO DE DOCUMENTO (DIRECT-TO-EMAIL) ---
-    const submitDocumentTask = async () => {
-        if (!file) {
-            setError("Por favor, anexe o documento solicitado.");
-            return;
-        }
-
-        setLoading(true);
-        setError(null);
-
-        try {
-            // 1. Envio do E-mail (Binário direto para o Backend)
-            const formData = new FormData();
-            formData.append('contract', file);
-
-            console.log("📤 Enviando e-mail...");
-            
-            // Endpoint específico para envio de e-mail (sem autenticação estrita ou tratado no backend)
-            const emailResponse = await fetch('http://localhost:3001/api/send-contract', {
-                method: 'POST',
-                body: formData, 
-            });
-
-            const emailResult = await emailResponse.json();
-
-            if (!emailResponse.ok) {
-                throw new Error(emailResult.error || "Falha no envio do e-mail.");
-            }
-
-            console.log("✅ E-mail enviado. Registrando pontos...");
-
-            // 2. Registro da Pontuação
-            // Usa a api local configurada com token para garantir a validação
-            await api.post(`/tasks/${task.id}/submit`, {
-                type: 'document',
-                fileUrl: null, 
-                evidence: `Arquivo enviado via e-mail: ${file.name} | Ref: ${emailResult.messageId || 'S/N'}`,
-                emailDestination: 'samuell.alves@aluno.uece.br'
-            });
-
-            onComplete();
-            
-        } catch (err) {
-            console.error("Erro no processo:", err);
-            const msg = err.message || "Erro ao processar envio.";
-            setError(msg);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // --- SUBMISSÃO SOCIAL ---
-    const submitSocialTask = async () => {
-        if (!socialLink.trim()) {
-            setError("Cole o link da sua postagem.");
-            return;
-        }
-        setLoading(true);
-        try {
-            await api.post(`/tasks/${task.id}/submit`, {
-                type: 'social',
-                evidence: socialLink
-            });
-            onComplete();
-        } catch (err) {
-            console.error("Erro social:", err);
-            setError("Erro ao validar link. Verifique se está correto.");
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    // --- SUBMISSÃO DE QUIZ ---
-    const handleQuizOptionSelect = (questionIndex, option) => {
-        setQuizAnswers(prev => ({ ...prev, [questionIndex]: option }));
-    };
-
-    const submitQuizTask = async () => {
-        const answeredCount = Object.keys(quizAnswers).length;
+    const handleQuestionChange = (index, field, value) => {
+        const currentQuiz = task.quiz || { perguntas: [] };
+        const currentQuestions = [...(currentQuiz.perguntas || currentQuiz.questions || [])];
         
-        if (answeredCount < questions.length) {
-            setError(`Responda todas as ${questions.length} perguntas.`);
-            return;
-        }
-
-        setLoading(true);
-        try {
-            const response = await api.post(`/tasks/${task.id}/submit`, {
-                type: 'quiz',
-                answers: quizAnswers
-            });
+        if (currentQuestions[index]) {
+            currentQuestions[index] = { ...currentQuestions[index], [field]: value };
             
-            if (response.data && (response.data.success || response.data.points > 0)) {
-                onComplete();
-            } else {
-                setError("Pontuação insuficiente ou respostas incorretas.");
-            }
-        } catch (err) {
-            console.error("Erro quiz:", err);
-            setError("Respostas incorretas ou erro ao validar.");
-        } finally {
-            setLoading(false);
+            setTask(prev => ({
+                ...prev,
+                quiz: { ...currentQuiz, perguntas: currentQuestions }
+            }));
         }
     };
 
-    // Lógica genérica
-    const submitGenericTask = async () => {
-        setLoading(true);
-        try {
-            await api.post(`/tasks/${task.id}/submit`, { type: 'generic', evidence: 'Conclusão manual' });
-            onComplete();
-        } catch (err) {
-            setError("Erro ao concluir tarefa.");
-        } finally {
-            setLoading(false);
+    const handleOptionChange = (qIndex, oIndex, value) => {
+        const currentQuiz = task.quiz || { perguntas: [] };
+        const currentQuestions = [...(currentQuiz.perguntas || currentQuiz.questions || [])];
+        
+        if (currentQuestions[qIndex]) {
+            const currentOptions = [...(currentQuestions[qIndex].opcoes || ["", "", "", ""])];
+            currentOptions[oIndex] = value;
+            currentQuestions[qIndex].opcoes = currentOptions;
+
+            setTask(prev => ({
+                ...prev,
+                quiz: { ...currentQuiz, perguntas: currentOptions }
+            }));
         }
     };
-
-    const getTaskContent = () => {
-        const type = (task.tipo || '').toLowerCase();
-        const categoryName = (task.categoria?.nome || '').toLowerCase();
-
-        // 1. TAREFA DE DOCUMENTO
-        if (type === 'administrativa' || categoryName.includes('document') || categoryName.includes('administrativa')) {
-            return (
-                <div className="space-y-6">
-                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-4">
-                        <h4 className="font-bold text-blue-900 text-sm mb-2 flex items-center gap-2">
-                            <FileText size={16} /> Instruções de Envio
-                        </h4>
-                        <p className="text-sm text-blue-800 mb-2">
-                            {task.descricao || task.description || "Envie a documentação necessária."}
-                        </p>
-                        <div className="bg-white p-2 rounded border border-blue-100 text-xs font-mono text-blue-600">
-                            Destino: samuell.alves@aluno.uece.br
-                        </div>
-                    </div>
-
-                    <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 flex flex-col items-center justify-center bg-gray-50 hover:bg-white transition-colors relative cursor-pointer group">
-                        <input 
-                            type="file" 
-                            onChange={handleFileChange} 
-                            className="absolute inset-0 opacity-0 cursor-pointer z-10"
-                            accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
-                            disabled={loading}
-                        />
-                        {file ? (
-                            <div className="text-center">
-                                <FileText className="w-8 h-8 text-[#FE5900] mx-auto mb-2" />
-                                <p className="font-bold text-gray-700 text-sm">{file.name}</p>
-                                <p className="text-xs text-gray-400">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
-                                <p className="text-xs text-green-600 font-semibold mt-1">Pronto para enviar</p>
-                            </div>
-                        ) : (
-                            <div className="text-center">
-                                <UploadCloud className="w-8 h-8 text-gray-400 group-hover:text-blue-500 mx-auto mb-2 transition-colors" />
-                                <p className="font-semibold text-gray-600 text-sm">Clique para anexar arquivo</p>
-                                <p className="text-xs text-gray-400 mt-1">PDF ou Imagem (Max 25MB)</p>
-                            </div>
-                        )}
-                    </div>
-
-                    <button 
-                        onClick={submitDocumentTask}
-                        disabled={loading || !file}
-                        className="w-full bg-[#FE5900] text-white py-3 rounded-xl font-bold shadow-lg hover:bg-orange-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
-                    >
-                        {loading ? <Loader className="animate-spin w-5 h-5" /> : <Send size={18} />}
-                        {loading ? "Enviando..." : "Enviar e Receber Pontos"}
-                    </button>
-                </div>
-            );
-        }
-
-        // 2. TAREFA SOCIAL
-        if (type === 'social' || categoryName.includes('social')) {
-            return (
-                <div className="space-y-6">
-                    <div className="bg-purple-50 border border-purple-100 rounded-xl p-4">
-                        <h4 className="font-bold text-purple-900 text-sm mb-2 flex items-center gap-2">
-                            <Camera size={16} /> Desafio Social
-                        </h4>
-                        <p className="text-sm text-purple-800">
-                            {task.descricao || task.description || "Cole o link da postagem."}
-                        </p>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold text-gray-500 mb-2 uppercase">Link da Postagem</label>
-                        <div className="relative">
-                            <LinkIcon className="absolute left-3 top-3 text-gray-400 w-4 h-4" />
-                            <input 
-                                type="url" 
-                                placeholder="https://instagram.com/p/..." 
-                                className="w-full pl-9 pr-4 py-2.5 border border-gray-300 rounded-xl focus:ring-2 focus:ring-purple-500 outline-none text-sm"
-                                value={socialLink}
-                                onChange={(e) => setSocialLink(e.target.value)}
-                                disabled={loading}
-                            />
-                        </div>
-                    </div>
-
-                    <button 
-                        onClick={submitSocialTask}
-                        disabled={loading || !socialLink}
-                        className="w-full bg-purple-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all"
-                    >
-                        {loading ? <Loader className="animate-spin w-5 h-5" /> : <CheckCircle size={18} />}
-                        {loading ? "Verificando..." : "Validar e Ganhar Pontos"}
-                    </button>
-                </div>
-            );
-        }
-
-        // 3. TAREFA QUIZ
-        if (type === 'conhecimento' || task.quiz) {
-            
-            if (questions.length === 0) {
-                return (
-                    <div className="text-center py-8">
-                        <AlertCircle className="w-10 h-10 text-gray-300 mx-auto mb-2" />
-                        <p className="text-gray-500">Nenhuma pergunta encontrada para este quiz.</p>
-                        <p className="text-xs text-gray-400 mt-1">Contate o administrador.</p>
-                    </div>
-                );
-            }
-
-            return (
-                <div className="space-y-6">
-                    <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-4">
-                        <h4 className="font-bold text-indigo-900 text-sm mb-2 flex items-center gap-2">
-                            <HelpCircle size={16} /> Teste de Conhecimento
-                        </h4>
-                        <p className="text-sm text-indigo-800">
-                            Responda corretamente para garantir seus pontos.
-                        </p>
-                    </div>
-
-                    <div className="space-y-6">
-                        {questions.map((q, qIndex) => {
-                            // Tratamento de campos flexíveis
-                            // Aceita: enunciado, pergunta, question, texto, title
-                            const questionText = q.enunciado || q.pergunta || q.question || q.texto || q.title || "Pergunta sem texto";
-                            // Aceita: opcoes, alternativas, options, answers
-                            const options = q.opcoes || q.alternativas || q.options || q.answers || [];
-
-                            return (
-                                <div key={qIndex} className="space-y-3">
-                                    <p className="font-bold text-gray-800 text-sm">
-                                        {qIndex + 1}. {questionText}
-                                    </p>
-                                    <div className="space-y-2">
-                                        {options.length > 0 ? (
-                                            options.map((opt, optIndex) => (
-                                                <label 
-                                                    key={optIndex} 
-                                                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                                                        quizAnswers[qIndex] === opt 
-                                                        ? 'border-indigo-500 bg-indigo-50 shadow-sm' 
-                                                        : 'border-gray-200 hover:bg-gray-50'
-                                                    }`}
-                                                >
-                                                    <input
-                                                        type="radio"
-                                                        name={`question-${qIndex}`}
-                                                        value={opt}
-                                                        checked={quizAnswers[qIndex] === opt}
-                                                        onChange={() => handleQuizOptionSelect(qIndex, opt)}
-                                                        className="w-4 h-4 text-indigo-600 focus:ring-indigo-500"
-                                                        disabled={loading}
-                                                    />
-                                                    <span className={`text-sm ${quizAnswers[qIndex] === opt ? 'text-indigo-900 font-medium' : 'text-gray-600'}`}>
-                                                        {opt}
-                                                    </span>
-                                                </label>
-                                            ))
-                                        ) : (
-                                            <p className="text-xs text-red-400 italic">Sem opções cadastradas.</p>
-                                        )}
-                                    </div>
-                                </div>
-                            );
-                        })}
-                    </div>
-
-                    <button 
-                        onClick={submitQuizTask}
-                        disabled={loading}
-                        className="w-full bg-indigo-600 text-white py-3 rounded-xl font-bold shadow-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 transition-all mt-4"
-                    >
-                        {loading ? <Loader className="animate-spin w-5 h-5" /> : <ListChecks size={18} />}
-                        {loading ? "Validando Respostas..." : "Enviar Respostas"}
-                    </button>
-                </div>
-            );
-        }
-
-        // 4. FALLBACK
+    
+    // --- LÓGICA SOCIAL (para Admin) ---
+    const renderSocialFields = () => {
+        // Se a tarefa já possui evidências de submissão (e o tipo é social), 
+        // o administrador pode ver o link que foi enviado pelo usuário
+        const evidenceLink = task.evidencias?.link;
+        
         return (
-            <div className="space-y-6">
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4">
-                    <h4 className="font-bold text-gray-800 text-sm mb-2">Descrição</h4>
-                    <p className="text-sm text-gray-600">
-                        {task.descricao || task.description || "Realize a atividade."}
-                    </p>
+            <div className="space-y-4 mt-6">
+                <div className="bg-purple-50 p-4 rounded-xl border border-purple-100 text-purple-900">
+                    <h4 className="font-bold flex items-center gap-2 text-sm"><Camera size={16}/> Configuração Social</h4>
+                    <p className="text-xs mt-1">Esta tarefa exige um link de postagem (Ex: LinkedIn, Instagram).</p>
                 </div>
-                <button 
-                    onClick={submitGenericTask}
-                    disabled={loading}
-                    className="w-full bg-[#394C97] text-white py-3 rounded-xl font-bold hover:bg-blue-900 transition-colors flex items-center justify-center gap-2"
-                >
-                    {loading ? <Loader className="animate-spin w-5 h-5" /> : <CheckCircle size={18} />}
-                    Marcar como Concluída
-                </button>
+
+                {evidenceLink && isEditing && (
+                    <div className="mt-4">
+                        <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Link Submetido pelo Usuário</label>
+                        <a 
+                            href={evidenceLink} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 p-3 bg-white border border-purple-200 rounded-xl text-purple-600 hover:bg-purple-50 transition-colors text-sm font-medium"
+                        >
+                            <Link size={16} /> 
+                            {evidenceLink.length > 50 ? evidenceLink.substring(0, 47) + '...' : evidenceLink}
+                        </a>
+                    </div>
+                )}
             </div>
         );
     };
 
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <motion.div 
-                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
-                onClick={onClose}
-            />
 
-            <motion.div 
-                initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }}
-                className="bg-white rounded-2xl w-full max-w-lg shadow-2xl relative z-10 overflow-hidden max-h-[90vh] flex flex-col"
-            >
-                {/* Header */}
-                <div className="px-6 py-4 border-b border-gray-100 flex justify-between items-center bg-gray-50 flex-shrink-0">
-                    <h3 className="font-bold text-lg text-gray-800 truncate pr-4">{task.titulo || 'Detalhes da Tarefa'}</h3>
-                    <button onClick={onClose} className="p-1 rounded-full hover:bg-gray-200 transition text-gray-500">
-                        <X size={20} />
+    // --- HANDLER DE SALVAMENTO BLINDADO ---
+    const onSaveWrapper = () => {
+        const taskToSave = { ...task };
+
+        // Correção de Categoria: Remove objeto e força NULL se vazio
+        delete taskToSave.categoria;
+        if (!taskToSave.categoria_id || taskToSave.categoria_id === "0" || taskToSave.categoria_id === 0) {
+            taskToSave.categoria_id = null;
+        }
+
+        // Prepara dados de Quiz para o backend. O backend irá manipular a criação/atualização
+        // das tabelas 'quizzes' e 'PerguntaQuiz' (como corrigido no taskController.js)
+        const currentQuiz = task.quiz || {};
+        const questions = currentQuiz.perguntas || currentQuiz.questions || [];
+
+        if (task.tipo === 'conhecimento') {
+            // Garante que o objeto quiz.perguntas vai no corpo da requisição
+            taskToSave.quiz = { perguntas: questions }; 
+            // O campo 'requisitos' é mantido para compatibilidade, mas o back usa a estrutura 'quiz'
+            taskToSave.requisitos = JSON.stringify({ perguntas: questions }); 
+        } else {
+             // Garante que quiz e requisitos sejam limpos se o tipo não for quiz
+             delete taskToSave.quiz;
+             taskToSave.requisitos = null;
+        }
+
+        handleSave(taskToSave);
+    };
+
+    // --- COMPONENTE DE CARD DE SELEÇÃO ---
+    const TypeCard = ({ value, label, icon: Icon, activeColor }) => (
+        <div 
+            onClick={() => handleChange('tipo', value)}
+            className={`cursor-pointer relative p-4 rounded-xl border-2 transition-all duration-200 flex flex-col items-center justify-center gap-2 text-center h-24 ${
+                task.tipo === value 
+                ? `border-${activeColor}-500 bg-${activeColor}-50 text-${activeColor}-700 shadow-sm ring-1 ring-${activeColor}-200` 
+                : 'border-gray-100 bg-white text-gray-400 hover:border-gray-200 hover:bg-gray-50'
+            }`}
+        >
+            <Icon size={24} className={task.tipo === value ? '' : 'opacity-50'} />
+            <span className="text-xs font-bold uppercase tracking-wider">{label}</span>
+            {task.tipo === value && (
+                <div className={`absolute top-2 right-2 w-2 h-2 rounded-full bg-${activeColor}-500`} />
+            )}
+        </div>
+    );
+
+    // Renderiza inputs de quiz
+    const renderQuizFields = () => {
+        const currentQuiz = task.quiz || { perguntas: [] };
+        const questions = currentQuiz.perguntas || currentQuiz.questions || [];
+
+        return (
+            <div className="space-y-6 mt-6">
+                <div className="flex justify-between items-center border-b pb-2">
+                    <h3 className="text-sm font-bold text-gray-700 flex items-center gap-2">
+                        <List size={16} /> Perguntas do Quiz
+                    </h3>
+                    <button 
+                        type="button"
+                        onClick={handleAddQuestion}
+                        className="text-xs bg-indigo-50 text-indigo-600 px-3 py-1.5 rounded-lg hover:bg-indigo-100 font-bold flex items-center gap-1 transition-colors"
+                    >
+                        <Plus size={12} /> Adicionar Pergunta
                     </button>
                 </div>
 
-                {/* Body */}
-                <div className="p-6 overflow-y-auto custom-scrollbar">
-                    {error && (
-                        <div className="mb-4 bg-red-50 text-red-600 p-3 rounded-lg text-xs font-medium flex items-center gap-2">
-                            <AlertCircle size={14} /> {error}
-                        </div>
-                    )}
-                    
-                    {isCompleted ? (
-                        <div className="text-center py-6">
-                            <div className="w-14 h-14 bg-green-100 text-green-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                                <CheckCircle size={28} />
+                {questions.length === 0 ? (
+                    <div className="text-center p-8 bg-gray-50 rounded-xl border-2 border-dashed border-gray-200">
+                        <HelpCircle className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500 font-medium">O quiz está vazio.</p>
+                        <p className="text-xs text-gray-400">Adicione perguntas para desafiar os usuários.</p>
+                    </div>
+                ) : (
+                    questions.map((q, qIndex) => (
+                        <div key={qIndex} className="bg-white p-5 rounded-xl border border-gray-200 shadow-sm relative group hover:border-indigo-200 transition-colors">
+                            <button 
+                                type="button"
+                                onClick={() => handleRemoveQuestion(qIndex)}
+                                className="absolute top-3 right-3 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-md transition-colors"
+                                title="Remover pergunta"
+                            >
+                                <Trash2 size={16} />
+                            </button>
+
+                            <div className="space-y-4 pr-8">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1.5">Pergunta {qIndex + 1}</label>
+                                    <input 
+                                        type="text" 
+                                        value={q.enunciado || ""}
+                                        onChange={(e) => handleQuestionChange(qIndex, 'enunciado', e.target.value)}
+                                        className="w-full p-3 text-sm bg-gray-50 border border-gray-200 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:bg-white outline-none transition-all font-medium"
+                                        placeholder="Digite o enunciado da pergunta..."
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                    {(q.opcoes || ["", "", "", ""]).map((opt, oIndex) => (
+                                        <div key={oIndex} className={`flex items-center gap-2 p-1 rounded-lg border transition-colors ${q.resposta_correta === opt && opt !== "" ? 'border-green-300 bg-green-50' : 'border-transparent'}`}>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleQuestionChange(qIndex, 'resposta_correta', opt)}
+                                                className={`w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold shrink-0 transition-colors ${q.resposta_correta === opt && opt !== "" ? 'bg-green-500 text-white shadow-md scale-105' : 'bg-gray-100 text-gray-400 hover:bg-gray-200'}`}
+                                                title="Clique para definir como correta"
+                                            >
+                                                {String.fromCharCode(65 + oIndex)}
+                                            </button>
+                                            <input 
+                                                type="text" 
+                                                value={opt || ""}
+                                                onChange={(e) => handleOptionChange(qIndex, oIndex, e.target.value)}
+                                                className="w-full p-2 text-sm bg-transparent border-b border-gray-200 focus:border-indigo-500 outline-none"
+                                                placeholder={`Alternativa ${oIndex + 1}`}
+                                            />
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <h3 className="text-lg font-bold text-gray-800">Tarefa Concluída!</h3>
-                            <p className="text-sm text-gray-500 mt-1">Pontos creditados com sucesso.</p>
-                            {status?.evidencias?.url && (
-                                <p className="text-xs text-blue-500 mt-4">Evidência enviada</p>
-                            )}
                         </div>
-                    ) : (
-                        getTaskContent()
+                    ))
+                )}
+            </div>
+        );
+    };
+
+    const handleBackdropClick = (e) => {
+        if (e.target === e.currentTarget) handleClose();
+    };
+
+    return (
+        <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+            onClick={handleBackdropClick}
+        >
+            <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl flex flex-col max-h-[90vh]"
+                onClick={(e) => e.stopPropagation()} 
+            >
+                {/* Header */}
+                <div className="px-8 py-6 border-b border-gray-100 flex justify-between items-center bg-white rounded-t-2xl">
+                    <div>
+                        <h2 className="text-xl font-bold text-gray-800">
+                            {isEditing ? 'Editar Tarefa' : 'Nova Tarefa'}
+                        </h2>
+                        <p className="text-xs text-gray-400 mt-1 uppercase tracking-wide font-medium">Configure os detalhes da atividade</p>
+                    </div>
+                    <button onClick={handleClose} className="p-2 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"><X size={20} /></button>
+                </div>
+
+                {/* Body Scrollable */}
+                <div className="p-8 overflow-y-auto custom-scrollbar flex-1 bg-gray-50/50">
+                    
+                    {/* SELEÇÃO DE TIPO (CARDS) */}
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                        <TypeCard value="padrao" label="Padrão" icon={CheckSquare} activeColor="gray" />
+                        <TypeCard value="administrativa" label="Documento" icon={FileText} activeColor="blue" />
+                        <TypeCard value="social" label="Social" icon={Camera} activeColor="purple" />
+                        <TypeCard value="conhecimento" label="Quiz" icon={HelpCircle} activeColor="indigo" />
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                        <div className="col-span-2">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Título</label>
+                            <input 
+                                type="text"
+                                value={task.titulo || ""}
+                                onChange={(e) => handleChange('titulo', e.target.value)}
+                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#394C97]/20 focus:border-[#394C97] outline-none font-bold text-gray-700 transition-all"
+                                placeholder="Ex: Contrato assinado"
+                            />
+                        </div>
+
+                        <div className="col-span-2">
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Descrição</label>
+                            <textarea 
+                                value={task.descricao || ""}
+                                onChange={(e) => handleChange('descricao', e.target.value)}
+                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#394C97]/20 focus:border-[#394C97] outline-none text-sm min-h-[80px] transition-all resize-none"
+                                placeholder="Instruções para o usuário..."
+                            />
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Missão</label>
+                            <div className="relative">
+                                <LayoutList className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
+                                <select 
+                                    value={task.missao_id || task.mission_id || ""}
+                                    onChange={(e) => handleChange('missao_id', Number(e.target.value))}
+                                    className="w-full pl-10 pr-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#394C97]/20 outline-none text-sm appearance-none cursor-pointer"
+                                >
+                                    <option value="">Selecione...</option>
+                                    {missions.map(m => (
+                                        <option key={m.id} value={m.id}>{m.titulo}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Categoria (Opcional)</label>
+                            <select 
+                                value={task.categoria_id ?? ""}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    handleChange('categoria_id', val === "" ? null : Number(val));
+                                }}
+                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#394C97]/20 outline-none text-sm cursor-pointer"
+                            >
+                                <option value="">Nenhuma</option>
+                                {categories.map(c => (
+                                    <option key={c.id} value={c.id}>{c.nome}</option>
+                                ))}
+                            </select>
+                        </div>
+
+                        <div>
+                            <label className="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1">Pontos (XP)</label>
+                            <input 
+                                type="number"
+                                value={task.pontos || 0}
+                                onChange={(e) => handleChange('pontos', Number(e.target.value))}
+                                className="w-full px-4 py-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-[#394C97]/20 outline-none text-sm font-bold text-[#394C97]"
+                                placeholder="0"
+                            />
+                        </div>
+                    </div>
+
+                    {/* Área de Quiz Condicional */}
+                    {(task.tipo === 'conhecimento' || (task.quiz && Object.keys(task.quiz).length > 0)) && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-8 border-t border-indigo-100 pt-6"
+                        >
+                            <div className="flex items-center gap-3 mb-2 text-indigo-900 bg-indigo-50 p-4 rounded-xl border border-indigo-100">
+                                <div className="bg-white p-2 rounded-lg shadow-sm text-indigo-600">
+                                    <HelpCircle size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="font-bold text-sm">Configuração do Quiz</h3>
+                                    <p className="text-xs text-indigo-700/70">Defina as perguntas e a resposta correta para pontuação automática.</p>
+                                </div>
+                            </div>
+                            {renderQuizFields()}
+                        </motion.div>
                     )}
+
+                    {/* Área Social Condicional */}
+                    {task.tipo === 'social' && (
+                        <motion.div 
+                            initial={{ opacity: 0, y: 10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="mt-8 border-t border-purple-100 pt-6"
+                        >
+                            {renderSocialFields()}
+                        </motion.div>
+                    )}
+
+                </div>
+
+                {/* Footer */}
+                <div className="px-8 py-5 border-t border-gray-100 flex justify-end gap-3 bg-white rounded-b-2xl">
+                    <button 
+                        type="button"
+                        onClick={handleClose}
+                        className="px-6 py-3 text-xs font-bold text-gray-500 hover:bg-gray-100 rounded-xl transition-colors uppercase tracking-wide"
+                        disabled={isLoading}
+                    >
+                        Cancelar
+                    </button>
+                    <button 
+                        type="button"
+                        onClick={onSaveWrapper}
+                        className="px-8 py-3 text-xs font-bold text-white bg-[#394C97] hover:bg-[#2a385f] rounded-xl shadow-lg shadow-indigo-200 transition-all flex items-center gap-2 uppercase tracking-wide hover:-translate-y-0.5 active:translate-y-0"
+                        disabled={isLoading}
+                    >
+                        {isLoading ? <span className="animate-spin">⌛</span> : <Save size={16} />}
+                        {isEditing ? 'Salvar Alterações' : 'Criar Tarefa'}
+                    </button>
                 </div>
             </motion.div>
         </div>
     );
 };
 
-export default TaskDetailsModal;
+export default TaskQuizModal;

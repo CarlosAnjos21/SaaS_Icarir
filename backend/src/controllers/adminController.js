@@ -5,7 +5,7 @@ const { Prisma } = require('@prisma/client');
 
 /**
  * @route   GET /api/admin/dashboard/stats
- * @desc    Retorna estatísticas gerais para o dashboard
+ * @desc    Retorna estatísticas gerais para o dashboard com dados reais de XP
  */
 const getDashboardStats = async (req, res) => {
   try {
@@ -22,52 +22,103 @@ const getDashboardStats = async (req, res) => {
       where: { ativa: true }
     });
 
-    // 3. Total de Missões/Tarefas Concluídas
-    // Contamos quantas vezes usuários concluíram tarefas como proxy de "missões concluídas" ou engajamento
+    // 3. Total de Tarefas Concluídas
     const completedMissions = await prisma.usuarioTarefa.count({
         where: { concluida: true }
     });
-
-    // 4. Top Usuário (Maior Pontuação)
-    const topUser = await prisma.usuario.findFirst({
+    
+    // 4. Top Usuário Global (Ranking Geral baseado em pontos_totais)
+    const topUserQuery = await prisma.usuario.findFirst({
       where: { 
         role: 'participante', 
         ativo: true 
       },
       orderBy: { 
-        pontos: 'desc' 
+        pontos_totais: 'desc' 
       },
       select: {
         nome: true,
-        pontos: true
+        pontos_totais: true,
+        foto_url: true // IMPORTANTE: Trazer a foto para o card de destaque
       }
     });
 
-    // 5. Cálculo da Taxa de Conclusão (Estimativa Simples)
-    // Evita divisão por zero
+    // 5. Ranking por Missão (Lógica Robusta via usuarios_tarefas)
+    // Nota: Usamos usuarios_tarefas e somamos pontos_obtidos agrupados por missão.
+    // Isso é mais preciso do que logs, pois reflete o estado atual das tarefas.
+    const missionRankings = await prisma.$queryRaw`
+      WITH UserMissionScores AS (
+        SELECT
+          m.id AS "missaoId",
+          m.titulo AS "missionTitle",
+          u.id AS "userId",
+          u.nome AS "userName",
+          u.foto_url AS "userAvatar",
+          SUM(ut.pontos_obtidos) AS "totalPoints"
+        FROM "usuarios_tarefas" ut
+        JOIN "tarefas" t ON ut.tarefa_id = t.id
+        JOIN "missoes" m ON t.missao_id = m.id
+        JOIN "usuarios" u ON ut.usuario_id = u.id
+        WHERE u.role = 'participante' 
+          AND u.ativo = true
+          AND ut.concluida = true
+        GROUP BY m.id, m.titulo, u.id, u.nome, u.foto_url
+      ),
+      RankedScores AS (
+        SELECT
+          *,
+          ROW_NUMBER() OVER(PARTITION BY "missaoId" ORDER BY "totalPoints" DESC) as rn
+        FROM UserMissionScores
+      )
+      SELECT
+        "missaoId",
+        "missionTitle",
+        "userId",
+        "userName",
+        "userAvatar",
+        "totalPoints"
+      FROM RankedScores
+      WHERE rn = 1
+      ORDER BY "totalPoints" DESC;
+    `;
+    
+    // 6. Cálculo da Taxa de Conclusão
     let averageCompletion = 0;
-    // Se houver tarefas concluídas e usuários, calculamos uma média arbitrária para exibir
-    // (Lógica real dependeria do total de tarefas possíveis vs concluídas)
-    if (totalUsers > 0 && totalMissions > 0) {
-        const totalTarefasPossiveis = totalUsers * totalMissions * 5; // Estima 5 tarefas por missão
-        if (totalTarefasPossiveis > 0) {
-             averageCompletion = Math.round((completedMissions / totalTarefasPossiveis) * 100);
-             if (averageCompletion > 100) averageCompletion = 100;
-        }
-    }
+    // Estimativa: (Tarefas Concluídas / (Usuários * Missões * Média de 3 tarefas por missão))
+    const estimatedTasksTotal = (totalUsers * totalMissions * 3) || 1;
+    averageCompletion = Math.round((completedMissions / estimatedTasksTotal) * 100); 
+    if (averageCompletion > 100) averageCompletion = 100;
 
-    // Monta o JSON final
+    // 7. Formatação e Normalização dos Dados
+    const topUserFormatted = {
+      name: topUserQuery?.nome || 'Nenhum usuário',
+      points: Number(topUserQuery?.pontos_totais || 0), // Garante número
+      avatar: topUserQuery?.foto_url || null
+    };
+
+    // Mapeamento seguro convertendo BigInt para Number
+    const missionRankingsFormatted = missionRankings.map(r => ({
+      id: r.missaoId,
+      title: r.missionTitle,
+      topUser: {
+        name: r.userName,
+        points: Number(r.totalPoints || 0),
+        avatar: r.userAvatar || null
+      }
+    }));
+
     res.json({
       totalUsers,
       totalMissions,
       completedMissions, 
       averageCompletion,
-      topUser: topUser || { name: 'Nenhum', points: 0 }
+      topUser: topUserFormatted,
+      missionRankings: missionRankingsFormatted
     });
 
   } catch (error) {
-    console.error("Erro no Dashboard:", error);
-    res.status(500).json({ error: "Erro ao carregar estatísticas" });
+    console.error("Erro no Dashboard Stats:", error);
+    res.status(500).json({ error: "Erro ao carregar estatísticas." });
   }
 };
 
@@ -87,20 +138,36 @@ const validateTaskSubmission = async (req, res) => {
 
     if (!submission) return res.status(404).json({ error: 'Submissão não encontrada.' });
 
+    const pontos = pontos_concedidos || 0;
+
     if (approve) {
       await prisma.$transaction([
         prisma.usuarioTarefa.update({
           where: { id: submissionId },
           data: {
             concluida: true,
-            pontos_obtidos: pontos_concedidos || 0,
+            pontos_obtidos: pontos,
             validado_por: adminId,
             data_validacao: new Date()
           }
         }),
         prisma.usuario.update({
           where: { id: submission.usuario_id },
-          data: { pontos: { increment: pontos_concedidos || 0 } }
+          data: { 
+            pontos: { increment: pontos },
+            pontos_totais: { increment: pontos }
+          } 
+        }),
+        // Gera Log de Pontos para auditoria
+        prisma.logsPontos.create({
+            data: {
+                usuario_id: submission.usuario_id,
+                tarefa_id: submission.tarefa_id,
+                validador_id: adminId,
+                pontos: pontos,
+                tipo: 'tarefa_concluida',
+                descricao: 'Tarefa validada pelo admin'
+            }
         })
       ]);
       res.json({ message: 'Aprovado com sucesso.' });
@@ -124,7 +191,7 @@ const validateTaskSubmission = async (req, res) => {
 
 /**
  * @route   GET /api/admin/users
- * @desc    Listar todos os usuários (Adicionado para corrigir o modal)
+ * @desc    Listar todos os usuários
  */
 const getAllUsers = async (req, res) => {
   try {
@@ -149,5 +216,5 @@ const getAllUsers = async (req, res) => {
 module.exports = {
   getDashboardStats,
   validateTaskSubmission,
-  getAllUsers // Exportando a nova função
+  getAllUsers
 };

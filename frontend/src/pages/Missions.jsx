@@ -1,46 +1,96 @@
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion"; 
-import { Loader, AlertTriangle, Target, CheckCircle, List, Flag } from "lucide-react"; 
+import { Loader, AlertTriangle, Target, CheckCircle, List, Flag, RefreshCw } from "lucide-react"; 
+
+// --- IMPORTAÇÕES REAIS (SEM MOCKS) ---
 import MissionCard from "../components/missions/MissionCard";
 import MissionDetails from "../components/missions/MissionDetails";
-
-// Importação da API
 import { fetchMissions } from '../api/apiFunctions'; 
 
 // ===================================================================
-// FUNÇÃO DE NORMALIZAÇÃO
+// FUNÇÃO DE NORMALIZAÇÃO DE DADOS (CORRIGIDA)
 // ===================================================================
 function normalizeMission(m) {
-    if (!m) return { id: null, title: '', category: '', status: '', progress: 0, deadline: '', totalTasks: 0, completedTasks: 0, accumulatedPoints: 0, description: '', tasks: [], ativa: false };
+    if (!m) return null;
 
-    const title = m.titulo || m.title || '';
+    const title = m.titulo || m.title || 'Sem Título';
     const description = m.descricao || m.description || '';
     const deadline = m.data_fim ? new Date(m.data_fim).toLocaleDateString('pt-BR') : (m.deadline || '');
-    const isActive = (m.ativa === undefined || m.ativa === null) ? true : Boolean(m.ativa);
     
-    // Mapeamento da Imagem (NOVO)
+    // Tratamento de imagem com fallback
     const image = m.foto_url || m.imageUrl || null;
 
+    // 1. Processamento de Tarefas
     let tasks = [];
     const rawTasks = m.tarefas || m.steps || [];
+    let calculatedCompletedTasks = 0;
 
     if (Array.isArray(rawTasks) && rawTasks.length > 0) {
-        tasks = rawTasks.map(t => ({ 
-            id: t.id, 
-            name: t.titulo || t.descricao || t.description || '', 
-            description: t.descricao || t.description || 'Detalhes da tarefa não disponíveis.',
-            points: t.pontos || t.points || 0,
-            completed: t.concluida || t.completed || false, 
-            status: (t.concluida || t.completed) ? 'CONCLUÍDA' : 'PENDENTE',
-            category: t.category || 'Geral'
-        }));
+        tasks = rawTasks.map(t => {
+            const isCompleted = Boolean(t.concluida || t.completed);
+            if (isCompleted) calculatedCompletedTasks++;
+            
+            return { 
+                id: t.id, 
+                name: t.titulo || t.descricao || t.description || '', 
+                description: t.descricao || t.description || 'Detalhes indisponíveis.',
+                points: Number(t.pontos || t.points || 0),
+                completed: isCompleted, 
+                status: isCompleted ? 'CONCLUÍDA' : 'PENDENTE',
+                category: t.category || 'Geral'
+            };
+        });
     }
 
     const totalTasks = tasks.length;
-    const completedTasks = tasks.filter(t => t.completed).length;
-    const progress = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
-    const accumulatedPoints = tasks.filter(t => t.completed).reduce((sum, t) => sum + (Number(t.points) || 0), 0);
-    const status = progress === 100 ? 'Concluída' : 'Em Andamento';
+    
+    // 2. DETECÇÃO ROBUSTA DE INSCRIÇÃO (CRÍTICO)
+    // Verifica bandeiras booleanas diretas
+    const directFlag = Boolean(m.isJoined || m.inscrito || m.joined || m.participando || m.matriculado);
+    
+    // Verifica chaves estrangeiras ou IDs de relação (comum em SQL/Supabase)
+    const relationId = Boolean(m.user_mission_id || m.subscription_id || m.matricula_id);
+    
+    // Verifica arrays de relação (ex: Supabase retorna user_missions: [{...}])
+    const nestedRelation = Array.isArray(m.user_missions) && m.user_missions.length > 0;
+    
+    // Verifica se há progresso gravado (se existe progresso definido, existe relação)
+    const backendProgress = m.progresso !== undefined && m.progresso !== null ? Number(m.progresso) : 0;
+    const hasProgressData = m.progresso !== undefined && m.progresso !== null;
+
+    // Verifica implicitamente se há tarefas concluídas
+    const hasCompletedTasks = calculatedCompletedTasks > 0;
+
+    // DECISÃO FINAL DE INSCRIÇÃO
+    const isJoined = directFlag || relationId || nestedRelation || hasProgressData || hasCompletedTasks;
+
+    // 3. CÁLCULO DE PROGRESSO
+    let progress = 0;
+    if (totalTasks > 0) {
+        // Prioriza o cálculo real baseado nas tarefas carregadas
+        progress = Math.round((calculatedCompletedTasks / totalTasks) * 100);
+    } else if (backendProgress > 0) {
+        // Fallback para o valor simples do banco se não houver tarefas detalhadas
+        progress = backendProgress;
+    }
+
+    const accumulatedPoints = tasks.filter(t => t.completed).reduce((sum, t) => sum + t.points, 0);
+    
+    // 4. DEFINIÇÃO DE STATUS
+    let status = 'Disponível';
+    
+    // Normaliza status do banco se vier como string
+    const dbStatus = m.status ? String(m.status).toLowerCase() : '';
+
+    if (progress === 100 || dbStatus === 'concluida' || dbStatus === 'completed') {
+        status = 'Concluída';
+    } else if (isJoined) {
+        status = 'Inscrito';
+    }
+
+    // 5. DEFINIÇÃO DE ATIVA
+    // Se o user já estiver inscrito, consideramos ativa para ele ver na lista, mesmo que 'ativa' seja false no banco
+    const isActive = (m.ativa === undefined || m.ativa === null) ? true : Boolean(m.ativa);
 
     return {
         id: m.id,
@@ -48,15 +98,15 @@ function normalizeMission(m) {
         description,
         deadline,
         totalTasks,
-        completedTasks,
+        completedTasks: calculatedCompletedTasks,
         accumulatedPoints,
         progress,
-        status,
+        status, // 'Disponível', 'Inscrito', ou 'Concluída'
         tasks,
-        category: m.destino || 'Geral', // Usando destino como categoria/local
+        category: m.destino || 'Geral', 
         ativa: isActive,
-        image, // Passando a imagem para o objeto final
-        isJoined: m.isJoined // Importante para saber se o usuário já participa
+        image, 
+        isJoined 
     };
 }
 
@@ -72,15 +122,21 @@ export default function Missions() {
     setError(null);
     try {
       const data = await fetchMissions();
+      
+      // Normaliza e Filtra
       const normalized = (data || [])
         .map(normalizeMission)
-        .filter(m => m.ativa === true && m.title); 
+        .filter(m => m !== null) // Remove nulos
+        // Lógica de visualização:
+        // Mostra se a missão está ativa (para novos users)
+        // OU se o utilizador atual já está inscrito (isJoined === true), independentemente de estar ativa
+        .filter(m => m.ativa === true || m.isJoined === true);
+      
       setMissions(normalized);
     } catch (err) {
-      // Se for erro 401/403, sugere relogin
       const msg = err.response?.status === 403 || err.response?.status === 401 
         ? "Sessão expirada. Por favor, faça login novamente."
-        : err.message || 'Erro de conexão';
+        : err.message || 'Erro de conexão ao buscar missões.';
         
       setError(msg);
       console.error("Erro ao carregar missões:", err);
@@ -95,22 +151,32 @@ export default function Missions() {
   
   const filteredMissions = missions.filter(mission => {
     if (activeTab === 'active') {
-      return mission.progress < 100;
-    } else if (activeTab === 'completed') {
-      return mission.progress === 100;
+      // Aba 'Ativas': Missões não concluídas (seja inscrito ou apenas disponível)
+      return mission.progress < 100 && mission.status !== 'Concluída';
+    } 
+    else if (activeTab === 'completed') {
+      // Aba 'Concluídas': Apenas 100% ou status explícito
+      return mission.progress === 100 || mission.status === 'Concluída';
     }
     return true;
   });
 
   const handleOpenMission = (mission) => setSelectedMission(mission);
-  const handleBackToMissions = () => setSelectedMission(null);
+  
+  // Função crítica: Recarrega dados ao voltar dos detalhes para atualizar o status
+  const handleBackToMissions = async () => {
+      setSelectedMission(null);
+      await loadMissions();
+  };
   
   const handleCompleteStep = (taskId) => {
-    console.log(`Tentativa de concluir a tarefa ID: ${taskId}.`);
+    // Log para debug
+    console.log(`Tarefa ${taskId} concluída na UI.`);
   };
 
+  // Renderização Condicional de Conteúdo
   const renderContent = () => {
-    if (loading) {
+    if (loading && !selectedMission) {
       return (
         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl shadow-sm border border-gray-100">
             <Loader size={40} className="animate-spin text-[#394C97] mb-4" /> 
@@ -119,7 +185,7 @@ export default function Missions() {
       );
     }
 
-    if (error) {
+    if (error && !selectedMission) {
       return (
         <div className="bg-red-50 border border-red-200 text-red-700 px-6 py-8 rounded-2xl flex flex-col items-center gap-3 text-center">
           <AlertTriangle size={32} />
@@ -202,6 +268,9 @@ export default function Missions() {
                     <p className="text-gray-500 font-medium">
                         {activeTab === 'active' ? 'Nenhuma missão ativa no momento.' : 'Nenhuma missão concluída ainda.'}
                     </p>
+                    <button onClick={loadMissions} className="mt-4 text-[#394C97] text-sm flex items-center gap-1 hover:underline">
+                        <RefreshCw size={12} /> Atualizar lista
+                    </button>
                 </div>
             )}
         </div>
