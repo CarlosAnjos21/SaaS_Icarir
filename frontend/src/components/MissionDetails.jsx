@@ -6,7 +6,7 @@ import {
   Briefcase, MapPin, Clock, Trophy, ArrowLeft, Loader, CheckCircle, Lock, PlayCircle, AlertCircle, LogOut, Award, User
 } from "lucide-react";
 import Navbar from "../components/Navbar";
-import { api } from "./missions/TaskDetailsModal";
+import api from "../api/api";
 import TaskDetailsModal from './missions/TaskDetailsModal';
 
 // --- SUBCOMPONENTES ---

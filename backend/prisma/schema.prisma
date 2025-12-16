@@ -169,7 +169,6 @@ model Tarefa {
   id                 Int         @id @default(autoincrement())
   missao_id          Int
   categoria_id       Int?
-  quiz               Quiz?
   titulo             String
   descricao          String?
   instrucoes         String?
@@ -189,10 +188,10 @@ model Tarefa {
   tarefaAnterior  Tarefa?          @relation("TarefaAnterior", fields: [tarefa_anterior_id], references: [id], onDelete: SetNull)
   proximasTarefas Tarefa[]         @relation("TarefaAnterior")
   usuarios        UsuarioTarefa[]
-  quiz            Quiz?            @relation(fields: [quizId], references: [id])
+  quiz            Quiz?
   cards           Card[]
   logs            LogsPontos[]
-  
+
   @@map("tarefas")
 }
 
@@ -255,15 +254,14 @@ model UsuarioTarefa {
 
 model Quiz {
   id           Int      @id @default(autoincrement())
-  tarefaid     Int      @unique
-  tarefa       Tarefa   @relation(fields: [tarefaId], references: [id])
+  tarefaId     Int      @unique
   titulo       String
   descricao    String?
   ativo        Boolean  @default(true)
   data_criacao DateTime @default(now())
 
   // Relations
-  tarefa    Tarefa[]
+  tarefa    Tarefa   @relation(fields: [tarefaId], references: [id])
   perguntas PerguntaQuiz[]
 
   @@map("quizzes")
