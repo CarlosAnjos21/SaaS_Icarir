@@ -196,9 +196,12 @@ const submitQuiz = async (req, res) => {
           }
         });
 
-        await tx.usuarios.update({
+        await tx.usuario.update({
           where: { id: userId },
-          data: { pontos: { increment: taskPoints } }
+          data: { 
+            pontos: { increment: taskPoints },
+            pontos_totais: { increment: taskPoints }
+          }
         });
 
         await tx.logsPontos.create({

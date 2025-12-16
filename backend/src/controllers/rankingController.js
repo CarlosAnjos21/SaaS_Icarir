@@ -23,7 +23,7 @@ const getGlobalRanking = async (req, res) => {
     // Busca dados
     const usuariosRaw = await usuarioModel.findMany({
       take: 100,
-      orderBy: { pontos: 'desc' } // Tenta ordenação direta pelo banco se possível
+      orderBy: { pontos_totais: 'desc' } // Ranking geral usa pontos_totais (soma de todas as missões)
     });
 
     // Processamento e normalização
@@ -31,7 +31,7 @@ const getGlobalRanking = async (req, res) => {
         .filter(u => u.ativo !== false) // Filtra inativos se a coluna existir
         .map((user) => {
             const nome = user.nome || user.name || "Sem Nome";
-            const pontos = Number(user.pontos || user.points || 0);
+            const pontos = Number(user.pontos_totais || user.pontos || user.points || 0);
             const foto = user.foto_url || user.photo_url || user.avatar || null;
             const depto = user.departamento || user.department || user.role || "Geral";
             
