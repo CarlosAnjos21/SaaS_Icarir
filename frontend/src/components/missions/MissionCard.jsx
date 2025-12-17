@@ -2,6 +2,7 @@ import React from 'react';
 import { Calendar, MapPin, CheckCircle, Lock, Award } from 'lucide-react';
 
 const MissionCard = ({ mission, onClick }) => {
+    // (log de depuração removido)
     // 1. Tratamento robusto da Imagem
     const displayImage = mission.image || mission.imageUrl || mission.foto_url;
 
@@ -41,16 +42,26 @@ const MissionCard = ({ mission, onClick }) => {
         (mission.quiz?.perguntas) || // Suporte explícito a perguntas do quiz
         [];
     
+    // Prioriza valor calculado no backend (`totalPoints`) quando disponível
+    let backendTotal = Number(mission.totalPoints ?? mission.pontos ?? mission.points ?? 0);
+
+    // Fallbacks extras: alguns lugares mantêm o objeto cru em `_raw`.
+    if ((!backendTotal || backendTotal === 0) && mission._raw) {
+        backendTotal = Number(mission._raw.totalPoints ?? mission._raw.pontos ?? mission._raw.points ?? 0) || backendTotal;
+        // Se ainda nada, some as tarefas dentro do _raw
+        if ((!backendTotal || backendTotal === 0) && Array.isArray(mission._raw.tarefas)) {
+            backendTotal = mission._raw.tarefas.reduce((acc, t) => acc + (Number(t.pontos || t.points || 0) || 0), 0);
+        }
+    }
+
     const calculatedPoints = tasksArray.reduce((acc, item) => {
-        // Tenta encontrar pontos em todas as chaves comuns (tarefas ou perguntas)
         const val = Number(item.pontos || item.points || item.valor || item.xp || 0);
         return acc + (Number.isNaN(val) ? 0 : val);
     }, 0);
-    
-    // Fallback: Se o cálculo for 0, usa o valor estático.
-    // Prioriza o cálculo se ele encontrar algo, pois geralmente é mais preciso.
+
+    // Ordem de prioridade: backendTotal (quando fornecido) -> cálculo local -> estático
     const staticPoints = Number(mission.pontos || mission.points || 0);
-    const displayPoints = calculatedPoints > 0 ? calculatedPoints : (Number.isNaN(staticPoints) ? 0 : staticPoints);
+    const displayPoints = backendTotal > 0 ? backendTotal : (calculatedPoints > 0 ? calculatedPoints : (Number.isNaN(staticPoints) ? 0 : staticPoints));
 
     const { 
         title, 

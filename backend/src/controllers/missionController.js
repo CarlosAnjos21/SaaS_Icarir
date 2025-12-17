@@ -37,11 +37,45 @@ const getAllActiveMissions = async (req, res) => {
         joinedMissionIds = inscricoes.map(i => i.missao_id);
     }
     
+    // Calcula soma de pontos das tarefas por missão
+    const missionIds = missoes.map(m => m.id);
+    const taskSums = await prisma.tarefa.groupBy({
+      by: ['missao_id'],
+      where: { missao_id: { in: missionIds }, ativa: true },
+      _sum: { pontos: true }
+    });
+    const missionTotalPoints = {};
+    taskSums.forEach(s => {
+      missionTotalPoints[s.missao_id] = s._sum.pontos || 0;
+    });
+
+    // Se houver usuário logado, calcula os pontos já obtidos por missão
+    const userPointsByMission = {};
+    if (userId && missionIds.length) {
+      const userTaskPoints = await prisma.usuarioTarefa.findMany({
+        where: {
+          usuario_id: userId,
+          tarefa: { missao_id: { in: missionIds } }
+        },
+        select: {
+          pontos_obtidos: true,
+          tarefa: { select: { missao_id: true } }
+        }
+      });
+
+      userTaskPoints.forEach(u => {
+        const mid = u.tarefa.missao_id;
+        userPointsByMission[mid] = (userPointsByMission[mid] || 0) + (u.pontos_obtidos || 0);
+      });
+    }
+
     // Formata retorno
     const formatted = missoes.map(m => ({
         ...m,
         preco: m.preco ? Number(m.preco) : 0,
-        isJoined: joinedMissionIds.includes(m.id)
+        isJoined: joinedMissionIds.includes(m.id),
+        totalPoints: missionTotalPoints[m.id] || 0,
+        userPoints: userPointsByMission[m.id] || 0
     }));
 
     res.json(formatted);
@@ -66,7 +100,17 @@ const getMissionById = async (req, res) => {
     });
 
     if (!missao) return res.status(404).json({ error: 'Missão não encontrada.' });
-    
+    // Calcula pontos totais da missão (soma das tarefas ativas)
+    try {
+      const pointsAgg = await prisma.tarefa.aggregate({
+        where: { missao_id: missionId, ativa: true },
+        _sum: { pontos: true }
+      });
+      missao.totalPoints = (pointsAgg && pointsAgg._sum && pointsAgg._sum.pontos) ? Number(pointsAgg._sum.pontos) : 0;
+    } catch (e) {
+      missao.totalPoints = 0;
+    }
+
     res.json(missao);
   } catch (error) {
     console.error('Erro ao buscar missão:', error);
@@ -183,11 +227,15 @@ const getMissionFullById = async (req, res) => {
     const myPoints = progressoUsuario.reduce((acc, curr) => acc + (curr.pontos_obtidos || 0), 0);
     
     // 4. Monta resposta final
+    // Soma os pontos totais das tarefas da missão
+    const missionTotalPoints = (missao.tarefas || []).reduce((acc, t) => acc + (t && t.pontos ? Number(t.pontos) : 0), 0);
+
     const response = {
       ...missao,
       preco: missao.preco ? Number(missao.preco) : 0,
       isJoined: !!inscricao,
       participationStatus: inscricao ? inscricao.status_participacao : null,
+      totalPoints: missionTotalPoints,
       userProgress: {
         totalPoints: myPoints,
         completedTasksCount: progressoUsuario.filter(p => p.concluida).length,

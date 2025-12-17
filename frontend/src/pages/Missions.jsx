@@ -75,6 +75,10 @@ function normalizeMission(m) {
     }
 
     const accumulatedPoints = tasks.filter(t => t.completed).reduce((sum, t) => sum + t.points, 0);
+    // Se não vierem tarefas detalhadas do backend, usar os valores agregados
+    const backendTotalPoints = Number(m.totalPoints ?? m.pontos ?? m.points ?? 0);
+    const backendUserPoints = Number(m.userPoints ?? m.user_points ?? 0);
+    const finalAccumulatedPoints = tasks.length > 0 ? accumulatedPoints : (backendUserPoints || 0);
     
     // 4. DEFINIÇÃO DE STATUS
     let status = 'Disponível';
@@ -98,8 +102,11 @@ function normalizeMission(m) {
         description,
         deadline,
         totalTasks,
-        completedTasks: calculatedCompletedTasks,
-        accumulatedPoints,
+      completedTasks: calculatedCompletedTasks,
+      accumulatedPoints: finalAccumulatedPoints,
+      pontos: backendTotalPoints,
+      points: backendTotalPoints,
+        totalPoints: backendTotalPoints,
         progress,
         status, // 'Disponível', 'Inscrito', ou 'Concluída'
         tasks,
@@ -133,6 +140,7 @@ export default function Missions() {
         .filter(m => m.ativa === true || m.isJoined === true);
       
       setMissions(normalized);
+      // (log temporário removido)
     } catch (err) {
       const msg = err.response?.status === 403 || err.response?.status === 401 
         ? "Sessão expirada. Por favor, faça login novamente."

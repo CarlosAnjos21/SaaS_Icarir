@@ -2,31 +2,10 @@ import React, { useState, useEffect, useMemo } from "react";
 import { motion, Reorder, AnimatePresence } from "framer-motion";
 import { X, Settings, Image as ImageIcon, Briefcase, Loader, DollarSign, Users, Calendar, MapPin, UploadCloud, GripVertical, Trophy, CheckCircle, FileText, Camera, AlertCircle, Trash2, Calculator } from "lucide-react";
 
-// ===================================================================
-// MOCKS PARA AMBIENTE DE DEMONSTRAÇÃO
-// ===================================================================
+// Use API functions reais
+import { fetchTasks, updateTask, deleteTask } from '../../../api/apiFunctions';
 
-const mockTasks = [
-    { id: 1, titulo: "Ler Documentação Inicial", tipo: "administrativa", pontos: 50, missao_id: 1, ordem: 0, ativa: true },
-    { id: 2, titulo: "Seguir perfil no Instagram", tipo: "social", pontos: 100, missao_id: 1, ordem: 1, ativa: true },
-    { id: 3, titulo: "Quiz de Segurança", tipo: "conhecimento", pontos: 200, missao_id: 1, ordem: 2, ativa: true },
-    { id: 4, titulo: "Tarefa Antiga", tipo: "padrao", pontos: 10, missao_id: 99, ordem: 0, ativa: true },
-];
-
-const fetchTasks = async () => {
-    return new Promise((resolve) => setTimeout(() => resolve(mockTasks), 500));
-};
-
-const updateTask = async (id, updates) => {
-    console.log(`[MOCK] Task ${id} updated:`, updates);
-    return new Promise((resolve) => setTimeout(resolve, 300));
-};
-
-const deleteTask = async (id) => {
-    console.log(`[MOCK] Task ${id} deleted`);
-    return new Promise((resolve) => setTimeout(resolve, 300));
-};
-
+// Supabase upload shim (keeps existing behavior in this file)
 const supabase = {
     storage: {
         from: () => ({
@@ -52,10 +31,21 @@ const MissionModal = ({ newMission, setNewMission, handleSaveMission, handleModa
     const [loadingTasks, setLoadingTasks] = useState(false);
 
     // LÓGICA DE OURO: Cálculo dinâmico dos pontos
-    // Soma os pontos de todas as tarefas vinculadas. Se não houver tarefas, é 0.
+    // - Se houver `linkedTasks` (missão existente com tarefas no DB), soma elas
+    // - Caso contrário (missão nova), soma `newMission.steps` que o user editou no modal
     const totalMissionPoints = useMemo(() => {
-        return linkedTasks.reduce((acc, task) => acc + (Number(task.pontos) || 0), 0);
-    }, [linkedTasks]);
+        const fromLinked = Array.isArray(linkedTasks) && linkedTasks.length > 0
+            ? linkedTasks.reduce((acc, task) => acc + (Number(task.pontos || task.points || 0) || 0), 0)
+            : 0;
+
+        if (fromLinked > 0) return fromLinked;
+
+        const fromSteps = Array.isArray(newMission?.steps)
+            ? newMission.steps.reduce((acc, s) => acc + (Number(s.points || s.pontos || 0) || 0), 0)
+            : 0;
+
+        return fromSteps;
+    }, [linkedTasks, newMission]);
 
     // Carrega as tarefas vinculadas a esta missão ao abrir o modal
     useEffect(() => {
@@ -225,12 +215,12 @@ const MissionModal = ({ newMission, setNewMission, handleSaveMission, handleModa
                                     <label className="block text-xs font-bold text-gray-500 mb-1.5 ml-1">Cidade</label>
                                     <div className="relative">
                                         <MapPin size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
-                                        <input
-                                            type="text"
-                                            className="w-full border border-gray-200 bg-gray-50 p-3 pl-10 rounded-xl outline-none text-sm"
-                                            value={newMission.cidade || newMission.city || ""}
-                                            onChange={(e) => setNewMission({ ...newMission, cidade: e.target.value })}
-                                        />
+                                            <input
+                                                type="text"
+                                                className="w-full border border-gray-200 bg-gray-50 p-3 pl-10 rounded-xl outline-none text-sm"
+                                                value={newMission.destino || newMission.cidade || newMission.city || ""}
+                                                onChange={(e) => setNewMission({ ...newMission, destino: e.target.value })}
+                                            />
                                     </div>
                                 </div>
                                 <div>
