@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from "framer-motion";
 import { 
     Zap, 
@@ -16,6 +17,8 @@ import TasksQuizzesContent from './TasksQuizzesContent';
 
 const MissionsContent = () => {
     const [internalTab, setInternalTab] = useState("missions");
+    const location = useLocation();
+    const navigate = useNavigate();
 
     const tabs = [
         { 
@@ -42,6 +45,20 @@ const MissionsContent = () => {
     ];
 
     const currentContent = tabs.find(tab => tab.id === internalTab)?.content;
+
+    // Restaurar aba a partir de ?adminTab=... na URL
+    React.useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const tab = params.get('adminTab');
+        if (tab && ['missions','categories','tasks'].includes(tab)) setInternalTab(tab);
+    }, [location.search]);
+
+    // Atualizar query param quando a aba muda
+    React.useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        params.set('adminTab', internalTab);
+        navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+    }, [internalTab, location.pathname, location.search, navigate]);
 
     return (
         <div className="min-h-screen bg-gray-50 font-sans text-gray-800 pb-20">

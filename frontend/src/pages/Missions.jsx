@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
+import { useLocation, useNavigate } from 'react-router-dom';
 import { motion } from "framer-motion"; 
 import { Loader, AlertTriangle, Target, CheckCircle, List, Flag, RefreshCw } from "lucide-react"; 
 
@@ -123,6 +124,8 @@ export default function Missions() {
   const [activeTab, setActiveTab] = useState('active');
   const [loading, setLoading] = useState(true); 
   const [error, setError] = useState(null); 
+  const location = useLocation();
+  const navigate = useNavigate();
 
   const loadMissions = useCallback(async () => {
     setLoading(true);
@@ -156,6 +159,27 @@ export default function Missions() {
   useEffect(() => {
     loadMissions();
   }, [loadMissions]);
+
+  // Sincroniza aba com query param `tab` para persistir seleção no reload
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const tab = params.get('tab');
+    if (tab === 'active' || tab === 'completed') {
+      setActiveTab(tab);
+    }
+  // somente executar quando mudar a localização (ex.: reload ou navegação externa)
+  }, [location.search]);
+
+  // Atualiza a URL quando a aba muda (sem empurrar histórico)
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(location.search);
+      if (activeTab) params.set('tab', activeTab);
+      navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+    } catch (e) {
+      // ignore
+    }
+  }, [activeTab, location.pathname, location.search, navigate]);
   
   const filteredMissions = missions.filter(mission => {
     if (activeTab === 'active') {
