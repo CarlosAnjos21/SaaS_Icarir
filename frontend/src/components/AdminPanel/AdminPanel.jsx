@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom"; // Import necessário para redirecionamento
+import { useState, useEffect } from "react";
+import { useNavigate, useLocation } from "react-router-dom"; // Import necessário para redirecionamento
 import { 
     BarChart2, 
     Users, 
@@ -25,6 +25,23 @@ export default function AdminPanel() {
     const [activeTab, setActiveTab] = useState("dashboard");
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const navigate = useNavigate(); // Hook de navegação
+    const location = useLocation();
+
+    // Restaurar aba ativa a partir da query `adminTab` no carregamento
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const tab = params.get('adminTab');
+        if (tab && ['dashboard','missions','users','tasks'].includes(tab)) {
+            setActiveTab(tab);
+        }
+    }, [location.search]);
+
+    // Atualizar query param quando a aba mudar (substitui entrada de histórico)
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        params.set('adminTab', activeTab);
+        navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+    }, [activeTab, location.pathname, location.search, navigate]);
 
     // ⚠️ Removidos: 'quizzes' e 'settings'
     const tabs = [
