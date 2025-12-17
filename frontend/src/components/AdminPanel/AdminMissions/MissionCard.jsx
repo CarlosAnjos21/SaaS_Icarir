@@ -12,8 +12,23 @@ const MissionCard = ({ mission, onEdit, onDelete, onManageParticipants }) => {
     const price = mission.preco ? Number(mission.preco) : 0;
     const vacancies = mission.vagas_disponiveis;
 
+    // Pontos: prioriza `totalPoints` retornado pelo backend, com fallbacks
+    let backendTotal = Number(mission.totalPoints ?? mission.pontos ?? mission.points ?? 0);
+    // Fallback para _raw (algumas respostas mantêm objeto cru)
+    if ((!backendTotal || backendTotal === 0) && mission._raw) {
+        backendTotal = Number(mission._raw.totalPoints ?? mission._raw.pontos ?? mission._raw.points ?? backendTotal) || backendTotal;
+        if ((!backendTotal || backendTotal === 0) && Array.isArray(mission._raw.tarefas)) {
+            backendTotal = mission._raw.tarefas.reduce((acc, t) => acc + (Number(t.pontos || t.points || 0) || 0), 0);
+        }
+    }
+    const stepsArray = Array.isArray(mission.steps) ? mission.steps : (Array.isArray(mission.tarefas) ? mission.tarefas : []);
+    const calculatedPoints = stepsArray.reduce((s, it) => s + (Number(it.points || it.pontos || 0) || 0), 0);
+    const displayPoints = backendTotal > 0 ? backendTotal : (calculatedPoints > 0 ? calculatedPoints : Number(mission.points || mission.pontos || 0));
+
     return (
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all group overflow-hidden flex flex-col h-full relative">
+        <div
+            className="bg-white rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all group overflow-hidden flex flex-col h-full relative"
+        >
             
             {/* Área da Imagem de Capa */}
             <div className="h-44 w-full relative bg-gray-100 overflow-hidden">
@@ -65,7 +80,7 @@ const MissionCard = ({ mission, onEdit, onDelete, onManageParticipants }) => {
                 <div className="flex items-center text-xs text-gray-500 mb-4 gap-3">
                     <span className="flex items-center gap-1">
                         <Trophy size={14} className="text-[#FE5900]" /> 
-                        <span className="font-semibold">{mission.points || mission.pontos || 0} XP</span>
+                        <span className="font-semibold">{displayPoints} XP</span>
                     </span>
                 </div>
 

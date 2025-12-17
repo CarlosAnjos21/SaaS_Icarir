@@ -531,6 +531,9 @@ export default function MissionDetails({ mission: initialMissionData, onBack, re
         ['inscrito', 'participando', 'confirmado'].includes(participationStatus);
 
     const totalPoints = useMemo(() => {
+        // Prefere total calculado pelo backend quando disponível
+        if (mission && mission.totalPoints != null) return Number(mission.totalPoints || 0);
+
         const items = [...(tarefas || []), ...(mission.quiz?.questions || [])];
         if (items.length === 0) return Number(mission.pontos || mission.points || 0);
         return items.reduce((acc, item) => acc + (Number(item.pontos || item.points || 0) || 0), 0);

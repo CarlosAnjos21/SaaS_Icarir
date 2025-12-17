@@ -93,6 +93,7 @@ function normalizeMission(m) {
         city: m.destino || m.city || '',
         descricao: m.descricao || '',
         points: totalPoints || Number(m.points || m.pontos || 0),
+        totalPoints: Number(m.totalPoints ?? totalPoints ?? m.pontos ?? m.points ?? 0),
         preco: m.preco != null ? Number(m.preco) : null,
         vagas_disponiveis: m.vagas_disponiveis != null ? Number(m.vagas_disponiveis) : null,
         expirationDate: m.data_fim ? String(m.data_fim).slice(0,10) : (m.expirationDate || ''),
