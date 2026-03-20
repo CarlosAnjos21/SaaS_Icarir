@@ -1,66 +1,116 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const missionController = require("../controllers/missionController");
+const missionController = require('../controllers/missionController');
+const { authenticate, checkRole } = require('../middlewares/authMiddleware');
+const taskRoutes = require('./taskRoutes');
 
-// Importa as funções de autenticação e autorização
-const { authenticate, checkRole } = require("../middlewares/authMiddleware");
-
-// 1. Importar as rotas de tarefas
-const taskRoutes = require("./taskRoutes"); 
-
-// Definição dos Roles permitidos para visualização (usado apenas nas rotas privadas agora)
-const PARTICIPANT_ROLES = ['admin', 'participante']; 
-
-// --- ROTAS DE SUB-MÓDULO (Aninhamento) ---
-
-// 2. Aninhar as rotas de tarefas, aplicando autenticação e permissão de acesso
-// Qualquer requisição para /api/missions/:missionId/tasks
-router.use(
-    "/:missionId/tasks", 
-    authenticate, 
-    checkRole(PARTICIPANT_ROLES), // Permite participante e admin
-    taskRoutes
-);
-
-
-// --- ROTAS DE VISUALIZAÇÃO DE MISSÕES ---
+// Aninhar rotas de tarefas — authenticate aplicado aqui para todas as subrotas
+router.use('/:missionId/tasks', authenticate, checkRole(['admin', 'participante']), taskRoutes);
 
 /**
- * @route   GET /api/missions
- * @desc    Listar todas as missões ativas
- * @access  Público (Alterado para exibir na Home)
+ * @swagger
+ * tags:
+ *   name: Missões
+ *   description: Endpoints de missões para participantes
  */
-router.get("/", missionController.getAllActiveMissions);
 
 /**
- * @route   GET /api/missions/:missionId
- * @desc    Buscar detalhes de uma missão específica
- * @access  Público (Alterado para exibir detalhes básicos)
+ * @swagger
+ * /missions:
+ *   get:
+ *     summary: Lista todas as missões ativas
+ *     tags: [Missões]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Lista de missões retornada com sucesso
+ *       401:
+ *         description: Não autorizado
  */
-router.get("/:missionId", missionController.getMissionById);
+router.get('/', authenticate, missionController.getAllActiveMissions);
 
 /**
- * @route   GET /api/missions/:missionId/full
- * @desc    Retorna os dados completos de uma missão (tarefas, inscritos, logs, contagens)
- * @access  Privado (Participante e Admin)
+ * @swagger
+ * /missions/{missionId}:
+ *   get:
+ *     summary: Busca detalhes básicos de uma missão
+ *     tags: [Missões]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: missionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Missão encontrada
+ *       404:
+ *         description: Missão não encontrada
  */
-router.get("/:missionId/full", authenticate, checkRole(PARTICIPANT_ROLES), missionController.getMissionFullById);
-
-
-// --- ROTAS DE AÇÃO (INSCRIÇÃO/DESINSCRIÇÃO) ---
+router.get('/:missionId', authenticate, missionController.getMissionById);
 
 /**
- * @route   POST /api/missions/:missionId/join
- * @desc    Inscrever o usuário logado em uma missão
- * @access  Privado (Apenas Participante deve se inscrever)
+ * @swagger
+ * /missions/{missionId}/full:
+ *   get:
+ *     summary: Retorna dados completos de uma missão (tarefas, progresso, ranking)
+ *     tags: [Missões]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: missionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Dados completos da missão
+ *       404:
+ *         description: Missão não encontrada
  */
-router.post("/:missionId/join", authenticate, checkRole(['participante']), missionController.joinMission); 
+router.get('/:missionId/full', authenticate, checkRole(['admin', 'participante']), missionController.getMissionFullById);
 
 /**
- * @route   DELETE /api/missions/:missionId/join
- * @desc    Sair (desvincular) da missão
- * @access  Privado (Apenas Participante)
+ * @swagger
+ * /missions/{missionId}/join:
+ *   post:
+ *     summary: Inscrever o usuário logado em uma missão
+ *     tags: [Missões]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: missionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Inscrição realizada com sucesso
+ *       409:
+ *         description: Usuário já inscrito
+ *   delete:
+ *     summary: Cancelar inscrição em uma missão
+ *     tags: [Missões]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: missionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Inscrição cancelada com sucesso
+ *       404:
+ *         description: Inscrição não encontrada
  */
-router.delete("/:missionId/join", authenticate, checkRole(['participante']), missionController.leaveMission);
+router.post('/:missionId/join', authenticate, checkRole(['participante']), missionController.joinMission);
+router.delete('/:missionId/join', authenticate, checkRole(['participante']), missionController.leaveMission);
 
 module.exports = router;

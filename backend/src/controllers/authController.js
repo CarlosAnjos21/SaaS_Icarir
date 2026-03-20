@@ -1,143 +1,122 @@
 const prisma = require('../config/prismaClient');
-const { Prisma } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const jwt = require('jsonwebtoken');
+const { Prisma } = require('@prisma/client');
+require('dotenv').config();
 
-const ALLOWED_ROLES = ['participante', 'admin', 'validador'];
-
-const getAllUsers = async (req, res) => {
-  const { ativo, perfil, busca } = req.query;
-
-  const where = {
-    ...(ativo !== undefined && { ativo: ativo === 'true' }),
-    ...(perfil && { role: perfil }),
-    ...(busca && {
-      OR: [
-        { nome: { contains: busca, mode: 'insensitive' } },
-        { email: { contains: busca, mode: 'insensitive' } },
-      ],
-    }),
-  };
-
-  try {
-    const users = await prisma.usuario.findMany({
-      where,
-      select: { id: true, nome: true, email: true, empresa: true, role: true, ativo: true, pontos: true, foto_url: true, data_criacao: true },
-      orderBy: { nome: 'asc' },
-    });
-    res.json(users);
-  } catch (error) {
-    console.error('Erro ao buscar usuários:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
-  }
-};
-
-const createUser = async (req, res) => {
-  const { nome, email, senha, empresa, role, ativo, pontos } = req.body;
+const register = async (req, res) => {
+  const { nome, email, senha, role, adminKey } = req.body;
 
   if (!nome || !email || !senha) {
     return res.status(400).json({ error: 'Nome, email e senha são obrigatórios.' });
   }
 
+  let userRole = 'participante';
+  if (role === 'admin') {
+    if (adminKey !== process.env.ADMIN_REGISTRATION_KEY) {
+      return res.status(403).json({ error: 'Chave de administrador inválida.' });
+    }
+    userRole = 'admin';
+  }
+
   try {
-    const salt = await bcrypt.genSalt(10);
-    const senhaHash = await bcrypt.hash(senha, salt);
+    const senhaHash = await bcrypt.hash(senha, await bcrypt.genSalt(10));
 
     const user = await prisma.usuario.create({
-      data: {
-        nome,
-        email,
-        senha: senhaHash,
-        empresa: empresa || null,
-        role: ALLOWED_ROLES.includes(role) ? role : 'participante',
-        ativo: ativo ?? true,
-        pontos: pontos ? parseInt(pontos) : 0,
-      },
-      select: { id: true, nome: true, email: true, empresa: true, role: true, ativo: true, pontos: true },
+      data: { nome, email, senha: senhaHash, role: userRole, ativo: true },
+      select: { id: true, nome: true, email: true, role: true, ativo: true },
     });
 
-    res.status(201).json({ message: 'Usuário criado com sucesso!', user });
+    res.status(201).json({ message: 'Usuário cadastrado com sucesso!', user });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
       return res.status(409).json({ error: 'Este e-mail já está cadastrado.' });
     }
-    console.error('Erro ao criar usuário:', error);
+    console.error('Erro ao cadastrar:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-const getUserById = async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
-
-  try {
-    const user = await prisma.usuario.findUnique({
-      where: { id },
-      select: { id: true, nome: true, email: true, empresa: true, role: true, ativo: true, pontos: true, foto_url: true },
-    });
-    if (!user) return res.status(404).json({ error: 'Usuário não encontrado.' });
-    res.json(user);
-  } catch (error) {
-    console.error('Erro ao buscar usuário:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
-  }
-};
-
-const updateUser = async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
-
-  const { nome, email, foto_url, role, ativo, pontos, empresa, senha } = req.body;
-
-  const data = {
-    ...(nome !== undefined && { nome }),
-    ...(email !== undefined && { email }),
-    ...(foto_url !== undefined && { foto_url }),
-    ...(role !== undefined && ALLOWED_ROLES.includes(role) && { role }),
-    ...(ativo !== undefined && { ativo }),
-    ...(pontos !== undefined && { pontos: parseInt(pontos) }),
-    ...(empresa !== undefined && { empresa }),
-  };
-
-  if (senha?.trim()) {
-    const salt = await bcrypt.genSalt(10);
-    data.senha = await bcrypt.hash(senha, salt);
+const login = async (req, res) => {
+  const { email, senha } = req.body;
+  if (!email || !senha) {
+    return res.status(400).json({ error: 'E-mail e senha são obrigatórios.' });
   }
 
   try {
-    const user = await prisma.usuario.update({
-      where: { id },
-      data,
-      select: { id: true, nome: true, email: true, empresa: true, role: true, ativo: true, pontos: true, foto_url: true },
-    });
-    res.json({ message: 'Usuário atualizado com sucesso!', user });
-  } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2002') return res.status(409).json({ error: 'E-mail já em uso.' });
-      if (error.code === 'P2025') return res.status(404).json({ error: 'Usuário não encontrado.' });
+    const user = await prisma.usuario.findUnique({ where: { email } });
+
+    if (!user || !(await bcrypt.compare(senha, user.senha))) {
+      return res.status(401).json({ error: 'Credenciais inválidas.' });
     }
-    console.error('Erro ao atualizar usuário:', error);
+    if (!user.ativo) {
+      return res.status(403).json({ error: 'Usuário inativo.' });
+    }
+
+    const payload = { user: { id: user.id, email: user.email, role: user.role } };
+
+    const accessToken = jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
+      expiresIn: process.env.JWT_ACCESS_EXPIRATION,
+    });
+    const refreshToken = jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
+      expiresIn: process.env.JWT_REFRESH_EXPIRATION,
+    });
+
+    res.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+
+    res.json({ message: 'Login bem-sucedido!', accessToken, user: payload.user });
+  } catch (error) {
+    console.error('Erro no login:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-const deleteUser = async (req, res) => {
-  const id = parseInt(req.params.id, 10);
-  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
+const refreshToken = (req, res) => {
+  const token = req.cookies.refreshToken;
+  if (!token) return res.status(401).json({ error: 'Token de renovação ausente.' });
 
   try {
-    // Soft delete — consistente com o restante do projeto
-    await prisma.usuario.update({
-      where: { id },
-      data: { ativo: false },
+    const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET);
+    const accessToken = jwt.sign(
+      { user: decoded.user },
+      process.env.JWT_ACCESS_SECRET,
+      { expiresIn: process.env.JWT_ACCESS_EXPIRATION }
+    );
+    res.json({ accessToken, user: decoded.user });
+  } catch {
+    res.status(403).json({ error: 'Token inválido ou expirado.' });
+  }
+};
+
+const logout = (req, res) => {
+  res.clearCookie('refreshToken', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: 'strict',
+  });
+  res.json({ message: 'Logout bem-sucedido.' });
+};
+
+const getMe = async (req, res) => {
+  try {
+    const userWithProfile = await prisma.usuario.findUnique({
+      where: { id: req.user.id },
+      include: { perfil: true },
     });
-    res.json({ message: 'Usuário desativado com sucesso.' });
+
+    if (!userWithProfile) return res.status(404).json({ error: 'Usuário não encontrado.' });
+
+    const { perfil, senha, ...base } = userWithProfile;
+    res.json({ ...base, ...(perfil || {}) });
   } catch (error) {
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      return res.status(404).json({ error: 'Usuário não encontrado.' });
-    }
-    console.error('Erro ao desativar usuário:', error);
+    console.error('Erro ao buscar perfil:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-module.exports = { getAllUsers, createUser, getUserById, updateUser, deleteUser };
+module.exports = { register, login, refreshToken, logout, getMe };
