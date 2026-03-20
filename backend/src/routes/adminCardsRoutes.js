@@ -1,6 +1,9 @@
 const express = require('express');
 const router = express.Router();
 const adminCardsController = require('../controllers/adminCardsController');
+
+// Auth/Admin já aplicados no adminRoutes.js pai
+
 /**
  * @swagger
  * tags:
@@ -14,22 +17,30 @@ const adminCardsController = require('../controllers/adminCardsController');
  *   post:
  *     summary: Cria um novo card
  *     tags: [Admin - Cards]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [titulo, tipo]
  *             properties:
  *               titulo:
  *                 type: string
- *                 example: "Card de Missão"
- *               descricao:
+ *               tipo:
  *                 type: string
- *                 example: "Complete a missão para ganhar pontos."
- *               imagemUrl:
+ *                 enum: [empresa, destino, lider]
+ *               raridade:
  *                 type: string
- *                 example: "https://exemplo.com/imagem.jpg"
+ *                 enum: [comum, raro, epico]
+ *               imagem_url:
+ *                 type: string
+ *               tarefa_requerida:
+ *                 type: integer
+ *               ativo:
+ *                 type: boolean
  *     responses:
  *       201:
  *         description: Card criado com sucesso
@@ -37,35 +48,20 @@ const adminCardsController = require('../controllers/adminCardsController');
  *         description: Dados inválidos
  *       401:
  *         description: Não autorizado
- *       500:
- *         description: Erro interno do servidor
- *
  *   get:
  *     summary: Lista todos os cards
  *     tags: [Admin - Cards]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
  *         description: Lista de cards retornada com sucesso
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 type: object
- *                 properties:
- *                   id:
- *                     type: integer
- *                   titulo:
- *                     type: string
- *                   descricao:
- *                     type: string
- *                   imagemUrl:
- *                     type: string
  *       401:
  *         description: Não autorizado
- *       500:
- *         description: Erro interno do servidor
  */
+router.route('/')
+  .post(adminCardsController.createCard)
+  .get(adminCardsController.getAllCards);
 
 /**
  * @swagger
@@ -73,31 +69,30 @@ const adminCardsController = require('../controllers/adminCardsController');
  *   get:
  *     summary: Busca um card pelo ID
  *     tags: [Admin - Cards]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: cardId
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID do card
  *     responses:
  *       200:
  *         description: Card encontrado
  *       404:
  *         description: Card não encontrado
- *       401:
- *         description: Não autorizado
- *
  *   put:
  *     summary: Atualiza um card existente
  *     tags: [Admin - Cards]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: cardId
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID do card
  *     requestBody:
  *       required: true
  *       content:
@@ -107,53 +102,32 @@ const adminCardsController = require('../controllers/adminCardsController');
  *             properties:
  *               titulo:
  *                 type: string
- *               descricao:
+ *               tipo:
  *                 type: string
- *               imagemUrl:
- *                 type: string
+ *                 enum: [empresa, destino, lider]
+ *               ativo:
+ *                 type: boolean
  *     responses:
  *       200:
  *         description: Card atualizado com sucesso
- *       400:
- *         description: Dados inválidos
  *       404:
  *         description: Card não encontrado
- *       401:
- *         description: Não autorizado
- *
  *   delete:
- *     summary: Exclui um card pelo ID
+ *     summary: Desativa (soft delete) um card
  *     tags: [Admin - Cards]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: cardId
  *         required: true
  *         schema:
  *           type: integer
- *         description: ID do card
  *     responses:
  *       200:
- *         description: Card excluído com sucesso
+ *         description: Card desativado com sucesso
  *       404:
  *         description: Card não encontrado
- *       401:
- *         description: Não autorizado
- */
-
-// Nota: Middlewares de Auth/Admin já estão no adminRoutes.js (pai)
-
-/**
- * @route   POST /api/admin/cards
- * @route   GET /api/admin/cards
- */
-router.route('/')
-  .post(adminCardsController.createCard)
-  .get(adminCardsController.getAllCards);
-
-/**
- * @route   GET /api/admin/cards/:cardId
- * @route   PUT /api/admin/cards/:cardId
- * @route   DELETE /api/admin/cards/:cardId
  */
 router.route('/:cardId')
   .get(adminCardsController.getCardById)
@@ -161,4 +135,3 @@ router.route('/:cardId')
   .delete(adminCardsController.deleteCard);
 
 module.exports = router;
-

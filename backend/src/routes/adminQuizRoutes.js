@@ -1,111 +1,115 @@
 const express = require('express');
 const router = express.Router();
-const adminQuizController = require('../controllers/adminQuizController');
+const adminMissionController = require('../controllers/adminMissionController');
+const missionController = require('../controllers/missionController');
 
-// --- ROTAS /api/admin/quizzes ---
-
-router.route('/')
-  .post(adminQuizController.createQuiz)
-  .get(adminQuizController.getAllQuizzes);
-
-router.route('/:quizId')
-  .get(adminQuizController.getQuizById)
-  .put(adminQuizController.updateQuiz)
-  .delete(adminQuizController.deleteQuiz);
-
-// --- ROTAS ANINHADAS DE PERGUNTAS ---
-// /api/admin/quizzes/:quizId/questions
-
-router.route('/:quizId/questions')
-  .post(adminQuizController.createQuestionForQuiz)
-  .get(adminQuizController.getQuestionsForQuiz);
-
-router.route('/:quizId/questions/:questionId')
-  .put(adminQuizController.updateQuestion)
-  .delete(adminQuizController.deleteQuestion);
-
-module.exports = router;
+// Auth/Admin já aplicados no adminRoutes.js pai
 
 /**
  * @swagger
  * tags:
- *   name: Admin - Quizzes
- *   description: Gerenciamento de quizzes pelo administrador
+ *   name: Admin - Missões
+ *   description: Rotas administrativas para gerenciamento de missões
  */
 
 /**
  * @swagger
- * /admin/quizzes:
+ * /admin/missions:
  *   post:
- *     summary: Criar um novo quiz
- *     tags: [Admin - Quizzes]
- *     description: Cria um quiz e conecta a uma tarefa já existente.
+ *     summary: Cria uma nova missão
+ *     tags: [Admin - Missões]
+ *     security:
+ *       - bearerAuth: []
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [titulo, data_inicio, data_fim]
  *             properties:
  *               titulo:
  *                 type: string
- *                 example: "Quiz Avançado Nubank"
+ *                 example: Missão Nubank
  *               descricao:
  *                 type: string
- *                 example: "Perguntas avançadas sobre operações financeiras."
+ *               destino:
+ *                 type: string
+ *                 example: São Paulo
+ *               foto_url:
+ *                 type: string
+ *               data_inicio:
+ *                 type: string
+ *                 format: date
+ *                 example: "2025-01-20"
+ *               data_fim:
+ *                 type: string
+ *                 format: date
+ *                 example: "2025-01-30"
+ *               preco:
+ *                 type: number
+ *                 example: 1500.50
+ *               vagas_disponiveis:
+ *                 type: integer
  *               ativa:
  *                 type: boolean
- *                 example: true
- *               tarefaId:
- *                 type: number
- *                 example: 3
+ *               missao_anterior_id:
+ *                 type: integer
+ *                 nullable: true
  *     responses:
  *       201:
- *         description: Quiz criado com sucesso
+ *         description: Missão criada com sucesso
  *       400:
- *         description: Erro de validação
- */
-
-/**
- * @swagger
- * /admin/quizzes:
+ *         description: Dados inválidos
+ *       401:
+ *         description: Não autorizado
  *   get:
- *     summary: Listar todos os quizzes
- *     tags: [Admin - Quizzes]
+ *     summary: Lista todas as missões
+ *     tags: [Admin - Missões]
+ *     security:
+ *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: Lista de quizzes
+ *         description: Lista de missões retornada com sucesso
+ *       401:
+ *         description: Não autorizado
  */
+router.route('/')
+  .post(adminMissionController.createMission)
+  .get(adminMissionController.getAllMissions);
 
 /**
  * @swagger
- * /admin/quizzes/{quizId}:
+ * /admin/missions/{missionId}:
  *   get:
- *     summary: Buscar um quiz pelo ID
- *     tags: [Admin - Quizzes]
+ *     summary: Busca uma missão pelo ID
+ *     tags: [Admin - Missões]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: quizId
+ *         name: missionId
  *         required: true
  *         schema:
- *           type: number
+ *           type: integer
  *     responses:
  *       200:
- *         description: Quiz encontrado
+ *         description: Missão encontrada
  *       404:
- *         description: Quiz não encontrado
- *
+ *         description: Missão não encontrada
  *   put:
- *     summary: Atualizar um quiz
- *     tags: [Admin - Quizzes]
+ *     summary: Atualiza uma missão existente
+ *     tags: [Admin - Missões]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: quizId
+ *         name: missionId
  *         required: true
  *         schema:
- *           type: number
+ *           type: integer
  *     requestBody:
- *       required: true
+ *       required: false
  *       content:
  *         application/json:
  *           schema:
@@ -115,137 +119,110 @@ module.exports = router;
  *                 type: string
  *               descricao:
  *                 type: string
+ *               preco:
+ *                 type: number
  *               ativa:
  *                 type: boolean
  *     responses:
  *       200:
- *         description: Quiz atualizado
+ *         description: Missão atualizada com sucesso
  *       404:
- *         description: Quiz não encontrado
- *
+ *         description: Missão não encontrada
  *   delete:
- *     summary: Deletar um quiz
- *     tags: [Admin - Quizzes]
+ *     summary: Desativa (soft delete) uma missão
+ *     tags: [Admin - Missões]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: quizId
+ *         name: missionId
  *         required: true
  *         schema:
- *           type: number
+ *           type: integer
  *     responses:
- *       204:
- *         description: Quiz removido
+ *       200:
+ *         description: Missão desativada com sucesso
  *       404:
- *         description: Quiz não encontrado
+ *         description: Missão não encontrada
  */
+router.route('/:missionId')
+  .get(adminMissionController.getMissionById)
+  .put(adminMissionController.updateMission)
+  .delete(adminMissionController.softDeleteMission);
 
 /**
  * @swagger
- * /admin/quizzes/{quizId}/questions:
- *   post:
- *     summary: Criar uma nova pergunta para um quiz
- *     tags: [Admin - Quizzes]
- *     parameters:
- *       - in: path
- *         name: quizId
- *         required: true
- *         schema:
- *           type: number
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               enunciado:
- *                 type: string
- *                 example: "O que é o Nubank?"
- *               alternativas:
- *                 type: array
- *                 items:
- *                   type: string
- *                 example: ["Banco digital", "Empresa de cosméticos", "Rede social", "Plataforma de saúde"]
- *               respostaCorreta:
- *                 type: number
- *                 example: 0
- *     responses:
- *       201:
- *         description: Pergunta criada com sucesso
- *       404:
- *         description: Quiz não encontrado
- *
+ * /admin/missions/{missionId}/participants:
  *   get:
- *     summary: Listar todas as perguntas de um quiz
- *     tags: [Admin - Quizzes]
+ *     summary: Lista participantes de uma missão
+ *     tags: [Admin - Missões]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: quizId
+ *         name: missionId
  *         required: true
  *         schema:
- *           type: number
+ *           type: integer
  *     responses:
  *       200:
- *         description: Lista de perguntas
- *       404:
- *         description: Quiz não encontrado
- */
-
-/**
- * @swagger
- * /admin/quizzes/{quizId}/questions/{questionId}:
- *   put:
- *     summary: Atualizar uma pergunta
- *     tags: [Admin - Quizzes]
+ *         description: Lista de participantes
+ *   post:
+ *     summary: Vincula um participante manualmente
+ *     tags: [Admin - Missões]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: quizId
+ *         name: missionId
  *         required: true
  *         schema:
- *           type: number
- *       - in: path
- *         name: questionId
- *         required: true
- *         schema:
- *           type: number
+ *           type: integer
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [userId]
  *             properties:
- *               enunciado:
- *                 type: string
- *               alternativas:
- *                 type: array
- *                 items:
- *                   type: string
- *               respostaCorreta:
- *                 type: number
+ *               userId:
+ *                 type: integer
  *     responses:
  *       200:
- *         description: Pergunta atualizada
- *       404:
- *         description: Quiz ou pergunta não encontrados
- *
+ *         description: Participante adicionado
+ *       409:
+ *         description: Usuário já inscrito
+ */
+router.route('/:missionId/participants')
+  .get(missionController.getMissionParticipants)
+  .post(missionController.addParticipantToMission);
+
+/**
+ * @swagger
+ * /admin/missions/{missionId}/participants/{userId}:
  *   delete:
- *     summary: Deletar uma pergunta
- *     tags: [Admin - Quizzes]
+ *     summary: Remove um participante da missão
+ *     tags: [Admin - Missões]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: quizId
+ *         name: missionId
  *         required: true
  *         schema:
- *           type: number
+ *           type: integer
  *       - in: path
- *         name: questionId
+ *         name: userId
  *         required: true
  *         schema:
- *           type: number
+ *           type: integer
  *     responses:
- *       204:
- *         description: Pergunta removida
+ *       200:
+ *         description: Participante removido
  *       404:
- *         description: Quiz ou pergunta não encontrados
+ *         description: Inscrição não encontrada
  */
+router.delete('/:missionId/participants/:userId', missionController.removeParticipantFromMission);
+
+module.exports = router;

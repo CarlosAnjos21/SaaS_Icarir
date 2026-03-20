@@ -1,13 +1,29 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const rankingController = require("../controllers/rankingController");
-
-// Protege a rota de ranking (comente se quiser deixar pública temporariamente)
+const rankingController = require('../controllers/rankingController');
+const { authenticate } = require('../middlewares/authMiddleware');
 
 /**
- * @route   GET /api/ranking
- * @desc    Busca o ranking global de usuários
+ * @swagger
+ * tags:
+ *   name: Ranking
+ *   description: Ranking global de participantes
  */
-router.get("/", rankingController.getGlobalRanking);
+
+/**
+ * @swagger
+ * /ranking:
+ *   get:
+ *     summary: Busca o ranking global de usuários
+ *     tags: [Ranking]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Ranking retornado com sucesso
+ *       401:
+ *         description: Não autorizado
+ */
+router.get('/', authenticate, rankingController.getGlobalRanking);
 
 module.exports = router;

@@ -1,28 +1,7 @@
-// authRoutes.js CORRIGIDO
-
 const express = require('express');
 const router = express.Router();
-// Importa o objeto de funções do controller
 const authController = require('../controllers/authController');
-
-// 🛑 MUDANÇA AQUI: Desestruture a função 'authenticate'
-const { authenticate } = require('../middlewares/authMiddleware'); // Apenas a função 'authenticate' é necessária aqui
-
-const upload = require('../middlewares/uploadMiddleware');
-
-// Rotas Públicas (não precisam de autenticação)
-// Sua sintaxe está correta: authController.register é uma função
-router.post('/register', authController.register);
-router.post('/login', authController.login);
-router.post('/refresh', authController.refreshToken); 
-
-// Rotas Protegidas (precisam de autenticação)
-// 🛑 MUDANÇA AQUI: Substitua 'authMiddleware' por 'authenticate'
-router.post('/logout', authenticate, authController.logout); 
-router.get('/me', authenticate, authController.getMe); 
-
-module.exports = router;
-
+const { authenticate } = require('../middlewares/authMiddleware');
 
 /**
  * @swagger
@@ -43,6 +22,7 @@ module.exports = router;
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [nome, email, senha]
  *             properties:
  *               nome:
  *                 type: string
@@ -52,15 +32,16 @@ module.exports = router;
  *                 example: davi@example.com
  *               senha:
  *                 type: string
- *                 example: 123456
+ *                 example: "123456"
  *     responses:
  *       201:
  *         description: Usuário criado com sucesso
- *       400:
- *         description: Dados inválidos ou usuário já existente
+ *       409:
+ *         description: E-mail já cadastrado
  *       500:
  *         description: Erro interno do servidor
  */
+router.post('/register', authController.register);
 
 /**
  * @swagger
@@ -74,44 +55,37 @@ module.exports = router;
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [email, senha]
  *             properties:
  *               email:
  *                 type: string
  *                 example: davi@example.com
  *               senha:
  *                 type: string
- *                 example: 123456
+ *                 example: "123456"
  *     responses:
  *       200:
- *         description: Login realizado com sucesso (retorna tokens)
+ *         description: Login realizado com sucesso
  *       401:
  *         description: Credenciais inválidas
- *       500:
- *         description: Erro interno do servidor
  */
+router.post('/login', authController.login);
 
 /**
  * @swagger
  * /auth/refresh:
  *   post:
- *     summary: Gera um novo token de acesso usando o token de refresh
+ *     summary: Gera um novo access token usando o refresh token (cookie)
  *     tags: [Autenticação]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             properties:
- *               refreshToken:
- *                 type: string
- *                 example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
  *     responses:
  *       200:
  *         description: Novo token gerado com sucesso
  *       401:
- *         description: Token de refresh inválido ou expirado
+ *         description: Refresh token ausente
+ *       403:
+ *         description: Refresh token inválido ou expirado
  */
+router.post('/refresh', authController.refreshToken);
 
 /**
  * @swagger
@@ -127,6 +101,7 @@ module.exports = router;
  *       401:
  *         description: Token inválido ou ausente
  */
+router.post('/logout', authenticate, authController.logout);
 
 /**
  * @swagger
@@ -142,4 +117,6 @@ module.exports = router;
  *       401:
  *         description: Token inválido ou expirado
  */
+router.get('/me', authenticate, authController.getMe);
 
+module.exports = router;

@@ -1,50 +1,122 @@
 const express = require('express');
 const router = express.Router();
-const categoriasController = require('../controllers/categoriasTarefasController');
-
-// 🛑 CORREÇÃO: Importe APENAS as funções específicas 'authenticate' e 'checkRole'
-// Removemos a importação do objeto 'authMiddleware' e do 'checkAdmin' separado.
-const { authenticate, checkRole } = require('../middlewares/authMiddleware');
-
-// Define o role necessário para rotas de gerenciamento
-const ADMIN_ROLE = ['admin'];
-
-// --- ROTAS PÚBLICAS (Leitura para todos) ---
+const authController = require('../controllers/authController');
+const { authenticate } = require('../middlewares/authMiddleware');
 
 /**
- * GET /api/categorias-tarefas
- * Lista todas as categorias de tarefas
+ * @swagger
+ * tags:
+ *   name: Autenticação
+ *   description: Rotas para login, cadastro e gerenciamento de sessão
  */
-router.get('/', categoriasController.getAllCategorias);
 
 /**
- * GET /api/categorias-tarefas/:id
- * Busca uma categoria pelo ID
+ * @swagger
+ * /auth/register:
+ *   post:
+ *     summary: Cadastra um novo usuário
+ *     tags: [Autenticação]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [nome, email, senha]
+ *             properties:
+ *               nome:
+ *                 type: string
+ *                 example: Davi Henrique
+ *               email:
+ *                 type: string
+ *                 example: davi@example.com
+ *               senha:
+ *                 type: string
+ *                 example: "123456"
+ *     responses:
+ *       201:
+ *         description: Usuário criado com sucesso
+ *       409:
+ *         description: E-mail já cadastrado
+ *       500:
+ *         description: Erro interno do servidor
  */
-router.get('/:id', categoriasController.getCategoriaById);
-
-
-// --- ROTAS PROTEGIDAS (Admin) ---
+router.post('/register', authController.register);
 
 /**
- * POST /api/categorias-tarefas
- * (Admin) Cria uma nova categoria
+ * @swagger
+ * /auth/login:
+ *   post:
+ *     summary: Realiza o login de um usuário
+ *     tags: [Autenticação]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, senha]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: davi@example.com
+ *               senha:
+ *                 type: string
+ *                 example: "123456"
+ *     responses:
+ *       200:
+ *         description: Login realizado com sucesso
+ *       401:
+ *         description: Credenciais inválidas
  */
-// 🛑 CORREÇÃO: Usa a função 'authenticate' e 'checkRole'
-router.post('/', authenticate, checkRole(ADMIN_ROLE), categoriasController.createCategoria);
+router.post('/login', authController.login);
 
 /**
- * PUT /api/categorias-tarefas/:id
- * (Admin) Atualiza uma categoria
+ * @swagger
+ * /auth/refresh:
+ *   post:
+ *     summary: Gera um novo access token usando o refresh token (cookie)
+ *     tags: [Autenticação]
+ *     responses:
+ *       200:
+ *         description: Novo token gerado com sucesso
+ *       401:
+ *         description: Refresh token ausente
+ *       403:
+ *         description: Refresh token inválido ou expirado
  */
-// 🛑 CORREÇÃO: Usa a função 'authenticate' e 'checkRole'
-router.put('/:id', authenticate, checkRole(ADMIN_ROLE), categoriasController.updateCategoria);
+router.post('/refresh', authController.refreshToken);
 
 /**
- * DELETE /api/categorias-tarefas/:id
- * (Admin) Remove uma categoria
+ * @swagger
+ * /auth/logout:
+ *   post:
+ *     summary: Encerra a sessão do usuário autenticado
+ *     tags: [Autenticação]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Logout realizado com sucesso
+ *       401:
+ *         description: Token inválido ou ausente
  */
-// 🛑 CORREÇÃO: Usa a função 'authenticate' e 'checkRole'
-router.delete('/:id', authenticate, checkRole(ADMIN_ROLE), categoriasController.deleteCategoria);
+router.post('/logout', authenticate, authController.logout);
+
+/**
+ * @swagger
+ * /auth/me:
+ *   get:
+ *     summary: Retorna os dados do usuário autenticado
+ *     tags: [Autenticação]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Dados do usuário autenticado
+ *       401:
+ *         description: Token inválido ou expirado
+ */
+router.get('/me', authenticate, authController.getMe);
 
 module.exports = router;

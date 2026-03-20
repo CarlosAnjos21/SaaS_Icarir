@@ -1,38 +1,56 @@
 const express = require('express');
 const router = express.Router();
 const validatorController = require('../controllers/validatorController');
-
-// 🛑 CORREÇÃO: Importa as funções específicas 'authenticate' e 'checkRole'
 const { authenticate, checkRole } = require('../middlewares/authMiddleware');
 
-// Define os roles que podem atuar como validadores
-const VALIDATOR_ROLES = ['admin', 'validator']; 
-
-// 🛑 Removemos o 'validatorMiddleware' se ele apenas checa o role.
-// Se ele tem outra função, adicione-o separadamente.
-// Por clareza, assumimos que ele era apenas a checagem de role.
-
-
-// ✅ MIDDLEWARES DE PROTEÇÃO GLOBAL
-// 1. Garante que o usuário está logado (JWT)
-// 🛑 CORREÇÃO: Usa a função 'authenticate' em vez do objeto 'authMiddleware'
+// Proteção global — validador ou admin
 router.use(authenticate);
-
-// 2. Garante que o usuário tem o role de Validador ou Admin
-// 🛑 CORREÇÃO: Usa a função checkRole para verificar o acesso
-router.use(checkRole(VALIDATOR_ROLES));
-
+router.use(checkRole(['admin', 'validador'])); // 'validador' conforme enum do schema
 
 /**
- * @route   GET /api/validations/pending
- * @desc    Lista validações pendentes de usuários_tarefas
- * @access  Restrito (Admin, Validator)
+ * @swagger
+ * tags:
+ *   name: Validações
+ *   description: Rotas para validadores e administradores
+ */
+
+/**
+ * @swagger
+ * /validations/pending:
+ *   get:
+ *     summary: Lista submissões pendentes de validação
+ *     tags: [Validações]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: query
+ *         name: tarefa_id
+ *         schema:
+ *           type: integer
+ *         description: Filtrar por tarefa
+ *       - in: query
+ *         name: usuario_id
+ *         schema:
+ *           type: integer
+ *         description: Filtrar por usuário
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *         description: Página (padrão 1)
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *         description: Itens por página (máx 200)
+ *     responses:
+ *       200:
+ *         description: Lista de pendências retornada com sucesso
+ *       401:
+ *         description: Não autorizado
+ *       403:
+ *         description: Permissão insuficiente
  */
 router.get('/pending', validatorController.getPendingValidations);
-
-// Você pode adicionar mais rotas aqui, como:
-// router.post('/approve/:submissionId', validatorController.approveSubmission);
-// router.post('/reject/:submissionId', validatorController.rejectSubmission);
-
 
 module.exports = router;

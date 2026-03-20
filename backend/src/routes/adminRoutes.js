@@ -1,58 +1,83 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
+const adminController = require('../controllers/adminController');
+const { authenticate, checkRole } = require('../middlewares/authMiddleware');
 
-const adminController = require("../controllers/adminController");
-
-// 🛑 IMPORTAÇÃO ESSENCIAL:
-// Precisamos das funções de autenticação e autorização do seu middleware
-const { authenticate, checkRole } = require("../middlewares/authMiddleware");
-
-// --- SUBROTAS ADMINISTRATIVAS ---
-const adminMissionRoutes = require("./adminMissionRoutes");
-const adminAwardsRoutes = require("./adminAwardsRoutes");
-const adminQuizRoutes = require("./adminQuizRoutes");
-const adminCardsRoutes = require("./adminCardsRoutes");
-const adminUserRoutes = require("./adminUserRoutes");
-const adminEnrollmentsRoutes = require("./adminEnrollmentsRoutes");
+const adminMissionRoutes = require('./adminMissionRoutes');
+const adminQuizRoutes = require('./adminQuizRoutes');
+const adminCardsRoutes = require('./adminCardsRoutes');
+const adminUserRoutes = require('./adminUserRoutes');
+const adminEnrollmentsRoutes = require('./adminEnrollmentsRoutes');
 const adminTaskRoutes = require('./adminTaskRoutes');
+const adminAwardsRoutes = require('./adminAwardsRoutes');
 
-// --- PROTEÇÃO GLOBAL ---
-// Aplicar estas regras a TODAS as rotas e sub-rotas que vêm a seguir
+// Proteção global — todas as rotas abaixo exigem admin autenticado
+router.use(authenticate);
+router.use(checkRole(['admin']));
 
-// 1. Verifica se o usuário está autenticado via JWT
-router.use(authenticate); 
-
-// 2. Verifica se o usuário tem role === 'admin'
-router.use(checkRole(['admin'])); 
-
-// --- ROTAS DE DASHBOARD ---
 /**
- * @route   GET /api/admin/dashboard/stats
- * @desc    Obter estatísticas gerais do sistema
- * @access  Admin
+ * @swagger
+ * tags:
+ *   name: Admin - Dashboard
+ *   description: Estatísticas e validações administrativas
  */
-router.get("/dashboard/stats", adminController.getDashboardStats);
 
-// --- VALIDAÇÃO DE SUBMISSÕES ---
 /**
- * @route   POST /api/admin/submissions/:submissionId/validate
- * @desc    Aprovar ou reprovar uma submissão de tarefa
- * @access  Admin
+ * @swagger
+ * /admin/dashboard/stats:
+ *   get:
+ *     summary: Retorna estatísticas gerais do sistema
+ *     tags: [Admin - Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     responses:
+ *       200:
+ *         description: Estatísticas retornadas com sucesso
+ *       401:
+ *         description: Não autorizado
  */
-router.post(
-  "/submissions/:submissionId/validate",
-  adminController.validateTaskSubmission
-);
+router.get('/dashboard/stats', adminController.getDashboardStats);
 
-// --- SUBROTAS ADMINISTRATIVAS ---
-// O router.use já aplica os middlewares acima para todas estas rotas
-router.use("/enrollments", adminEnrollmentsRoutes);
-router.use("/missions", adminMissionRoutes);
-router.use("/users", adminUserRoutes);
-router.use("/quizzes", adminQuizRoutes);
-router.use("/awards", adminAwardsRoutes);
-router.use("/cards", adminCardsRoutes);
+/**
+ * @swagger
+ * /admin/submissions/{submissionId}/validate:
+ *   post:
+ *     summary: Aprova ou reprova uma submissão de tarefa
+ *     tags: [Admin - Dashboard]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: submissionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [approve]
+ *             properties:
+ *               approve:
+ *                 type: boolean
+ *               pontos_concedidos:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Submissão validada com sucesso
+ *       404:
+ *         description: Submissão não encontrada
+ */
+router.post('/submissions/:submissionId/validate', adminController.validateTaskSubmission);
+
+router.use('/missions', adminMissionRoutes);
+router.use('/quizzes', adminQuizRoutes);
+router.use('/cards', adminCardsRoutes);
+router.use('/users', adminUserRoutes);
+router.use('/enrollments', adminEnrollmentsRoutes);
 router.use('/tasks', adminTaskRoutes);
-// router.use('/tasks', adminTaskRoutes); // Descomente se criar rotas específicas de tarefas admin
+router.use('/awards', adminAwardsRoutes);
 
 module.exports = router;

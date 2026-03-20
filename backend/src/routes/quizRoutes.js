@@ -1,98 +1,101 @@
 const express = require('express');
 const router = express.Router();
 const quizController = require('../controllers/quizController');
-
-// 🛑 CORREÇÃO: Importe as funções específicas 'authenticate' e 'checkRole'
 const { authenticate, checkRole } = require('../middlewares/authMiddleware');
 
-// Define os roles que podem interagir com os quizzes
-const PARTICIPANT_ROLES = ['admin', 'participante']; 
-
-// ✅ MIDDLEWARES DE PROTEÇÃO
-// 1. Garante que o usuário está logado
-// 🛑 CORREÇÃO: Usa a função 'authenticate' em vez do objeto 'authMiddleware'
+// Proteção global
 router.use(authenticate);
-
-// 2. Garante que o usuário tem permissão para acessar quizzes
-router.use(checkRole(PARTICIPANT_ROLES));
-
-
-/**
- * @route   GET /api/quizzes/task/:taskId
- * @desc    (Usuário) Listar quizzes associados a uma tarefa
- * @access  Privado (Participante e Admin)
- */
-router.get('/task/:taskId', quizController.getQuizzesByTask);
-
-/**
- * @route   GET /api/quizzes/:quizId
- * @desc    (Usuário) Buscar um quiz e suas perguntas (sem respostas)
- * @access  Privado (Participante e Admin)
- */
-router.get('/:quizId', quizController.getQuizForUser);
-
-/**
- * @route   POST /api/quizzes/:quizId/submit
- * @desc    (Usuário) Submeter respostas de um quiz
- * @access  Privado (Participante e Admin)
- */
-router.post('/:quizId/submit', quizController.submitQuiz);
-
-module.exports = router;
-
+router.use(checkRole(['admin', 'participante']));
 
 /**
  * @swagger
  * tags:
  *   name: Quiz
- *   description: Rotas para resposta do quiz
+ *   description: Rotas para interação com quizzes
  */
+
+/**
+ * @swagger
+ * /quizzes/task/{taskId}:
+ *   get:
+ *     summary: Busca o quiz associado a uma tarefa
+ *     tags: [Quiz]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Quiz encontrado
+ *       404:
+ *         description: Nenhum quiz encontrado para esta tarefa
+ */
+router.get('/task/:taskId', quizController.getQuizzesByTask);
+
+/**
+ * @swagger
+ * /quizzes/{quizId}:
+ *   get:
+ *     summary: Busca um quiz pelo ID (sem respostas corretas)
+ *     tags: [Quiz]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: quizId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: Quiz encontrado
+ *       404:
+ *         description: Quiz não encontrado ou inativo
+ */
+router.get('/:quizId', quizController.getQuizForUser);
 
 /**
  * @swagger
  * /quizzes/{quizId}/submit:
  *   post:
- *     summary: Responde um quiz
+ *     summary: Submete respostas de um quiz
  *     tags: [Quiz]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: quizId
+ *         required: true
+ *         schema:
+ *           type: integer
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
+ *             required: [answers]
  *             properties:
- *               usuario_id:
- *                 type: int
- *                 example: 1
- *               pergunta_id:
- *                 type: int
- *                 example: 2
- *               resposta:
- *                 type: text
- *                 example: A resposta do usuário
- *               correta:
- *                 type: boolean
- *                 example: True
- *     responses:
- *       201:
- *         description: Quiz submentido com sucesso
- *       400:
- *         description: Dados inválidos
- *       500:
- *         description: Erro interno do servidor
- */                                        
-
-/**
- * @swagger
- * /quizzes/{quizId}:
- *   get:
- *     summary: Retorna os quizzes
- *     tags: [Quiz]
- *     security:
- *       - bearerAuth: []
+ *               answers:
+ *                 type: array
+ *                 items:
+ *                   type: object
+ *                   properties:
+ *                     pergunta_id:
+ *                       type: integer
+ *                     resposta:
+ *                       type: string
+ *                 example: [{ pergunta_id: 1, resposta: "Banco digital" }]
  *     responses:
  *       200:
- *         description: Dados do quiz respondido
- *       401:
- *         description: Token inválido ou expirado
+ *         description: Quiz submetido com sucesso
+ *       409:
+ *         description: Quiz já foi completado
  */
+router.post('/:quizId/submit', quizController.submitQuiz);
+
+module.exports = router;
