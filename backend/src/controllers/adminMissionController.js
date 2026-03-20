@@ -1,66 +1,43 @@
-// Importa o Prisma Client e tratamento de erros
 const prisma = require('../config/prismaClient');
 const { Prisma } = require('@prisma/client');
 
-/**
- * @route   POST /api/admin/missions
- * @desc    (Admin) Criar uma nova missão
- * @access  Admin
- */
+const serializeMission = (m) => ({
+  ...m,
+  preco: m.preco ? parseFloat(m.preco.toString()) : null,
+});
+
 const createMission = async (req, res) => {
-  const {
-    titulo,
-    descricao,
-    destino,
-    data_inicio,
-    data_fim,
-    preco,
-    vagas_disponiveis,
-    ativa,
-    missao_anterior_id,
-    foto_url // <--- ADICIONADO AQUI
-  } = req.body;
+  const { titulo, descricao, destino, data_inicio, data_fim, preco, vagas_disponiveis, ativa, missao_anterior_id, foto_url } = req.body;
 
   if (!titulo || !data_inicio || !data_fim) {
     return res.status(400).json({ error: 'Título, data de início e data de fim são obrigatórios.' });
   }
 
   try {
-    const newMission = await prisma.missao.create({
+    const mission = await prisma.missao.create({
       data: {
         titulo,
         descricao: descricao || null,
-        foto_url: foto_url || null, // <--- DESCOMENTADO E ATIVADO
+        foto_url: foto_url || null,
         destino: destino || null,
         data_inicio: new Date(data_inicio),
         data_fim: new Date(data_fim),
-        preco: preco ? parseFloat(preco) : 0.00,
+        preco: preco ? parseFloat(preco) : 0.0,
         vagas_disponiveis: vagas_disponiveis ? parseInt(vagas_disponiveis, 10) : null,
         ativa: ativa ?? true,
-        missao_anterior_id: missao_anterior_id ? parseInt(missao_anterior_id, 10) : null
-      }
+        missao_anterior_id: missao_anterior_id ? parseInt(missao_anterior_id, 10) : null,
+      },
     });
-
-    res.status(201).json({
-      message: 'Missão criada com sucesso!',
-      mission: newMission
-    });
+    res.status(201).json({ message: 'Missão criada com sucesso!', mission: serializeMission(mission) });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-      return res.status(400).json({ error: 'ID da missão anterior (missao_anterior_id) é inválido.' });
+      return res.status(400).json({ error: 'missao_anterior_id inválido.' });
     }
-
     console.error('Erro ao criar missão:', error);
-    if (error && error.stack) console.error(error.stack);
-    res.status(500).json({ error: 'Erro interno do servidor.', details: error.message });
+    res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-/**
- * @route   GET /api/admin/missions
- * @desc    (Admin) Listar todas as missões (ativas e inativas)
- * @access  Admin
- */
 const getAllMissions = async (req, res) => {
   try {
     const missions = await prisma.missao.findMany({
@@ -69,191 +46,90 @@ const getAllMissions = async (req, res) => {
         tarefas: {
           where: { ativa: true },
           orderBy: { ordem: 'asc' },
-          include: { categoria: true }
-        }
-      }
+          include: { categoria: true },
+        },
+      },
     });
-
-    // Transformar Decimal para número
-    const transformedMissions = missions.map(m => ({
-      ...m,
-      preco: m.preco ? parseFloat(m.preco.toString()) : null,
-      vagas_disponiveis: m.vagas_disponiveis ? parseInt(m.vagas_disponiveis.toString(), 10) : null,
-    }));
-
-    res.json(transformedMissions);
+    res.json(missions.map(serializeMission));
   } catch (error) {
-    console.error('Erro ao buscar todas as missões:', error);
+    console.error('Erro ao buscar missões:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-/**
- * @route   GET /api/admin/missions/:missionId
- * @desc    (Admin) Buscar detalhes de uma missão específica
- * @access  Admin
- */
 const getMissionById = async (req, res) => {
-  const missionId = parseInt(req.params.missionId, 10);
-  if (isNaN(missionId)) {
-    return res.status(400).json({ error: 'ID da missão inválido.' });
-  }
+  const id = parseInt(req.params.missionId, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
 
   try {
     const mission = await prisma.missao.findUnique({
-      where: { id: missionId },
+      where: { id },
       include: {
         tarefas: {
           where: { ativa: true },
           orderBy: { ordem: 'asc' },
-          include: { categoria: true }
-        }
-      }
+          include: { categoria: true },
+        },
+      },
     });
-
-    if (!mission) {
-      return res.status(404).json({ error: 'Missão não encontrada.' });
-    }
-
-    // Transformar Decimal para número
-    const transformedMission = {
-      ...mission,
-      preco: mission.preco ? parseFloat(mission.preco.toString()) : null,
-      vagas_disponiveis: mission.vagas_disponiveis ? parseInt(mission.vagas_disponiveis.toString(), 10) : null,
-    };
-
-    res.json(transformedMission);
+    if (!mission) return res.status(404).json({ error: 'Missão não encontrada.' });
+    res.json(serializeMission(mission));
   } catch (error) {
-    console.error('Erro ao buscar missão por ID:', error);
+    console.error('Erro ao buscar missão:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-/**
- * @route   PUT /api/admin/missions/:missionId
- * @desc    (Admin) Atualizar uma missão
- * @access  Admin
- */
 const updateMission = async (req, res) => {
-  const missionId = parseInt(req.params.missionId, 10);
-  if (isNaN(missionId)) {
-    return res.status(400).json({ error: 'ID da missão inválido.' });
-  }
+  const id = parseInt(req.params.missionId, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
 
-  const {
-    titulo,
-    descricao,
-    destino,
-    data_inicio,
-    data_fim,
-    preco,
-    vagas_disponiveis,
-    ativa,
-    missao_anterior_id,
-    foto_url 
-  } = req.body;
+  const { titulo, descricao, destino, data_inicio, data_fim, preco, vagas_disponiveis, ativa, missao_anterior_id, foto_url } = req.body;
 
-  console.log('updateMission - payload recebido:', req.body);
+  const data = {
+    ...(titulo !== undefined && { titulo }),
+    ...(descricao !== undefined && { descricao }),
+    ...(destino !== undefined && { destino }),
+    ...(foto_url !== undefined && { foto_url }),
+    ...(ativa !== undefined && { ativa }),
+    ...(data_inicio && !isNaN(new Date(data_inicio)) && { data_inicio: new Date(data_inicio) }),
+    ...(data_fim && !isNaN(new Date(data_fim)) && { data_fim: new Date(data_fim) }),
+    ...(preco !== undefined && !isNaN(parseFloat(preco)) && { preco: parseFloat(preco) }),
+    ...(vagas_disponiveis !== undefined && { vagas_disponiveis: vagas_disponiveis ? parseInt(vagas_disponiveis, 10) : null }),
+    ...(missao_anterior_id !== undefined && { missao_anterior_id: missao_anterior_id ? parseInt(missao_anterior_id, 10) : null }),
+  };
 
-  // Objeto para armazenar dados enviados para atualização de missão.
-  const dataToUpdate = {};
-
-  if (titulo !== undefined) dataToUpdate.titulo = titulo;
-  if (descricao !== undefined) dataToUpdate.descricao = descricao;
-  if (destino !== undefined) dataToUpdate.destino = destino;
-  if (foto_url !== undefined) dataToUpdate.foto_url = foto_url; 
-
-  if (data_inicio !== undefined) {
-    const di = new Date(data_inicio);
-    if (!isNaN(di)) dataToUpdate.data_inicio = di;
-  }
-  if (data_fim !== undefined) {
-    const df = new Date(data_fim);
-    if (!isNaN(df)) dataToUpdate.data_fim = df;
-  }
-
-  if (preco !== undefined) {
-    const p = parseFloat(preco);
-    if (!isNaN(p)) dataToUpdate.preco = p;
-  }
-  if (vagas_disponiveis !== undefined) {
-    const v = parseInt(vagas_disponiveis, 10);
-    if (!isNaN(v)) dataToUpdate.vagas_disponiveis = v;
-  }
-
-  if (ativa !== undefined) dataToUpdate.ativa = ativa;
-  if (missao_anterior_id !== undefined) {
-    dataToUpdate.missao_anterior_id = missao_anterior_id ? parseInt(missao_anterior_id, 10) : null;
+  if (Object.keys(data).length === 0) {
+    return res.status(400).json({ error: 'Nenhum campo válido para atualizar.' });
   }
 
   try {
-    if (Object.keys(dataToUpdate).length === 0) {
-      console.warn('updateMission chamado sem campos válidos para atualizar. Payload:', req.body);
-      return res.status(400).json({ error: 'Nenhum campo válido para atualizar.' });
-    }
-
-    console.log('updateMission - dados para atualizar:', dataToUpdate);
-
-    const updatedMission = await prisma.missao.update({
-      where: { id: missionId },
-      data: dataToUpdate
-    });
-
-    res.json({
-      message: 'Missão atualizada com sucesso!',
-      mission: updatedMission
-    });
-
+    const mission = await prisma.missao.update({ where: { id }, data });
+    res.json({ message: 'Missão atualizada com sucesso!', mission: serializeMission(mission) });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
-      if (error.code === 'P2025') {
-        return res.status(404).json({ error: 'Missão não encontrada para atualizar.' });
-      }
-      if (error.code === 'P2003') {
-        return res.status(400).json({ error: 'ID da missão anterior (missao_anterior_id) é inválido.' });
-      }
+      if (error.code === 'P2025') return res.status(404).json({ error: 'Missão não encontrada.' });
+      if (error.code === 'P2003') return res.status(400).json({ error: 'missao_anterior_id inválido.' });
     }
-
     console.error('Erro ao atualizar missão:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-/**
- * @route   DELETE /api/admin/missions/:missionId
- * @desc    (Admin) Desativar (soft delete) uma missão
- * @access  Admin
- */
 const softDeleteMission = async (req, res) => {
-  const missionId = parseInt(req.params.missionId, 10);
-  if (isNaN(missionId)) {
-    return res.status(400).json({ error: 'ID da missão inválido.' });
-  }
+  const id = parseInt(req.params.missionId, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
 
   try {
-    const deletedMission = await prisma.missao.update({
-      where: { id: missionId },
-      data: { ativa: false }
-    });
-
-    res.json({
-      message: 'Missão desativada (soft delete) com sucesso!',
-      mission: deletedMission
-    });
+    const mission = await prisma.missao.update({ where: { id }, data: { ativa: false } });
+    res.json({ message: 'Missão desativada com sucesso!', mission: serializeMission(mission) });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      return res.status(404).json({ error: 'Missão não encontrada para deletar.' });
+      return res.status(404).json({ error: 'Missão não encontrada.' });
     }
-
-    console.error('Erro ao deletar missão:', error);
+    console.error('Erro ao desativar missão:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-module.exports = {
-  createMission,
-  getAllMissions,
-  getMissionById,
-  updateMission,
-  softDeleteMission
-};
+module.exports = { createMission, getAllMissions, getMissionById, updateMission, softDeleteMission };
