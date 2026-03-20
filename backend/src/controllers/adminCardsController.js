@@ -1,56 +1,39 @@
-// Importa o Prisma Client
 const prisma = require('../config/prismaClient');
-const { Prisma } = require('@prisma/client'); // Para tratamento de erro
+const { Prisma } = require('@prisma/client');
 
-/**
- * @route   POST /api/admin/cards
- * @desc    (Admin) Criar um novo selo (card)
- * @access  Admin
- */
 const createCard = async (req, res) => {
-  // Campos da tabela 'cards' 
-  const {
-    tarefa_id, // 
-    titulo, // [cite: 167]
-    descricao, // [cite: 168]
-    ativo // 
-  } = req.body;
+  const { tarefa_requerida, titulo, descricao, tipo, raridade, imagem_url, ativo } = req.body;
 
-  if (!titulo || !tarefa_id) { // [cite: 166, 167]
-    return res.status(400).json({ error: 'Os campos "titulo" e "tarefa_id" são obrigatórios.' });
+  if (!titulo || !tipo) {
+    return res.status(400).json({ error: 'Os campos "titulo" e "tipo" são obrigatórios.' });
   }
 
   try {
-    const newCard = await prisma.cards.create({
+    const card = await prisma.card.create({
       data: {
-        tarefa_id: parseInt(tarefa_id, 10), // 
-        titulo: titulo, // [cite: 167]
-        descricao: descricao || null, // [cite: 168]
-        ativo: ativo || false // 
-        // data_criacao é @default(now())
-      }
+        titulo,
+        descricao: descricao || null,
+        tipo,
+        raridade: raridade || 'comum',
+        imagem_url: imagem_url || null,
+        tarefa_requerida: tarefa_requerida ? parseInt(tarefa_requerida, 10) : null,
+        ativo: ativo ?? true,
+      },
     });
-    res.status(201).json({ message: 'Selo (Card) criado com sucesso!', card: newCard });
-
+    res.status(201).json({ message: 'Card criado com sucesso!', card });
   } catch (error) {
-    // Erro de FK (tarefa_id não existe)
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-      return res.status(404).json({ error: 'ID da tarefa (tarefa_id) é inválido.' });
+      return res.status(404).json({ error: 'tarefa_requerida inválido.' });
     }
     console.error('Erro ao criar card:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-/**
- * @route   GET /api/admin/cards
- * @desc    (Admin) Listar todos os selos (cards)
- * @access  Admin
- */
 const getAllCards = async (req, res) => {
   try {
-    const cards = await prisma.cards.findMany({
-      orderBy: { data_criacao: 'desc' }
+    const cards = await prisma.card.findMany({
+      orderBy: { data_criacao: 'desc' },
     });
     res.json(cards);
   } catch (error) {
@@ -59,113 +42,69 @@ const getAllCards = async (req, res) => {
   }
 };
 
-/**
- * @route   GET /api/admin/cards/:cardId
- * @desc    (Admin) Buscar detalhes de um selo (card)
- * @access  Admin
- */
 const getCardById = async (req, res) => {
+  const id = parseInt(req.params.cardId, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
+
   try {
-    const cardId = parseInt(req.params.cardId, 10);
-    if (isNaN(cardId)) {
-      return res.status(400).json({ error: 'ID do Card inválido.' });
-    }
-
-    const card = await prisma.cards.findUnique({
-      where: { id: cardId }
-    });
-
-    if (!card) {
-      return res.status(404).json({ error: 'Selo (Card) não encontrado.' });
-    }
+    const card = await prisma.card.findUnique({ where: { id } });
+    if (!card) return res.status(404).json({ error: 'Card não encontrado.' });
     res.json(card);
-
   } catch (error) {
-    console.error('Erro ao buscar card por ID:', error);
+    console.error('Erro ao buscar card:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-/**
- * @route   PUT /api/admin/cards/:cardId
- * @desc    (Admin) Atualizar um selo (card)
- * @access  Admin
- */
 const updateCard = async (req, res) => {
+  const id = parseInt(req.params.cardId, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
+
+  const { titulo, descricao, tipo, raridade, imagem_url, tarefa_requerida, ativo } = req.body;
+
   try {
-    const cardId = parseInt(req.params.cardId, 10);
-    if (isNaN(cardId)) {
-      return res.status(400).json({ error: 'ID do Card inválido.' });
-    }
-
-    const { tarefa_id, titulo, descricao, ativo } = req.body; // 
-
-    if (!titulo || !tarefa_id) { // [cite: 166, 167]
-      return res.status(400).json({ error: 'Os campos "titulo" e "tarefa_id" são obrigatórios.' });
-    }
-
-    const updatedCard = await prisma.cards.update({
-      where: { id: cardId },
+    const card = await prisma.card.update({
+      where: { id },
       data: {
-        tarefa_id: parseInt(tarefa_id, 10), // 
-        titulo: titulo, // [cite: 167]
-        descricao: descricao, // [cite: 168]
-        ativo: ativo // 
-      }
+        ...(titulo !== undefined && { titulo }),
+        ...(descricao !== undefined && { descricao }),
+        ...(tipo !== undefined && { tipo }),
+        ...(raridade !== undefined && { raridade }),
+        ...(imagem_url !== undefined && { imagem_url }),
+        ...(ativo !== undefined && { ativo }),
+        ...(tarefa_requerida !== undefined && {
+          tarefa_requerida: tarefa_requerida ? parseInt(tarefa_requerida, 10) : null,
+        }),
+      },
     });
-
-    res.json({ message: 'Selo (Card) atualizado com sucesso!', card: updatedCard });
-
+    res.json({ message: 'Card atualizado com sucesso!', card });
   } catch (error) {
-    // Erro se o card não for encontrado
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      return res.status(404).json({ error: 'Selo (Card) não encontrado para atualizar.' });
-    }
-    // Erro de FK (tarefa_id não existe)
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2003') {
-      return res.status(404).json({ error: 'ID da tarefa (tarefa_id) é inválido.' });
+    if (error instanceof Prisma.PrismaClientKnownRequestError) {
+      if (error.code === 'P2025') return res.status(404).json({ error: 'Card não encontrado.' });
+      if (error.code === 'P2003') return res.status(404).json({ error: 'tarefa_requerida inválido.' });
     }
     console.error('Erro ao atualizar card:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-/**
- * @route   DELETE /api/admin/cards/:cardId
- * @desc    (Admin) Desativar (soft delete) um selo (card)
- * @access  Admin
- */
 const deleteCard = async (req, res) => {
+  const id = parseInt(req.params.cardId, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
+
   try {
-    const cardId = parseInt(req.params.cardId, 10);
-    if (isNaN(cardId)) {
-      return res.status(400).json({ error: 'ID do Card inválido.' });
-    }
-
-    // Soft delete (apenas desativa)
-    const deletedCard = await prisma.cards.update({
-      where: { id: cardId },
-      data: {
-        ativo: false // 
-      }
+    const card = await prisma.card.update({
+      where: { id },
+      data: { ativo: false },
     });
-
-    res.json({ message: 'Selo (Card) desativado (soft delete) com sucesso!', card: deletedCard });
-
+    res.json({ message: 'Card desativado com sucesso!', card });
   } catch (error) {
-    // Erro se o card não for encontrado
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-      return res.status(404).json({ error: 'Selo (Card) não encontrado para deletar.' });
+      return res.status(404).json({ error: 'Card não encontrado.' });
     }
-    console.error('Erro ao deletar card:', error);
+    console.error('Erro ao desativar card:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-module.exports = {
-  createCard,
-  getAllCards,
-  getCardById,
-  updateCard,
-  deleteCard,
-};
+module.exports = { createCard, getAllCards, getCardById, updateCard, deleteCard };

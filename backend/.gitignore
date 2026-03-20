@@ -1,8 +1,25 @@
-uploads/
+# Dependências
 node_modules/
-dist/
-*.log
+
+# Variáveis de ambiente — NUNCA commitar o .env real
 .env
+.env.local
+.env.production
+
+# Prisma
+prisma/.env
+
+# Uploads locais (em produção usar Supabase Storage)
+uploads/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Sistema
 .DS_Store
 Thumbs.db
-/src/generated/prisma
+
+# Build
+dist/
+build/

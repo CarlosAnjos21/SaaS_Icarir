@@ -1,244 +1,164 @@
-// Importa o Prisma Client
 const prisma = require('../config/prismaClient');
 
-/**
- * @route   GET /api/quizzes/:quizId
- * @desc    (Usuário) Buscar um quiz e suas perguntas (sem as respostas)
- * @access  Privado
- */
 const getQuizForUser = async (req, res) => {
-  try {
-    const quizId = parseInt(req.params.quizId, 10);
-    if (isNaN(quizId)) {
-      return res.status(400).json({ error: 'ID do Quiz inválido.' });
-    }
+  const quizId = parseInt(req.params.quizId, 10);
+  if (isNaN(quizId)) return res.status(400).json({ error: 'ID inválido.' });
 
-    // 1. Buscar o Quiz e suas perguntas (substitui as 2 queries)
+  try {
     const quiz = await prisma.quiz.findFirst({
       where: { id: quizId, ativo: true },
       select: {
-        id: true,
-        titulo: true,
-        descricao: true,
+        id: true, titulo: true, descricao: true,
         perguntas: {
-          select: {
-            id: true,
-            enunciado: true,
-            tipo: true,
-            ordem: true,
-            opcoes: true
-          },
-          orderBy: { ordem: 'asc' }
-        }
-      }
+          select: { id: true, enunciado: true, tipo: true, ordem: true, opcoes: true },
+          orderBy: { ordem: 'asc' },
+        },
+      },
     });
 
-    if (!quiz) {
-      return res.status(404).json({ error: 'Quiz não encontrado ou inativo.' });
-    }
+    if (!quiz) return res.status(404).json({ error: 'Quiz não encontrado ou inativo.' });
 
-    // 2. Remover a chave 'isCorrect' de cada opção
-    const filteredQuestions = quiz.perguntas.map(q => {
-      const filteredOptions = q.opcoes.map(option => {
-        const { isCorrect, ...rest } = option;
-        return rest;
-      });
-      return { ...q, opcoes: filteredOptions };
-    });
+    // Remove campo isCorrect das opções antes de enviar ao usuário
+    const perguntas = quiz.perguntas.map((q) => ({
+      ...q,
+      opcoes: Array.isArray(q.opcoes)
+        ? q.opcoes.map(({ isCorrect, ...rest }) => rest)
+        : q.opcoes,
+    }));
 
-    const response = { ...quiz, perguntas: filteredQuestions };
-    res.json(response);
-
+    res.json({ ...quiz, perguntas });
   } catch (error) {
     console.error('Erro ao buscar quiz:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-/**
- * @route   GET /api/quizzes/task/:taskId
- * @desc    (Usuário) Listar quizzes associados a uma tarefa (pelo id da tarefa)
- * @access  Privado
- */
 const getQuizzesByTask = async (req, res) => {
-  try {
-    const taskId = parseInt(req.params.taskId, 10);
-    if (isNaN(taskId)) {
-      return res.status(400).json({ error: 'ID da tarefa inválido.' });
-    }
+  const taskId = parseInt(req.params.taskId, 10);
+  if (isNaN(taskId)) return res.status(400).json({ error: 'ID inválido.' });
 
+  try {
     const quiz = await prisma.quiz.findFirst({
       where: { tarefa_id: taskId, ativo: true },
-      include: {
-        perguntas: {
-          orderBy: { ordem: 'asc' }
-        }
-      }
+      include: { perguntas: { orderBy: { ordem: 'asc' } } },
     });
 
-    if (!quiz) {
-      return res.status(404).json({ error: 'Nenhum quiz encontrado para esta tarefa.' });
-    }
+    if (!quiz) return res.status(404).json({ error: 'Nenhum quiz encontrado para esta tarefa.' });
 
-    const perguntas = quiz.perguntas.map(p => {
-      const opcoes = Array.isArray(p.opcoes)
+    const perguntas = quiz.perguntas.map((p) => ({
+      ...p,
+      opcoes: Array.isArray(p.opcoes)
         ? p.opcoes.map(({ isCorrect, ...rest }) => rest)
-        : [];
-      return { ...p, opcoes };
-    });
+        : p.opcoes,
+    }));
 
     res.json({ ...quiz, perguntas });
-
   } catch (error) {
     console.error('Erro ao buscar quiz por tarefa:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-/**
- * @route   POST /api/quizzes/:quizId/submit
- * @desc    (Usuário) Submeter respostas de um quiz
- * @access  Privado
- * @body    { "answers": [{ "pergunta_id": 1, "resposta": "texto da resposta" }] }
- */
 const submitQuiz = async (req, res) => {
   const quizId = parseInt(req.params.quizId, 10);
-  if (isNaN(quizId)) {
-    return res.status(400).json({ error: 'ID do Quiz inválido.' });
-  }
+  if (isNaN(quizId)) return res.status(400).json({ error: 'ID inválido.' });
 
   const userId = req.user.id;
   const { answers } = req.body;
 
-  if (!answers || !Array.isArray(answers) || answers.length === 0) {
+  if (!Array.isArray(answers) || answers.length === 0) {
     return res.status(400).json({ error: 'O array "answers" é obrigatório.' });
   }
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      const quiz = await tx.quiz.findFirstOrThrow({
+      const quiz = await tx.quiz.findFirst({
         where: { id: quizId, ativo: true },
-        select: { id: true, tarefa_id: true }
+        select: { id: true, tarefa_id: true },
       });
+      if (!quiz) throw Object.assign(new Error('Quiz não encontrado ou inativo.'), { status: 404 });
+
       const { tarefa_id } = quiz;
+
+      // Verifica se tarefa já foi concluída
+      if (tarefa_id) {
+        const existing = await tx.usuarioTarefa.findUnique({
+          where: { usuario_id_tarefa_id: { usuario_id: userId, tarefa_id } },
+          select: { concluida: true },
+        });
+        if (existing?.concluida) {
+          throw Object.assign(new Error('Você já completou este quiz.'), { status: 409 });
+        }
+      }
 
       const questions = await tx.perguntaQuiz.findMany({
         where: { quiz_id: quizId },
-        select: { id: true, opcoes: true }
+        select: { id: true, resposta_correta: true },
       });
 
-      const correctAnswersMap = new Map();
-      questions.forEach(q => {
-        const correctOption = q.opcoes.find(opt => opt.isCorrect === true);
-        correctAnswersMap.set(q.id, correctOption ? correctOption.text : null);
-      });
-
-      let taskPoints = 0;
-      if (tarefa_id) {
-        const tarefa = await tx.tarefa.findUnique({
-          where: { id: tarefa_id },
-          select: { pontos: true }
-        });
-        taskPoints = tarefa ? tarefa.pontos : 0;
-
-        const existingSub = await tx.usuarioTarefa.findUnique({
-          where: {
-            usuario_id_tarefa_id: { usuario_id: userId, tarefa_id }
-          },
-          select: { concluida: true }
-        });
-
-        if (existingSub && existingSub.concluida) {
-          throw new Error('Você já completou este quiz/tarefa.');
-        }
-      }
+      // Mapa de respostas corretas diretamente do campo resposta_correta
+      const correctMap = new Map(questions.map((q) => [q.id, q.resposta_correta]));
 
       let totalCorrect = 0;
       const submissionResults = [];
 
-      for (const answer of answers) {
-        const { pergunta_id, resposta } = answer;
-        const isCorrect = correctAnswersMap.get(pergunta_id) === resposta;
+      for (const { pergunta_id, resposta } of answers) {
+        const isCorrect = correctMap.get(pergunta_id) === resposta;
         if (isCorrect) totalCorrect++;
 
-        const newAnswer = await tx.respostaQuiz.create({
-          data: {
-            usuario_id: userId,
-            pergunta_id,
-            resposta,
-            correta: isCorrect
-          },
-          select: { id: true, pergunta_id: true, resposta: true, correta: true }
+        const saved = await tx.respostaQuiz.create({
+          data: { usuario_id: userId, pergunta_id, resposta, correta: isCorrect },
+          select: { id: true, pergunta_id: true, resposta: true, correta: true },
         });
-        submissionResults.push(newAnswer);
+        submissionResults.push(saved);
       }
 
-      let finalMessage = `Quiz submetido. Você acertou ${totalCorrect} de ${correctAnswersMap.size}.`;
+      const totalQuestions = correctMap.size;
+      const allCorrect = totalCorrect === totalQuestions;
 
-      if (tarefa_id && totalCorrect === correctAnswersMap.size) {
-        finalMessage = `Parabéns! Você acertou todas e ganhou ${taskPoints} pontos!`;
+      // Só concede pontos e marca concluída se acertou tudo
+      if (tarefa_id && allCorrect) {
+        const tarefa = await tx.tarefa.findUnique({
+          where: { id: tarefa_id },
+          select: { pontos: true },
+        });
+        const taskPoints = tarefa?.pontos || 0;
 
         await tx.usuarioTarefa.upsert({
-          where: {
-            usuario_id_tarefa_id: { usuario_id: userId, tarefa_id }
-          },
-          create: {
-            usuario_id: userId,
-            tarefa_id,
-            concluida: true,
-            pontos_obtidos: taskPoints,
-            data_conclusao: new Date()
-          },
-          update: {
-            concluida: true,
-            pontos_obtidos: taskPoints,
-            data_conclusao: new Date()
-          }
+          where: { usuario_id_tarefa_id: { usuario_id: userId, tarefa_id } },
+          create: { usuario_id: userId, tarefa_id, concluida: true, pontos_obtidos: taskPoints, data_conclusao: new Date() },
+          update: { concluida: true, pontos_obtidos: taskPoints, data_conclusao: new Date() },
         });
 
         await tx.usuario.update({
           where: { id: userId },
-          data: { 
-            pontos: { increment: taskPoints },
-            pontos_totais: { increment: taskPoints }
-          }
+          data: { pontos: { increment: taskPoints }, pontos_totais: { increment: taskPoints } },
         });
 
         await tx.logsPontos.create({
-          data: {
-            usuario_id: userId,
-            tarefa_id,
-            pontos: taskPoints,
-            tipo: 'ganho_quiz',
-            descricao: 'Quiz concluído com 100% de acerto.'
-          }
+          data: { usuario_id: userId, tarefa_id, pontos: taskPoints, tipo: 'ganho_quiz', descricao: 'Quiz concluído com 100% de acerto.' },
         });
+
+        return {
+          message: `Parabéns! Você acertou todas e ganhou ${taskPoints} pontos!`,
+          score: { correct: totalCorrect, total: totalQuestions },
+          results: submissionResults,
+        };
       }
 
       return {
-        message: finalMessage,
-        score: {
-          correct: totalCorrect,
-          total: correctAnswersMap.size
-        },
-        results: submissionResults
+        message: `Quiz submetido. Você acertou ${totalCorrect} de ${totalQuestions}.`,
+        score: { correct: totalCorrect, total: totalQuestions },
+        results: submissionResults,
       };
     });
 
-    res.status(200).json(result);
-
+    res.json(result);
   } catch (error) {
-    if (error.message.includes('Quiz não encontrado') || error.message.includes('Você já completou')) {
-      return res.status(409).json({ error: error.message });
-    }
-
+    if (error.status) return res.status(error.status).json({ error: error.message });
     console.error('Erro ao submeter quiz:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-module.exports = {
-  getQuizForUser,
-  getQuizzesByTask,
-  submitQuiz
-};
+module.exports = { getQuizForUser, getQuizzesByTask, submitQuiz };

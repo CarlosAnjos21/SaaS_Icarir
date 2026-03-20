@@ -3,55 +3,74 @@ require("dotenv").config();
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
 const path = require("path");
-const fs = require('fs');
+const fs = require("fs");
 const setupSwagger = require("./swagger");
-// ✅ MANTER: Importações necessárias para as rotas /auth e /users
-const authRoutes = require('./routes/authRoutes');
-const userRoutes = require('./routes/userRoutes'); 
 
 const app = express();
+
+// ─── Middlewares Globais ───────────────────────────────────────────────────────
 app.use(express.json());
 app.use(cookieParser());
-setupSwagger(app); // 1. Configuração do Swagger
 
-// ✅ Configuração única do CORS para o frontend (Vite)
+// ─── CORS Dinâmico (funciona em dev e produção) ────────────────────────────────
+const allowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((o) => o.trim())
+  : ["http://localhost:5173"];
+
 app.use(
-  cors({
-    origin: "http://localhost:5173", // porta correta do front-end com Vite
-    credentials: true,
-  })
+  cors({
+    origin: (origin, callback) => {
+      // Permite requests sem origin (ex: Postman, curl) em dev
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS bloqueado para origin: ${origin}`));
+      }
+    },
+    credentials: true,
+  })
 );
 
-// ✅ Rota de Autenticação e Usuários
-app.use('/api/auth', authRoutes);
-app.use('/api/users', userRoutes);
+// ─── Swagger ───────────────────────────────────────────────────────────────────
+setupSwagger(app);
 
-// ✅ Rotas da API principal (se o mainRouter incluir outras rotas)
+// ─── Pasta de uploads ──────────────────────────────────────────────────────────
+try {
+  const uploadsPath = path.join(__dirname, "..", "uploads", "evidences");
+  fs.mkdirSync(uploadsPath, { recursive: true });
+} catch (err) {
+  console.error("Erro criando pasta de uploads:", err);
+}
+app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
+
+// ─── Rotas da API ──────────────────────────────────────────────────────────────
+// ATENÇÃO: Todas as rotas passam pelo index.js — sem duplicação aqui
 const mainRouter = require("./routes/index");
 app.use("/api", mainRouter);
 
-// ✅ Redirecionar a raiz para o front-end
+// ─── Rota raiz ────────────────────────────────────────────────────────────────
 app.get("/", (req, res) => {
-  res.redirect("http://localhost:5173");
+  res.json({ message: "API Jornada Conexões rodando!", status: "ok" });
 });
 
-// Garantir que a pasta de uploads exista antes de iniciar o servidor
-try {
-  const uploadsPath = path.join(__dirname, '..', 'uploads', 'evidences');
-  fs.mkdirSync(uploadsPath, { recursive: true });
-  // opcional: também garantir a pasta uploads (pai)
-  fs.mkdirSync(path.join(__dirname, '..', 'uploads'), { recursive: true });
-} catch (err) {
-  console.error('Erro criando pasta de uploads:', err);
-}
+// ─── Error Handler Global ─────────────────────────────────────────────────────
+// Captura qualquer erro não tratado nas rotas
+app.use((err, req, res, next) => {
+  console.error("❌ Erro não tratado:", err.stack || err.message);
 
-// ✅ Servir arquivos estáticos (imagens enviadas)
-// Servir uploads estáticos (permitir acesso via /uploads/...)
-app.use('/uploads', express.static(path.join(__dirname, '..', 'uploads')));
+  // Erro de CORS
+  if (err.message && err.message.startsWith("CORS bloqueado")) {
+    return res.status(403).json({ error: err.message });
+  }
 
+  res.status(err.status || 500).json({
+    error: err.message || "Erro interno do servidor.",
+  });
+});
 
-// ✅ Iniciar servidor
+// ─── Start ────────────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => {
-  console.log(`Servidor rodando em http://localhost:${PORT}`);
+  console.log(`✅ Servidor rodando na porta ${PORT}`);
+  console.log(`📄 Docs: http://localhost:${PORT}/api-docs`);
 });
