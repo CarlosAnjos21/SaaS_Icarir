@@ -143,38 +143,27 @@ export default function Navbar() {
     return (
         <nav className={navbarClasses}>
             {/* LOGO */}
-            <Link to="/" className="flex items-center gap-2 z-50">
-                <img
-                    src={logoIcarir}
-                    alt="Logo ICARIR"
-                    className="h-14 w-auto transition-transform duration-300 hover:scale-105"
-                />
-            </Link>
+            {/* Logo */}
+  <Link to="/" className="flex items-center gap-2 pl-6">
+    <img src={logoIcarir} alt="Logo ICARIR" className="h-14 w-auto" />
+  </Link>
 
-            {/* MENU DESKTOP */}
-            <ul className="hidden md:flex gap-8 text-base font-medium tracking-wide">
-                {navLinks.map((item, index) => (
-                    <li key={index} className="relative group">
-                        <Link
-                            to={item.path}
-                            className={`
-                    transition-all duration-200
-                    hover:scale-110 active:scale-95
-                    ${isTransparent ? "text-white hover:text-orange-500" : "text-[#394C97] hover:text-orange-500"}
-                `}
-                        >
-                            {item.name}
-
-                            {/* Underline animado */}
-                            <span
-                                className="absolute left-0 -bottom-1 w-full h-[2px] bg-orange-500
-                    scale-x-0 group-hover:scale-x-100
-                    origin-left transition-transform duration-300"
-                            ></span>
-                        </Link>
-                    </li>
-                ))}
-            </ul>
+  {/* Menu */}
+  <ul className="hidden md:flex gap-6 text-base font-medium tracking-wide">
+    {navLinks.map((item, index) => (
+      <li key={index} className="relative group">
+        <Link
+          to={item.path}
+          className={`transition-all duration-200 hover:scale-110 active:scale-95 ${
+            isTransparent ? "text-white hover:text-orange-500" : "text-[#394C97] hover:text-orange-500"
+          }`}
+        >
+          {item.name}
+          <span className="absolute left-0 -bottom-1 w-full h-[2px] bg-orange-500 scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-300"></span>
+        </Link>
+      </li>
+    ))}
+  </ul>
 
 
             {/* ÍCONES */}
