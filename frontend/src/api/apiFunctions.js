@@ -89,22 +89,22 @@ export const deleteUserApi = async (id) => {
 
 // --- CATEGORIAS DE TAREFAS (CRUD) ---
 export const fetchCategories = async () => {
-    const response = await api.get("/categorias-tarefas");
+    const response = await api.get("/task-categories"); // ALTERADO
     return response.data;
 };
 
 export const createCategory = async (categoryData) => {
-    const response = await api.post("/categorias-tarefas", categoryData);
+    const response = await api.post("/task-categories", categoryData); // ALTERADO
     return response.data.categoria || response.data;
 };
 
 export const updateCategory = async (id, categoryData) => {
-    const response = await api.put(`/categorias-tarefas/${id}`, categoryData);
+    const response = await api.put(`/task-categories/${id}`, categoryData); // ALTERADO
     return response.data.categoria || response.data;
 };
 
 export const deleteCategory = async (id) => {
-    const response = await api.delete(`/categorias-tarefas/${id}`);
+    const response = await api.delete(`/task-categories/${id}`); // ALTERADO
     return response.data;
 };
 
