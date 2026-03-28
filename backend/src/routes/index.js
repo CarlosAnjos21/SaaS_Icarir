@@ -12,6 +12,7 @@ const rankingRoutes = require("./rankingRoutes");
 const taskRoutes = require("./taskRoutes");
 const validatorRoutes = require("./validatorRoutes");
 const taskCategoriesRoutes = require("./taskCategoriesRoutes");
+const dashboardRoutes = require("./dashboardRoutes");
 
 router.use("/users",           authenticate, userRoutes);
 router.use("/missions",        authenticate, missionRoutes);
@@ -20,6 +21,8 @@ router.use("/ranking",         authenticate, rankingRoutes);
 router.use("/tasks",           authenticate, taskRoutes);
 router.use("/validations",     authenticate, validatorRoutes);
 router.use("/task-categories", authenticate, taskCategoriesRoutes); 
+//
+router.use("/dashboard",       authenticate, dashboardRoutes);
 
 const adminRoutes = require("./adminRoutes");
 router.use("/admin", adminRoutes);
