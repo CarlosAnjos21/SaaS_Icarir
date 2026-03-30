@@ -50,10 +50,17 @@ export default function CareerPanel() {
         const token = localStorage.getItem("token");
 
         const response = await fetch("http://localhost:3001/api/dashboard", {
+          method: "GET",
           headers: {
+            "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
+          credentials: "include",
         });
+
+        if (!response.ok) {
+          throw new Error("Não autorizado");
+        }
 
         const data = await response.json();
 
