@@ -218,7 +218,12 @@ const UsersContent = () => {
 
         const validUsers = usersList.map((user) => ({
           ...user,
-          data_criacao: user.data_criacao || user.dataCriacao,
+          data_criacao:
+            user.data_criacao ||
+            user.dataCriacao ||
+            user.created_at ||
+            user.createdAt ||
+            new Date(),
         }));
         setUsers(validUsers);
       }
@@ -290,8 +295,15 @@ const UsersContent = () => {
         );
       } else {
         response = await createUser(currentUser);
-        const newUser = response.user || response;
-        if (newUser && newUser.id) setUsers((prev) => [...prev, newUser]);
+
+        const newUser = {
+          ...(response.user || response),
+          data_criacao: (response.user || response).data_criacao || new Date(),
+        };
+
+        if (newUser && newUser.id) {
+          setUsers((prev) => [...prev, newUser]);
+        }
       }
       handleModalClose();
     } catch (err) {
