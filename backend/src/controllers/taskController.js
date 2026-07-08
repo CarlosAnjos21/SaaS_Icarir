@@ -1,6 +1,7 @@
 const prisma = require('../config/prismaClient');
 const { Prisma } = require('@prisma/client');
 const supabase = require('../config/supabaseClient');
+const { uploadEvidenceFile } = require('../helpers/supabaseUpload');
 
 const VALID_TIPOS = ['administrativa', 'conhecimento', 'engajamento', 'social', 'feedback'];
 const VALID_DIFICULDADES = ['facil', 'medio', 'dificil'];
@@ -45,28 +46,42 @@ const getTaskById = async (req, res) => {
   }
 };
 
+/**
+ * ─── submitTask: Submete tarefa com evidências ─────────────────────────────────
+ * 
+ * MUDANÇA IMPORTANTE: Agora integra uploadEvidenceFile() do helper
+ * 
+ * Fluxo:
+ * 1. Valida tarefa e inscrição
+ * 2. Se houver files (Multer) → faz upload no Supabase
+ * 3. Armazena URLs das evidências no BD
+ * 4. Se quiz → valida automaticamente
+ * 5. Cria/atualiza UsuarioTarefa com pontos
+ */
 const submitTask = async (req, res) => {
   const missionId = parseInt(req.params.missionId, 10);
   const taskId = parseInt(req.params.taskId, 10);
   const userId = req.user.id;
   const { evidencias } = req.body;
 
-  if (!evidencias) return res.status(400).json({ error: 'O campo "evidencias" é obrigatório.' });
   if (isNaN(missionId) || isNaN(taskId)) return res.status(400).json({ error: 'IDs inválidos.' });
 
   try {
     const result = await prisma.$transaction(async (tx) => {
+      // Validar tarefa
       const task = await tx.tarefa.findFirst({
         where: { id: taskId, missao_id: missionId, ativa: true },
         include: { quiz: { include: { perguntas: true } } },
       });
       if (!task) throw Object.assign(new Error('Tarefa não encontrada ou inativa.'), { status: 403 });
 
+      // Validar inscrição
       const enrollment = await tx.usuarioMissao.findFirst({
         where: { usuario_id: userId, missao_id: missionId },
       });
       if (!enrollment) throw Object.assign(new Error('Você não está inscrito nesta missão.'), { status: 403 });
 
+      // Validar se já completada
       const existing = await tx.usuarioTarefa.findUnique({
         where: { usuario_id_tarefa_id: { usuario_id: userId, tarefa_id: taskId } },
       });
@@ -74,9 +89,10 @@ const submitTask = async (req, res) => {
 
       let pontosObtidos = 0;
       let isConcluida = false;
+      let evidenciasProcessadas = evidencias || {};
 
-      // Validação automática de quiz
-      if (task.tipo === 'conhecimento' && task.quiz && evidencias.type === 'quiz' && evidencias.answers) {
+      // ─── VALIDAÇÃO AUTOMÁTICA DE QUIZ ───────────────────────────────────────
+      if (task.tipo === 'conhecimento' && task.quiz && evidencias?.type === 'quiz' && evidencias.answers) {
         const perguntas = task.quiz.perguntas;
         const total = perguntas.length;
 
@@ -91,14 +107,45 @@ const submitTask = async (req, res) => {
         }
       }
 
+      // ─── UPLOAD DE ARQUIVOS (se houver) ─────────────────────────────────────
+      // req.files vem do uploadMiddleware (multer)
+      if (req.files && req.files.length > 0) {
+        try {
+          const uploadedUrls = await Promise.all(
+            req.files.map((file) =>
+              uploadEvidenceFile(file, userId, taskId)
+            )
+          );
+
+          // Armazena URLs no formato JSON
+          evidenciasProcessadas = {
+            ...(evidencias || {}),
+            files: uploadedUrls.map((url, idx) => ({
+              url,
+              originalName: req.files[idx].originalname,
+              mimeType: req.files[idx].mimetype,
+              size: req.files[idx].size,
+              uploadedAt: new Date().toISOString(),
+            })),
+          };
+
+          console.log(`✅ ${req.files.length} arquivo(s) enviado(s) com sucesso`);
+        } catch (uploadError) {
+          throw Object.assign(
+            new Error(`Falha ao fazer upload: ${uploadError.message}`),
+            { status: 400 }
+          );
+        }
+      }
+
+      // ─── CRIAR OU ATUALIZAR SUBMISSÃO ────────────────────────────────────────
       const submissionData = {
         usuario_id: userId,
         tarefa_id: taskId,
-        evidencias,
+        evidencias: evidenciasProcessadas,
         concluida: isConcluida,
         pontos_obtidos: pontosObtidos,
         data_conclusao: isConcluida ? new Date() : null,
-        // validado_por é Int? no schema — null para sistema, só admin preenche
         validado_por: null,
         tentativas: (existing?.tentativas || 0) + 1,
       };
@@ -112,18 +159,25 @@ const submitTask = async (req, res) => {
 
     res.status(201).json({
       message: result.concluida
-        ? `Tarefa concluída! Você ganhou ${result.pontos_obtidos} pontos.`
-        : 'Tarefa submetida para validação.',
+        ? `✅ Tarefa concluída! Você ganhou ${result.pontos_obtidos} pontos.`
+        : '⏳ Tarefa submetida para validação.',
       submission: result,
     });
   } catch (error) {
     if (error.status) return res.status(error.status).json({ error: error.message });
-    console.error('Erro ao submeter tarefa:', error);
+    console.error('❌ Erro ao submeter tarefa:', error);
     res.status(500).json({ error: 'Erro interno do servidor.' });
   }
 };
 
-// Upload via Supabase Storage (memoryStorage — sem file.filename local)
+/**
+ * ─── uploadEvidence: Endpoint alternativo APENAS para upload ───────────────────
+ * 
+ * Uso: POST /api/tasks/:missionId/tasks/:taskId/upload
+ * Para quem preferir separar upload de submissão
+ * 
+ * DEPRECADO: Prefira usar submitTask com files
+ */
 const uploadEvidence = async (req, res) => {
   const missionId = parseInt(req.params.missionId, 10);
   const taskId = parseInt(req.params.taskId, 10);
@@ -133,43 +187,53 @@ const uploadEvidence = async (req, res) => {
   if (!req.files?.length) return res.status(400).json({ error: 'Nenhum arquivo enviado.' });
 
   try {
+    // Usar helper para fazer upload
     const uploadedUrls = await Promise.all(
-      req.files.map(async (file) => {
-        const ext = file.originalname.split('.').pop();
-        const path = `evidences/${userId}/${taskId}/${Date.now()}.${ext}`;
-
-        const { error } = await supabase.storage
-          .from('uploads')
-          .upload(path, file.buffer, { contentType: file.mimetype, upsert: false });
-
-        if (error) throw new Error(`Supabase upload error: ${error.message}`);
-
-        const { data } = supabase.storage.from('uploads').getPublicUrl(path);
-        return { originalName: file.originalname, mimeType: file.mimetype, size: file.size, url: data.publicUrl };
-      })
+      req.files.map((file) => uploadEvidenceFile(file, userId, taskId))
     );
 
+    // Armazenar apenas referências (sem criar UsuarioTarefa completa)
     const existing = await prisma.usuarioTarefa.findUnique({
       where: { usuario_id_tarefa_id: { usuario_id: userId, tarefa_id: taskId } },
     });
 
     const result = await prisma.usuarioTarefa.upsert({
       where: { usuario_id_tarefa_id: { usuario_id: userId, tarefa_id: taskId } },
-      update: { evidencias: uploadedUrls, tentativas: (existing?.tentativas || 0) + 1 },
+      update: {
+        evidencias: {
+          files: uploadedUrls.map((url, idx) => ({
+            url,
+            originalName: req.files[idx].originalname,
+            mimeType: req.files[idx].mimetype,
+            uploadedAt: new Date().toISOString(),
+          })),
+        },
+        tentativas: (existing?.tentativas || 0) + 1,
+      },
       create: {
         usuario_id: userId,
         tarefa_id: taskId,
-        evidencias: uploadedUrls,
+        evidencias: {
+          files: uploadedUrls.map((url, idx) => ({
+            url,
+            originalName: req.files[idx].originalname,
+            mimeType: req.files[idx].mimetype,
+            uploadedAt: new Date().toISOString(),
+          })),
+        },
         concluida: false,
         pontos_obtidos: 0,
         tentativas: 1,
       },
     });
 
-    res.status(201).json({ message: 'Evidências enviadas com sucesso.', submission: result });
+    res.status(201).json({
+      message: `✅ ${req.files.length} arquivo(s) enviado(s) com sucesso.`,
+      submission: result,
+    });
   } catch (error) {
-    console.error('Erro ao enviar evidências:', error);
-    res.status(500).json({ error: 'Erro interno do servidor.' });
+    console.error('❌ Erro ao enviar evidências:', error);
+    res.status(500).json({ error: 'Erro ao fazer upload. Tente novamente.' });
   }
 };
 
@@ -205,7 +269,6 @@ const createTaskForMission = async (req, res) => {
         },
       });
 
-      // Cria quiz sem tentar setar quizId (campo não existe no schema)
       if (tipo === 'conhecimento' && quiz?.perguntas?.length > 0) {
         await tx.quiz.create({
           data: {
@@ -287,7 +350,6 @@ const updateTask = async (req, res) => {
             });
           }
         } else if (quiz.perguntas.length > 0) {
-          // Cria quiz sem quizId (não existe no schema)
           await tx.quiz.create({
             data: {
               tarefa_id: taskId,
