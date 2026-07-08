@@ -12,11 +12,8 @@ import api from './api';
  */
 export const submitTaskWithEvidence = async (missionId, taskId, evidencias, files = []) => {
   const formData = new FormData();
-  
-  // Adiciona evidências como JSON string
   formData.append('evidencias', JSON.stringify(evidencias));
-  
-  // Adiciona arquivos
+
   files.forEach((file) => {
     formData.append('files', file);
   });
@@ -31,9 +28,6 @@ export const submitTaskWithEvidence = async (missionId, taskId, evidencias, file
   return response.data;
 };
 
-/**
- * Apenas upload de evidências (fallback)
- */
 export const uploadTaskEvidence = async (missionId, taskId, files) => {
   const formData = new FormData();
   files.forEach((file) => {
@@ -50,17 +44,11 @@ export const uploadTaskEvidence = async (missionId, taskId, files) => {
   return response.data;
 };
 
-/**
- * Buscar tarefa por ID
- */
 export const getTask = async (missionId, taskId) => {
   const response = await api.get(`/missions/${missionId}/tasks/${taskId}`);
   return response.data;
 };
 
-/**
- * Listar tarefas de uma missão
- */
 export const getTasks = async (missionId) => {
   const response = await api.get(`/missions/${missionId}/tasks`);
   return response.data;

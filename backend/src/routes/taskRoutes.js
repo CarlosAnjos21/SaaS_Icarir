@@ -5,17 +5,6 @@ const { authenticate, checkRole } = require('../middlewares/authMiddleware');
 const upload = require('../middlewares/uploadMiddleware');
 
 /**
- * ─── Task Routes com Upload Integration ────────────────────────────────────────
- * 
- * Auth já aplicado no missionRoutes pai via router.use
- * 
- * MUDANÇAS:
- * - POST /submit agora suporta multipart/form-data com arquivos
- * - Middleware upload.array() integrado
- * - uploadEvidence mantido como fallback
- */
-
-/**
  * @swagger
  * tags:
  *   name: Tarefas
@@ -197,8 +186,8 @@ router.route('/:taskId')
  */
 router.post(
   '/:taskId/submit',
-  upload.array('files', 10), // Multer middleware: até 10 arquivos
-  taskController.submitTask   // Controller trata upload + validação
+  upload.array('files', 10), 
+  taskController.submitTask   
 );
 
 /**

@@ -2,13 +2,14 @@ const express = require("express");
 require("dotenv").config();
 const cookieParser = require("cookie-parser");
 const cors = require("cors");
-const path = require("path");
-const fs = require("fs");
+const helmet = require("helmet");
+const rateLimit = require("express-rate-limit");
 const setupSwagger = require("./swagger");
 
 const app = express();
 
 // ─── Middlewares Globais ───────────────────────────────────────────────────────
+app.use(helmet());
 app.use(express.json());
 app.use(cookieParser());
 
@@ -20,7 +21,6 @@ const allowedOrigins = process.env.ALLOWED_ORIGINS
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Permite requests sem origin (ex: Postman, curl) em dev
       if (!origin || allowedOrigins.includes(origin)) {
         callback(null, true);
       } else {
@@ -31,34 +31,30 @@ app.use(
   })
 );
 
+// ─── Rate Limiting ──────────────────────────────────────────────────────────────
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  message: { error: "Muitas requisições. Tente novamente em alguns minutos." },
+});
+app.use("/api", apiLimiter);
+
 // ─── Swagger ───────────────────────────────────────────────────────────────────
 setupSwagger(app);
 
-// ─── Pasta de uploads ──────────────────────────────────────────────────────────
-try {
-  const uploadsPath = path.join(__dirname, "..", "uploads", "evidences");
-  fs.mkdirSync(uploadsPath, { recursive: true });
-} catch (err) {
-  console.error("Erro criando pasta de uploads:", err);
-}
-app.use("/uploads", express.static(path.join(__dirname, "..", "uploads")));
-
 // ─── Rotas da API ──────────────────────────────────────────────────────────────
-// ATENÇÃO: Todas as rotas passam pelo index.js — sem duplicação aqui
 const mainRouter = require("./routes/index");
 app.use("/api", mainRouter);
 
 // ─── Rota raiz ────────────────────────────────────────────────────────────────
 app.get("/", (req, res) => {
-  res.json({ message: "API Jornada Conexões rodando!", status: "ok" });
+  res.json({ message: "API ICARIR rodando!", status: "ok" });
 });
 
 // ─── Error Handler Global ─────────────────────────────────────────────────────
-// Captura qualquer erro não tratado nas rotas
 app.use((err, req, res, next) => {
   console.error("❌ Erro não tratado:", err.stack || err.message);
 
-  // Erro de CORS
   if (err.message && err.message.startsWith("CORS bloqueado")) {
     return res.status(403).json({ error: err.message });
   }

@@ -1,4 +1,4 @@
-// Prisma schema for Umbrella Corporation backend (PostgreSQL)
+// Prisma schema — ICARIR (PostgreSQL)
 // Pre-reqs:
 // - Set DATABASE_URL in prisma/.env
 // - To create from these models: npx prisma migrate dev --name init
