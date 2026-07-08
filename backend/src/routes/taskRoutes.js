@@ -4,7 +4,16 @@ const taskController = require('../controllers/taskController');
 const { authenticate, checkRole } = require('../middlewares/authMiddleware');
 const upload = require('../middlewares/uploadMiddleware');
 
-// Auth já aplicado no missionRoutes pai via router.use
+/**
+ * ─── Task Routes com Upload Integration ────────────────────────────────────────
+ * 
+ * Auth já aplicado no missionRoutes pai via router.use
+ * 
+ * MUDANÇAS:
+ * - POST /submit agora suporta multipart/form-data com arquivos
+ * - Middleware upload.array() integrado
+ * - uploadEvidence mantido como fallback
+ */
 
 /**
  * @swagger
@@ -135,47 +144,7 @@ router.route('/:taskId')
  * @swagger
  * /missions/{missionId}/tasks/{taskId}/submit:
  *   post:
- *     summary: Submeter uma tarefa para validação
- *     tags: [Tarefas]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: missionId
- *         required: true
- *         schema:
- *           type: integer
- *       - in: path
- *         name: taskId
- *         required: true
- *         schema:
- *           type: integer
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required: [evidencias]
- *             properties:
- *               evidencias:
- *                 type: object
- *                 example: { type: "link", url: "https://..." }
- *     responses:
- *       201:
- *         description: Tarefa submetida com sucesso
- *       403:
- *         description: Usuário não inscrito na missão
- *       409:
- *         description: Tarefa já concluída
- */
-router.post('/:taskId/submit', taskController.submitTask);
-
-/**
- * @swagger
- * /missions/{missionId}/tasks/{taskId}/evidences:
- *   post:
- *     summary: Upload de evidências (imagem) para uma tarefa
+ *     summary: Submeter uma tarefa com evidências (inclui opção de upload de arquivos)
  *     tags: [Tarefas]
  *     security:
  *       - bearerAuth: []
@@ -197,16 +166,85 @@ router.post('/:taskId/submit', taskController.submitTask);
  *           schema:
  *             type: object
  *             properties:
- *               file:
+ *               evidencias:
  *                 type: string
- *                 format: binary
+ *                 description: JSON string com evidências (links, respostas de quiz, etc)
+ *                 example: '{"type":"quiz","answers":{"1":"opcaoA"}}'
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
+ *                 description: Até 10 arquivos de evidência (imagem ou PDF)
+ *     responses:
+ *       201:
+ *         description: Tarefa submetida com sucesso
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 message:
+ *                   type: string
+ *                 submission:
+ *                   type: object
+ *       400:
+ *         description: Dados inválidos ou arquivo muito grande
+ *       403:
+ *         description: Usuário não inscrito na missão ou tarefa inativa
+ *       409:
+ *         description: Tarefa já concluída
+ */
+router.post(
+  '/:taskId/submit',
+  upload.array('files', 10), // Multer middleware: até 10 arquivos
+  taskController.submitTask   // Controller trata upload + validação
+);
+
+/**
+ * @swagger
+ * /missions/{missionId}/tasks/{taskId}/evidences:
+ *   post:
+ *     summary: (DEPRECADO) Upload de evidências separado - use /submit ao invés
+ *     tags: [Tarefas]
+ *     deprecated: true
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: missionId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *       - in: path
+ *         name: taskId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         multipart/form-data:
+ *           schema:
+ *             type: object
+ *             required: [files]
+ *             properties:
+ *               files:
+ *                 type: array
+ *                 items:
+ *                   type: string
+ *                   format: binary
  *     responses:
  *       201:
  *         description: Evidências enviadas com sucesso
  *       400:
- *         description: Nenhum arquivo enviado
+ *         description: Nenhum arquivo enviado ou formato inválido
  */
-router.post('/:taskId/evidences', upload.array('file', 5), taskController.uploadEvidence);
+router.post(
+  '/:taskId/evidences',
+  upload.array('files', 10),
+  taskController.uploadEvidence
+);
 
 /**
  * @swagger
@@ -237,25 +275,39 @@ router.post('/:taskId/evidences', upload.array('file', 5), taskController.upload
  *             properties:
  *               titulo:
  *                 type: string
+ *               descricao:
+ *                 type: string
  *               perguntas:
  *                 type: array
  *                 items:
  *                   type: object
+ *                   required: [enunciado, resposta_correta]
  *                   properties:
  *                     enunciado:
  *                       type: string
+ *                     tipo:
+ *                       type: string
+ *                       enum: [multipla_escolha, verdadeiro_falso, texto]
  *                     opcoes:
  *                       type: array
  *                       items:
  *                         type: string
  *                     resposta_correta:
  *                       type: string
+ *                     explicacao:
+ *                       type: string
  *     responses:
  *       201:
  *         description: Quiz criado com sucesso
+ *       404:
+ *         description: Tarefa não encontrada
  *       409:
  *         description: Tarefa já possui um quiz
  */
-router.post('/:taskId/quiz', checkRole(['admin']), taskController.createQuizForTask);
+router.post(
+  '/:taskId/quiz',
+  checkRole(['admin']),
+  taskController.createQuizForTask
+);
 
 module.exports = router;
