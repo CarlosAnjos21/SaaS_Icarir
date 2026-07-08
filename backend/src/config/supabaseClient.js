@@ -1,10 +1,10 @@
 const { createClient } = require('@supabase/supabase-js');
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseKey = process.env.SUPABASE_SECRET_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  throw new Error("ERRO CRÍTICO: SUPABASE_URL e SUPABASE_SERVICE_ROLE_KEY são obrigatórios no arquivo .env");
+  throw new Error("ERRO CRÍTICO: SUPABASE_URL e SUPABASE_SECRET_KEY são obrigatórios no arquivo .env");
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
