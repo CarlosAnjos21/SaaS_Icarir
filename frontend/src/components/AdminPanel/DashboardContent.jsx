@@ -13,40 +13,12 @@ import {
     RefreshCw,
     Medal
 } from 'lucide-react';
-
-// ===================================================================
-// API CLIENT
-// ===================================================================
-const fetchStats = async () => {
-    const baseUrl = typeof process !== 'undefined' && process.env?.REACT_APP_API_URL 
-        ? process.env.REACT_APP_API_URL 
-        : 'http://localhost:3001/api'; 
-
-    const token = localStorage.getItem('token') || localStorage.getItem('user_token') || '';
-
-    try {
-        const response = await fetch(`${baseUrl}/admin/dashboard/stats`, {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-                ...(token ? { 'Authorization': `Bearer ${token}` } : {})
-            }
-        });
-
-        if (!response.ok) {
-            throw new Error(`Erro na API (${response.status})`);
-        }
-
-        return await response.json();
-    } catch (error) {
-        console.error("Falha na requisição real:", error);
-        throw error;
-    }
-};
+import { fetchStats } from '../../api/apiFunctions';
 
 // ===================================================================
 // COMPONENTES DE UI
 // ===================================================================
+
 
 const StatsCard = ({ icon: Icon, title, value, color, bgColor, delay }) => (
     <motion.div 

@@ -189,10 +189,6 @@ const TaskDetailsModal = ({ task: initialTask, status, onClose, onComplete }) =>
 
     // --- SUBMISSÕES ---
 
-    const handleQuizOptionSelect = (questionId, option) => {
-        setQuizAnswers(prev => ({ ...prev, [questionId]: option }));
-    };
-
     const handleSubmit = async (type, evidenceData) => {
         setLoading(true);
         setError(null);
@@ -513,31 +509,32 @@ export default function MissionDetails({ mission: initialMissionData, onBack, re
         if (!isUserJoined) return;
         setSelectedTask(task);
     };
-
-    if (loading && !fullMissionData && !initialMissionData) return <div className="p-20 text-center"><Loader className="animate-spin mx-auto text-[#394C97] mb-2" /> Carregando missão...</div>;
-    
-    if (error && !fullMissionData) return <div className="p-10 text-center text-red-500"><AlertCircle className="mx-auto mb-2"/>{error}<br/><button onClick={onBack} className="mt-4 underline">Voltar</button></div>;
-
     const mission = fullMissionData || initialMissionData;
-    const { title, descricao, deadline, destino, tarefas = [], userProgress, ranking, foto_url } = mission;
+    const { title, descricao, deadline, destino, tarefas = [], userProgress, ranking, foto_url } = mission || {};
 
     // Cálculo e Status na Página Principal
-    const statusLower = String(mission.status || '').toLowerCase();
-    const participationStatus = String(mission.status_participacao || mission.statusParticipacao || '').toLowerCase();
-    const isUserJoined = 
+    const statusLower = String(mission?.status || '').toLowerCase();
+    const participationStatus = String(mission?.status_participacao || mission?.statusParticipacao || '').toLowerCase();
+    const isUserJoined = mission ? (
         mission.isJoined === true || 
         mission.isJoined === 1 || 
         ['inscrito', 'participando', 'matriculado', 'joined', 'confirmado'].includes(statusLower) ||
-        ['inscrito', 'participando', 'confirmado'].includes(participationStatus);
+        ['inscrito', 'participando', 'confirmado'].includes(participationStatus)
+    ) : false;
 
     const totalPoints = useMemo(() => {
+        if (!mission) return 0;
         // Prefere total calculado pelo backend quando disponível
-        if (mission && mission.totalPoints != null) return Number(mission.totalPoints || 0);
+        if (mission.totalPoints != null) return Number(mission.totalPoints || 0);
 
         const items = [...(tarefas || []), ...(mission.quiz?.questions || [])];
         if (items.length === 0) return Number(mission.pontos || mission.points || 0);
         return items.reduce((acc, item) => acc + (Number(item.pontos || item.points || 0) || 0), 0);
     }, [mission, tarefas]);
+
+    if (loading && !fullMissionData && !initialMissionData) return <div className="p-20 text-center"><Loader className="animate-spin mx-auto text-[#394C97] mb-2" /> Carregando missão...</div>;
+    
+    if (error && !fullMissionData) return <div className="p-10 text-center text-red-500"><AlertCircle className="mx-auto mb-2"/>{error}<br/><button onClick={onBack} className="mt-4 underline">Voltar</button></div>;
 
     const tasksStatus = userProgress?.tasksStatus || {};
     const myTotalPoints = userProgress?.totalPoints || 0;
