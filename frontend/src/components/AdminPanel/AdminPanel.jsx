@@ -28,8 +28,9 @@ export default function AdminPanel() {
   // Detecta tamanho da tela
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768) setIsSidebarOpen(false); // fecha sidebar no mobile
+      const mobile = window.innerWidth < 768;
+      setIsMobile(mobile);
+      setIsSidebarOpen(!mobile); // desktop: aberta por padrão | mobile: fechada (fora da tela)
     };
     handleResize();
     window.addEventListener("resize", handleResize);
@@ -49,14 +50,37 @@ export default function AdminPanel() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     params.set("adminTab", activeTab);
-    navigate({ pathname: location.pathname, search: params.toString() }, { replace: true });
+    navigate(
+      { pathname: location.pathname, search: params.toString() },
+      { replace: true },
+    );
   }, [activeTab, location.pathname, location.search, navigate]);
 
   const tabs = [
-    { id: "dashboard", label: "Dashboard", icon: BarChart2, content: <DashboardContent /> },
-    { id: "missions", label: "Missões Ativas", icon: Zap, content: <MissionsContent /> },
-    { id: "users", label: "Gestão de Usuários", icon: Users, content: <UsersContent /> },
-    { id: "tasks", label: "Tarefas", icon: Briefcase, content: <TasksQuizzesContent /> },
+    {
+      id: "dashboard",
+      label: "Dashboard",
+      icon: BarChart2,
+      content: <DashboardContent />,
+    },
+    {
+      id: "missions",
+      label: "Missões Ativas",
+      icon: Zap,
+      content: <MissionsContent />,
+    },
+    {
+      id: "users",
+      label: "Gestão de Usuários",
+      icon: Users,
+      content: <UsersContent />,
+    },
+    {
+      id: "tasks",
+      label: "Tarefas",
+      icon: Briefcase,
+      content: <TasksQuizzesContent />,
+    },
   ];
 
   const currentTab = tabs.find((tab) => tab.id === activeTab);
@@ -67,16 +91,35 @@ export default function AdminPanel() {
     navigate("/login");
   };
 
+  const handleTabClick = (id) => {
+    setActiveTab(id);
+    if (isMobile) setIsSidebarOpen(false); // fecha o drawer ao navegar no mobile
+  };
+
   return (
     <div className="min-h-screen bg-gray-100 flex font-sans overflow-hidden relative">
+      {/* Botão flutuante para abrir a sidebar no mobile quando fechada */}
+      {isMobile && !isSidebarOpen && (
+        <button
+          onClick={() => setIsSidebarOpen(true)}
+          className="fixed top-4 left-4 z-50 p-2.5 bg-white rounded-lg shadow-lg text-[#394C97] border border-gray-200"
+        >
+          <Menu size={20} />
+        </button>
+      )}
+
       {/* SIDEBAR */}
       <motion.aside
-        initial={{ width: isSidebarOpen ? 280 : 80 }}
-        animate={{ width: isSidebarOpen ? 280 : 80 }}
+        initial={false}
+        animate={
+          isMobile
+            ? { x: isSidebarOpen ? 0 : "-100%", width: 280 }
+            : { x: 0, width: isSidebarOpen ? 280 : 80 }
+        }
         transition={{ duration: 0.3, ease: "easeInOut" }}
         className={`
           bg-white shadow-2xl border-r border-gray-200 flex flex-col h-screen
-          z-50 ${isMobile ? "fixed top-0 left-0" : "relative"}
+          z-50 ${isMobile ? "fixed top-0 left-0" : "relative flex-shrink-0"}
         `}
       >
         {/* Logo e Toggle */}
@@ -106,7 +149,7 @@ export default function AdminPanel() {
           {tabs.map((tab) => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
+              onClick={() => handleTabClick(tab.id)}
               className={`w-full flex items-center gap-3 px-4 py-3.5 rounded-xl transition-all duration-200 group relative overflow-hidden ${
                 activeTab === tab.id
                   ? "bg-[#394C97] text-white shadow-lg shadow-blue-900/20"
@@ -114,7 +157,10 @@ export default function AdminPanel() {
               }`}
             >
               <div className={`relative z-10 ${!isSidebarOpen && "mx-auto"}`}>
-                <tab.icon size={22} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
+                <tab.icon
+                  size={22}
+                  strokeWidth={activeTab === tab.id ? 2.5 : 2}
+                />
               </div>
               <AnimatePresence>
                 {isSidebarOpen && (
@@ -129,7 +175,10 @@ export default function AdminPanel() {
                 )}
               </AnimatePresence>
               {activeTab === tab.id && isSidebarOpen && (
-                <ChevronRight size={16} className="ml-auto opacity-50 relative z-10" />
+                <ChevronRight
+                  size={16}
+                  className="ml-auto opacity-50 relative z-10"
+                />
               )}
             </button>
           ))}
@@ -147,13 +196,15 @@ export default function AdminPanel() {
                 !isSidebarOpen && "mx-auto"
               }`}
             />
-            {isSidebarOpen && <span className="font-semibold text-sm">Sair do Sistema</span>}
+            {isSidebarOpen && (
+              <span className="font-semibold text-sm">Sair do Sistema</span>
+            )}
           </button>
         </div>
       </motion.aside>
 
       {/* MAIN */}
-      <main className="flex-1 h-screen overflow-y-auto bg-gray-50 relative transition-all duration-300">
+      <main className="flex-1 w-full h-screen overflow-y-auto bg-gray-50 relative transition-all duration-300">
         <div className="w-full h-full">
           <AnimatePresence mode="wait">
             <motion.div
