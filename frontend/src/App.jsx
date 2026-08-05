@@ -5,7 +5,7 @@ import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 // Components
 import Navbar from "./components/Navbar";
 import Login from "./components/Login";
-import ProtectedRoute from "./components/ProtectedRoute"; 
+import ProtectedRoute from "./components/ProtectedRoute";
 
 // Pages
 import Home from "./pages/Home";
@@ -20,23 +20,23 @@ import Logout from "./pages/Logout";
 import CareerPanel from "./pages/CareerPanel";
 import Sorteio from "./pages/RafflePage";
 
+import AdminPendingSubmissions from "./pages/AdminPendingSubmissions";
+
 export default function App() {
   return (
     <Router>
       <div className="bg-white text-dark min-h-screen">
         <Navbar />
         <Routes>
-          
           {/* 1. 🌍 ROTAS PÚBLICAS (Acessíveis a todos) */}
           <Route path="/" element={<Home />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />
           <Route path="/logout" element={<Logout />} />
-          <Route path="/quiz" element={<Quiz />} /> 
-          <Route path="/trips" element={<Trips />} /> {/* Se Trips não precisar de login */}
-          
+          <Route path="/quiz" element={<Quiz />} />
+          <Route path="/trips" element={<Trips />} />{" "}
+          {/* Se Trips não precisar de login */}
           {/* ------------------------------------------------------------- */}
-          
           {/* 2. 🔒 ROTAS PROTEGIDAS (Apenas para usuários Logados) */}
           <Route element={<ProtectedRoute />}>
             {/* 🗺️ Rotas de Conteúdo/Gamificação Protegidas */}
@@ -50,9 +50,12 @@ export default function App() {
 
             {/* 🔑 Rota de Administração Protegida */}
             <Route path="/admin" element={<Admin />} />
-
+            <Route path="/admin" element={<Admin />} />
+            <Route
+              path="/admin/submissions"
+              element={<AdminPendingSubmissions />}
+            />
           </Route>
-          
         </Routes>
       </div>
     </Router>

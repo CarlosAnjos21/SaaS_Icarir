@@ -1,16 +1,16 @@
-const prisma = require('../config/prismaClient');
+const prisma = require("../config/prismaClient");
 
 const getDashboardStats = async (req, res) => {
   try {
     const [totalUsers, totalMissions, completedTasks] = await Promise.all([
-      prisma.usuario.count({ where: { role: 'participante', ativo: true } }),
+      prisma.usuario.count({ where: { role: "participante", ativo: true } }),
       prisma.missao.count({ where: { ativa: true } }),
       prisma.usuarioTarefa.count({ where: { concluida: true } }),
     ]);
 
     const topUser = await prisma.usuario.findFirst({
-      where: { role: 'participante', ativo: true },
-      orderBy: { pontos_totais: 'desc' },
+      where: { role: "participante", ativo: true },
+      orderBy: { pontos_totais: "desc" },
       select: { nome: true, pontos_totais: true, foto_url: true },
     });
 
@@ -36,8 +36,11 @@ const getDashboardStats = async (req, res) => {
       ORDER BY "totalPoints" DESC
     `;
 
-    const estimatedTotal = (totalUsers * totalMissions * 3) || 1;
-    const averageCompletion = Math.min(Math.round((completedTasks / estimatedTotal) * 100), 100);
+    const estimatedTotal = totalUsers * totalMissions * 3 || 1;
+    const averageCompletion = Math.min(
+      Math.round((completedTasks / estimatedTotal) * 100),
+      100,
+    );
 
     res.json({
       totalUsers,
@@ -45,7 +48,7 @@ const getDashboardStats = async (req, res) => {
       completedTasks,
       averageCompletion,
       topUser: {
-        name: topUser?.nome || 'Nenhum usuário',
+        name: topUser?.nome || "Nenhum usuário",
         points: Number(topUser?.pontos_totais || 0),
         avatar: topUser?.foto_url || null,
       },
@@ -60,8 +63,8 @@ const getDashboardStats = async (req, res) => {
       })),
     });
   } catch (error) {
-    console.error('Erro no dashboard:', error);
-    res.status(500).json({ error: 'Erro ao carregar estatísticas.' });
+    console.error("Erro no dashboard:", error);
+    res.status(500).json({ error: "Erro ao carregar estatísticas." });
   }
 };
 
@@ -74,7 +77,8 @@ const validateTaskSubmission = async (req, res) => {
     const submission = await prisma.usuarioTarefa.findUnique({
       where: { id: submissionId },
     });
-    if (!submission) return res.status(404).json({ error: 'Submissão não encontrada.' });
+    if (!submission)
+      return res.status(404).json({ error: "Submissão não encontrada." });
 
     if (approve) {
       await prisma.$transaction([
@@ -100,12 +104,12 @@ const validateTaskSubmission = async (req, res) => {
             tarefa_id: submission.tarefa_id,
             validador_id: adminId,
             pontos: pontos_concedidos,
-            tipo: 'tarefa_concluida',
-            descricao: 'Tarefa validada pelo admin',
+            tipo: "tarefa_concluida",
+            descricao: "Tarefa validada pelo admin",
           },
         }),
       ]);
-      return res.json({ message: 'Submissão aprovada.' });
+      return res.json({ message: "Submissão aprovada." });
     }
 
     await prisma.usuarioTarefa.update({
@@ -117,24 +121,61 @@ const validateTaskSubmission = async (req, res) => {
         data_validacao: new Date(),
       },
     });
-    res.json({ message: 'Submissão reprovada.' });
+    res.json({ message: "Submissão reprovada." });
   } catch (error) {
-    console.error('Erro na validação:', error);
-    res.status(500).json({ error: 'Erro ao validar submissão.' });
+    console.error("Erro na validação:", error);
+    res.status(500).json({ error: "Erro ao validar submissão." });
   }
 };
 
 const getAllUsers = async (req, res) => {
   try {
     const users = await prisma.usuario.findMany({
-      select: { id: true, nome: true, email: true, foto_url: true, role: true, ativo: true },
-      orderBy: { nome: 'asc' },
+      select: {
+        id: true,
+        nome: true,
+        email: true,
+        foto_url: true,
+        role: true,
+        ativo: true,
+      },
+      orderBy: { nome: "asc" },
     });
     res.json(users);
   } catch (error) {
-    console.error('Erro ao listar usuários:', error);
-    res.status(500).json({ error: 'Erro ao buscar usuários.' });
+    console.error("Erro ao listar usuários:", error);
+    res.status(500).json({ error: "Erro ao buscar usuários." });
   }
 };
 
-module.exports = { getDashboardStats, validateTaskSubmission, getAllUsers };
+const getPendingSubmissions = async (req, res) => {
+  try {
+    const pending = await prisma.usuarioTarefa.findMany({
+      where: { concluida: false, validado_por: null },
+      include: {
+        usuario: { select: { id: true, nome: true, foto_url: true } },
+        tarefa: {
+          select: {
+            id: true,
+            titulo: true,
+            tipo: true,
+            pontos: true,
+            missao_id: true,
+          },
+        },
+      },
+      orderBy: { data_criacao: "desc" }, // ajuste o nome do campo se for diferente
+    });
+    res.json(pending);
+  } catch (error) {
+    console.error("Erro ao listar pendentes:", error);
+    res.status(500).json({ error: "Erro ao buscar submissões pendentes." });
+  }
+};
+
+module.exports = {
+  getDashboardStats,
+  validateTaskSubmission,
+  getAllUsers,
+  getPendingSubmissions,
+};

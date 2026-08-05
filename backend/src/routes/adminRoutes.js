@@ -1,19 +1,19 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const adminController = require('../controllers/adminController');
-const { authenticate, checkRole } = require('../middlewares/authMiddleware');
+const adminController = require("../controllers/adminController");
+const { authenticate, checkRole } = require("../middlewares/authMiddleware");
 
-const adminMissionRoutes = require('./adminMissionRoutes');
-const adminQuizRoutes = require('./adminQuizRoutes');
-const adminCardsRoutes = require('./adminCardsRoutes');
-const adminUserRoutes = require('./adminUserRoutes');
-const adminEnrollmentsRoutes = require('./adminEnrollmentsRoutes');
-const adminTaskRoutes = require('./adminTaskRoutes');
-const adminAwardsRoutes = require('./adminAwardsRoutes');
+const adminMissionRoutes = require("./adminMissionRoutes");
+const adminQuizRoutes = require("./adminQuizRoutes");
+const adminCardsRoutes = require("./adminCardsRoutes");
+const adminUserRoutes = require("./adminUserRoutes");
+const adminEnrollmentsRoutes = require("./adminEnrollmentsRoutes");
+const adminTaskRoutes = require("./adminTaskRoutes");
+const adminAwardsRoutes = require("./adminAwardsRoutes");
 
 // Proteção global — todas as rotas abaixo exigem admin autenticado
 router.use(authenticate);
-router.use(checkRole(['admin']));
+router.use(checkRole(["admin"]));
 
 /**
  * @swagger
@@ -36,7 +36,7 @@ router.use(checkRole(['admin']));
  *       401:
  *         description: Não autorizado
  */
-router.get('/dashboard/stats', adminController.getDashboardStats);
+router.get("/dashboard/stats", adminController.getDashboardStats);
 
 /**
  * @swagger
@@ -70,14 +70,18 @@ router.get('/dashboard/stats', adminController.getDashboardStats);
  *       404:
  *         description: Submissão não encontrada
  */
-router.post('/submissions/:submissionId/validate', adminController.validateTaskSubmission);
+router.post(
+  "/submissions/:submissionId/validate",
+  adminController.validateTaskSubmission,
+);
 
-router.use('/missions', adminMissionRoutes);
-router.use('/quizzes', adminQuizRoutes);
-router.use('/cards', adminCardsRoutes);
-router.use('/users', adminUserRoutes);
-router.use('/enrollments', adminEnrollmentsRoutes);
-router.use('/tasks', adminTaskRoutes);
-router.use('/awards', adminAwardsRoutes);
+router.use("/missions", adminMissionRoutes);
+router.use("/quizzes", adminQuizRoutes);
+router.use("/cards", adminCardsRoutes);
+router.use("/users", adminUserRoutes);
+router.use("/enrollments", adminEnrollmentsRoutes);
+router.use("/tasks", adminTaskRoutes);
+router.use("/awards", adminAwardsRoutes);
+router.get("/submissions/pending", adminController.getPendingSubmissions); //
 
 module.exports = router;

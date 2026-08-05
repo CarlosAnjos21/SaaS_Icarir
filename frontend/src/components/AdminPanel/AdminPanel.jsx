@@ -5,6 +5,7 @@ import {
   Users,
   Zap,
   Briefcase,
+  ClipboardCheck,
   Menu,
   X,
   LogOut,
@@ -17,6 +18,7 @@ import DashboardContent from "./DashboardContent";
 import UsersContent from "./UsersContent";
 import MissionsContent from "./AdminMissions/MissionsContent";
 import TasksQuizzesContent from "./AdminMissions/TasksQuizzesContent";
+import SubmissionsContent from "./SubmissionsContent";
 
 export default function AdminPanel() {
   const [activeTab, setActiveTab] = useState("dashboard");
@@ -41,7 +43,10 @@ export default function AdminPanel() {
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const tab = params.get("adminTab");
-    if (tab && ["dashboard", "missions", "users", "tasks"].includes(tab)) {
+    if (
+      tab &&
+      ["dashboard", "missions", "users", "tasks", "submissions"].includes(tab)
+    ) {
       setActiveTab(tab);
     }
   }, [location.search]);
@@ -80,6 +85,12 @@ export default function AdminPanel() {
       label: "Tarefas",
       icon: Briefcase,
       content: <TasksQuizzesContent />,
+    },
+    {
+      id: "submissions",
+      label: "Submissões Pendentes",
+      icon: ClipboardCheck,
+      content: <SubmissionsContent />,
     },
   ];
 
