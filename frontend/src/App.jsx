@@ -1,5 +1,3 @@
-// src/App.jsx
-
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 
 // Components
@@ -19,8 +17,6 @@ import Trips from "./pages/Trips";
 import Logout from "./pages/Logout";
 import CareerPanel from "./pages/CareerPanel";
 import Sorteio from "./pages/RafflePage";
-
-import AdminPendingSubmissions from "./pages/AdminPendingSubmissions";
 
 export default function App() {
   return (
@@ -50,11 +46,6 @@ export default function App() {
 
             {/* 🔑 Rota de Administração Protegida */}
             <Route path="/admin" element={<Admin />} />
-            <Route path="/admin" element={<Admin />} />
-            <Route
-              path="/admin/submissions"
-              element={<AdminPendingSubmissions />}
-            />
           </Route>
         </Routes>
       </div>
